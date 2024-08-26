@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aac1b29acd6036b46a9a9f25c29f604f, type: 3}
+  m_Name: Tomato
+  m_EditorClassIdentifier: 
+  Name: Tomato
+  Type: 2
+  canBePlanted: 1
+  totalTimeInSeconds: 90
+  itemImage: {fileID: 21300000, guid: ce6e296038a021d439d14bead1b7bcc0, type: 3}
+  plantGrowMeshes:
+  - {fileID: 4300000, guid: 7f90442c42c67c9459b16d5aeadbcba5, type: 3}
+  - {fileID: 4300000, guid: 039c2a17c79559c479b4acc4478f97e6, type: 3}
+  - {fileID: 4300000, guid: ae3a938f70d254f4bb6768e9c7a6f8a1, type: 3}
+  - {fileID: 4300000, guid: 7306b7ab02e6c8440b5030dd1d3fed62, type: 3}
+  plantMat:
+  - {fileID: 2100000, guid: da5a311d3775332478c396918dda3aaa, type: 2}
+  - {fileID: 2100000, guid: fdf18c58b725a2f469593ece1786d307, type: 2}
