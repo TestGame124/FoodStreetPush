@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices.WindowsRuntime;
-using UnityEngine;
+﻿using UnityEngine;
 
 [System.Serializable]
 public class ItemReward : IReward
@@ -13,8 +12,12 @@ public class ItemReward : IReward
     }
 
     private Sprite previewImage;
+    private int amount;
     public Sprite PreviewImage { get { return previewImage; } set { previewImage = value; } }
-    public int Amount { get { return 0; } set { Amount = 0; } }
+
+    // An item reward is an unlock, not a quantity, so this stays 0 and the
+    // level-up UI shows "Unlocked" instead of a number.
+    public int Amount { get { return amount; } set { amount = value; } }
 
     public void GiveReward()
     {

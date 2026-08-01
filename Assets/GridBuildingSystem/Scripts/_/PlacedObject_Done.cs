@@ -40,7 +40,7 @@ public class PlacedObject_Done : MonoBehaviour, IInteractableObjectEditorState {
     public PlacedObjectTypeSO.Dir Dir => dir;
 
     //[Range(0,270)]
-    [SerializeField] int directionVal => PlacedObjectTypeSO.GetRotationAngle(dir);
+    int directionVal => PlacedObjectTypeSO.GetRotationAngle(dir);
 
     public ObjectType shopItemType;
 
@@ -171,6 +171,10 @@ public class PlacedObject_Done : MonoBehaviour, IInteractableObjectEditorState {
         }
         transform.SetParent(null);
 
+        // This instance goes back to the pool. Clear the initialised flag so the
+        // next Setup() allocates a fresh ID instead of inheriting the dead
+        // object's identity, which would alias its save entry.
+        alreadyInitialized = false;
     }
 
     

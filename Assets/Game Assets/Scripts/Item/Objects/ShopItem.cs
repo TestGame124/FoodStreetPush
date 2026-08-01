@@ -30,14 +30,10 @@ public class ShopItem
 
         if (!isUnlocked) {
 
-            //if (itemData.requiredLevel == 2)
-            //{
-                AddReward(LevelUpSystem.GetLevel(), true);
-            //}
-            //else
-            //{
-                LevelUpSystem.OnLevelUp += AddReward;
-            //}
+            // Catch the case where the player is already one level away from
+            // unlocking this item, then keep watching for future level-ups.
+            AddReward(LevelUpSystem.GetLevel());
+            LevelUpSystem.OnLevelUp += AddReward;
         }
     }
 
@@ -102,29 +98,11 @@ public class ShopItem
     {
         if (IsUnlocked)
             return;
-        Debug.Log("Reward Added Unlock Item");
 
-       
-            if (level == itemData.requiredLevel - 1)
-            {
-
-                LevelUpSystem.AddReward(this);
-            }
-        
-    } 
-    private void AddReward(int level, bool addOnCurrent = false)
-    {
-        if (IsUnlocked)
-            return;
-        Debug.Log("Reward Added Unlock Item");
-
-       
-            if (level == itemData.requiredLevel - 1)
-            {
-
-                LevelUpSystem.AddReward(this);
-            }
-        
+        if (level == itemData.requiredLevel - 1)
+        {
+            LevelUpSystem.AddReward(this);
+        }
     }
 
     

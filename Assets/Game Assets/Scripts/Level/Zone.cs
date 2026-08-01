@@ -44,10 +44,11 @@ public class Zone : MonoBehaviour
     {
         
 
+        // Index-based IDs, so scene-authored objects keep the same identity
+        // every session. Runtime-placed objects allocate above RUNTIME_ID_BASE.
         for (int i = 0; i < placedObject.Count; i++)
         {
-            placedObject[i].InitializeObject(SaveController.GiveUniqueID());
-            
+            placedObject[i].InitializeObject(i + 1);
         }
 
         visitorSpawner.Initialize(this);

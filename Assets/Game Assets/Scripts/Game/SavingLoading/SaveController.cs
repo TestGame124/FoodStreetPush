@@ -22,23 +22,57 @@ public class SaveController : MonoBehaviour
 
     public static bool SaveIsRequired;
 
-    public static int uID;
+    private const string IdCounterKey = "placedObjectIdCounter";
+
+    /// <summary>
+    /// Objects authored into the scene take IDs 1..N from their index in the
+    /// zone's list, which is stable across sessions. Runtime-placed objects
+    /// allocate above this base from a persisted counter, so a runtime ID is
+    /// never reused and never collides with a scene object's ID.
+    /// </summary>
+    public const int RUNTIME_ID_BASE = 100000;
+
+    public static int uID = RUNTIME_ID_BASE;
 
     public const int SAVE_DELAY = 2;
 
     public static readonly object fileLock = new object();
 
     static ISaveGameSerializer serializer;
-    public static void SavePlacedObjects(List<PlacedObjectData> placedObjectDataList)
+
+    // Authoritative in-memory copy of the placed-object list. The save file is
+    // deserialized once per session; every mutation edits this list and writes
+    // it back, instead of doing a full load + scan + save on every placement.
+    private static List<PlacedObjectData> cachedPlacedObjects;
+
+    private static List<PlacedObjectData> GetCache()
     {
-        //lock (fileLock)
-        //{
+        if (cachedPlacedObjects == null)
+        {
+            if (serializer == null)
+                serializer = new SaveGameBinarySerializer();
+
+            PlacedObjectDataListWrapper wrapper = SaveGame.Load<PlacedObjectDataListWrapper>(PlacedObjectDataID, serializer);
+            cachedPlacedObjects = wrapper != null && wrapper.placedObjectDataList != null
+                ? wrapper.placedObjectDataList
+                : new List<PlacedObjectData>();
+        }
+        return cachedPlacedObjects;
+    }
+
+    private static void Persist()
+    {
         if (serializer == null)
             serializer = new SaveGameBinarySerializer();
-        PlacedObjectDataListWrapper placedObj = new PlacedObjectDataListWrapper { placedObjectDataList = placedObjectDataList };
 
-            SaveGame.Save(PlacedObjectDataID, placedObj,serializer);
-        //}
+        PlacedObjectDataListWrapper placedObj = new PlacedObjectDataListWrapper { placedObjectDataList = GetCache() };
+        SaveGame.Save(PlacedObjectDataID, placedObj, serializer);
+    }
+
+    public static void SavePlacedObjects(List<PlacedObjectData> placedObjectDataList)
+    {
+        cachedPlacedObjects = placedObjectDataList ?? new List<PlacedObjectData>();
+        Persist();
     }
 #if UNITY_EDITOR
     [UnityEditor.MenuItem("Saving/Clear Data")]
@@ -46,179 +80,89 @@ public class SaveController : MonoBehaviour
     {
         PlayerPrefs.DeleteAll();
         SaveGame.Clear();
+        cachedPlacedObjects = null;
     }
 #endif
 
     public static bool isSavingPlacedObject;
-   
-    //static List<PlacedObjectData> placedObjectDataList;
+
     public static void SavePlacedObject(PlacedObjectData placedObjectData)
     {
-        //if (!TutorialController.TutorialCompleted())
-        //{
-        //    SaveGame.Delete(PlacedObjectDataID);
-        //}
+        List<PlacedObjectData> placedObjectDataList = GetCache();
 
-        //if(placedObjectDataList.Count <= 0)
-        //    placedObjectDataList = LoadPlacedObjects();
-        List<PlacedObjectData> placedObjectDataList = LoadPlacedObjects();
-
-        //List<PlacedObjectData> placedObjectDataList  = LoadPlacedObjects();
-
-        //bool alreadExist = placedObjectDataList.Any(x => x.position.x == placedObjectData.position.x
-        //&& x.position.y == placedObjectData.position.y
-        //&& x.position.z == placedObjectData.position.z && x.objectType == placedObjectData.objectType);
-        bool alreadyExist = false;
-        for (int i = 0; i < placedObjectDataList.Count; i++)
+        if (IndexOfId(placedObjectDataList, placedObjectData.Id) < 0)
         {
-            var existingObject = placedObjectDataList[i];
-
-            if (existingObject.position.x == placedObjectData.position.x &&
-                existingObject.position.y == placedObjectData.position.y &&
-                existingObject.position.z == placedObjectData.position.z &&
-                existingObject.objectType == placedObjectData.objectType)
-            {
-                alreadyExist = true;
-                break;
-            }
-        }
-        if (!alreadyExist)
-        {
-
             placedObjectDataList.Add(placedObjectData);
-            SavePlacedObjects(placedObjectDataList);
+            Persist();
         }
-        
-
-
     }
-    static List<PlacedObjectData> placedObjectDataList = new();
+
+    private static int IndexOfId(List<PlacedObjectData> list, int id)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].Id == id)
+                return i;
+        }
+        return -1;
+    }
+
     public static void BatchSavePlacedObjects(List<PlacedObjectData> placedObjectsBatch, List<PlacedObjectData> removedObjectsBatch)
     {
-       
-        if(placedObjectDataList.Count <= 0)
-        {
-        placedObjectDataList = LoadPlacedObjects();
-        }
+        List<PlacedObjectData> placedObjectDataList = GetCache();
 
         foreach (var removedObjectData in removedObjectsBatch)
         {
-            for (int i = 0; i < placedObjectDataList.Count; i++)
-            {
-                var existingObject = placedObjectDataList[i];
-
-                if (existingObject.position.x == removedObjectData.position.x &&
-                    existingObject.position.y == removedObjectData.position.y &&
-                    existingObject.position.z == removedObjectData.position.z &&
-                    existingObject.objectType == removedObjectData.objectType)
-                {
-                    placedObjectDataList.RemoveAt(i);
-                    break; 
-                }
-            }
+            int index = IndexOfId(placedObjectDataList, removedObjectData.Id);
+            if (index >= 0)
+                placedObjectDataList.RemoveAt(index);
         }
 
         foreach (var placedObjectData in placedObjectsBatch)
         {
-            bool alreadyExist = false;
-            for (int i = 0; i < placedObjectDataList.Count; i++)
-            {
-                var existingObject = placedObjectDataList[i];
-
-                if (existingObject.position.x == placedObjectData.position.x &&
-                    existingObject.position.y == placedObjectData.position.y &&
-                    existingObject.position.z == placedObjectData.position.z &&
-                    existingObject.objectType == placedObjectData.objectType)
-                {
-                    alreadyExist = true;
-                    break;
-                }
-            }
-
-            if (!alreadyExist)
-            {
+            if (IndexOfId(placedObjectDataList, placedObjectData.Id) < 0)
                 placedObjectDataList.Add(placedObjectData);
-            }
         }
 
-
-        SavePlacedObjects(placedObjectDataList);
+        Persist();
     }
 
 
-    public static void RemoveObject(PlacedObjectData placedObjectData, Vector3 oldPos)
+    public static void RemoveObject(PlacedObjectData placedObjectData)
     {
-        //lock (fileLock)
-        //{
-        List<PlacedObjectData> placedObjectDataList = LoadPlacedObjects();
-        //if (placedObjectDataList.Count <= 0)
-        //{
-        //    placedObjectDataList = LoadPlacedObjects();
-        //}
+        List<PlacedObjectData> placedObjectDataList = GetCache();
 
-        bool objectFound = false;
-            for (int i = 0; i < placedObjectDataList.Count; i++)
-            {
-            Debug.Log($"OBject Removed Save X : {placedObjectDataList[i].position.x} , Z : {placedObjectDataList[i].position.z}");
-
-            if (placedObjectDataList[i].objectType == placedObjectData.objectType &&
-                    placedObjectDataList[i].position.x == oldPos.x &&
-                    placedObjectDataList[i].position.z == oldPos.z)
-                {
-                    placedObjectDataList.RemoveAt(i);
-                    objectFound = true;
-                    break;
-                }
-            }
-            if (objectFound)
-            {
-                SavePlacedObjects(placedObjectDataList);
-            }
-
-        //}
+        int index = IndexOfId(placedObjectDataList, placedObjectData.Id);
+        if (index >= 0)
+        {
+            placedObjectDataList.RemoveAt(index);
+            Persist();
+        }
     }
 
-    
-
-
+    /// <summary>
+    /// Returns a snapshot of the saved placed objects. Callers get their own
+    /// list so they can iterate it while placement code mutates the cache.
+    /// </summary>
     public static List<PlacedObjectData> LoadPlacedObjects()
     {
-
-        //PlacedObjectDataListWrapper wrapper = SaveObject<PlacedObjectDataListWrapper>(saveFilePath);
-        if (serializer == null)
-            serializer = new SaveGameBinarySerializer();
-        PlacedObjectDataListWrapper wrapper = SaveGame.Load<PlacedObjectDataListWrapper>(PlacedObjectDataID, serializer);
-        
-        if (wrapper != null)
-        {
-            return wrapper.placedObjectDataList;
-        }
-        return new List<PlacedObjectData>();
-
+        return new List<PlacedObjectData>(GetCache());
     }
-    public static void UpdatePlacedObject(PlacedObjectData placedObjectData, Vector3 oldPos)
+
+    public static void UpdatePlacedObject(PlacedObjectData placedObjectData)
     {
-        List<PlacedObjectData> placedObjectDataList = LoadPlacedObjects();
-        bool objectFound = false;
-        for (int i = 0; i < placedObjectDataList.Count; i++)
+        List<PlacedObjectData> placedObjectDataList = GetCache();
+
+        int index = IndexOfId(placedObjectDataList, placedObjectData.Id);
+        if (index >= 0)
         {
-
-            if (placedObjectDataList[i].objectType == placedObjectData.objectType &&
-                placedObjectDataList[i].position.x == oldPos.x &&
-                placedObjectDataList[i].position.z == oldPos.z)
-            {
-                Debug.Log("OBject Placed Save");
-
-                placedObjectDataList[i] = placedObjectData;
-                
-                objectFound = true;
-                break;
-            }
+            placedObjectDataList[index] = placedObjectData;
+            Persist();
         }
-        if (objectFound)
-            SavePlacedObjects(placedObjectDataList);
         else
+        {
             SavePlacedObject(placedObjectData);
+        }
     }
     
     [System.Serializable]
@@ -233,9 +177,24 @@ public class SaveController : MonoBehaviour
         SaveIsRequired = true;
     }
 
+    /// <summary>
+    /// Restores the runtime ID counter. Must run before any runtime object is
+    /// placed, otherwise fresh objects reuse IDs from a previous session.
+    /// </summary>
+    public static void InitializeIds()
+    {
+        uID = PlayerPrefs.GetInt(IdCounterKey, RUNTIME_ID_BASE);
+        if (uID < RUNTIME_ID_BASE)
+            uID = RUNTIME_ID_BASE;
+    }
+
     public static int GiveUniqueID()
     {
+        if (uID < RUNTIME_ID_BASE)
+            uID = RUNTIME_ID_BASE;
+
         uID++;
+        PlayerPrefs.SetInt(IdCounterKey, uID);
         return uID;
     }
 

@@ -210,21 +210,17 @@ public class GridBuildingSystem3D : MonoBehaviour {
             }
             else
             {
-                Vector3 oldPos = placedObject.placedPosition;
-                Debug.Log($"Old Pos : {oldPos}");
                 placedObject.PlaceSelectedObject(placedObjectWorldPosition, placedObjectOrigin, dir);
 
                 PlacedObjectData data = new PlacedObjectData
                 {
                     Id = placedObject.ID,
                     objectType = placedObject.GetPlacedObjectTypeSO().type,
-                    //position = new SerializableVector3(placedObject.transform.position),
                     position = new BayatGames.SaveGameFree.Types.Vector3Save(placedObject.transform.position),
                     direction = placedObject.GetDir()
                 };
 
-                SaveController.UpdatePlacedObject(/*SavePlacedObject(placedObject)*/data,oldPos);
-                Debug.Log($"Updated Pos : {placedObjectWorldPosition}");
+                SaveController.UpdatePlacedObject(data);
             }
             ghostObject.selectedState = false;
 
@@ -641,38 +637,26 @@ public void LoadPlacedObjects()
         Vector3 objectPos = placedObject.transform.position;
         if (removeObject)
         {
-            Debug.Log("Remove Obj");
             objectPos = placedObject.placedPosition;
         }
-        
-        
+
         PlacedObjectData data = new PlacedObjectData
         {
             Id = placedObject.ID,
             objectType = placedObject.GetPlacedObjectTypeSO().type,
-            //position = new SerializableVector3(objectPos),
             position = new BayatGames.SaveGameFree.Types.Vector3Save(objectPos),
             direction = placedObject.GetDir(),
             isRemoved = placedObject.isRemoved
-
         };
-       
-        // Run the save operation in a separate thread
-        //Thread saveThread = null;
 
         if (!removeObject)
         {
             SaveController.SavePlacedObject(data);
-            //saveThread = new Thread(() => SaveController.SavePlacedObject(data));
         }
         else
         {
-            SaveController.RemoveObject(data, objectPos);
-            //saveThread = new Thread(() => SaveController.RemoveObject(data, objectPos));
-
+            SaveController.RemoveObject(data);
         }
-
-        //saveThread.Start();
 
         return data;
     }

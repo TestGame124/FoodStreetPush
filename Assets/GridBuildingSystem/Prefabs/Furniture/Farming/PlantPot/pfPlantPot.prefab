@@ -264,6 +264,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlantPotVisuals
       objectReference: {fileID: 0}
+    - target: {fileID: 1456656668474129271, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2499414142690952232, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -309,6 +313,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5149259365084036331, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5660437630978556108, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.04
+      objectReference: {fileID: 0}
+    - target: {fileID: 8399874216357322023, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}

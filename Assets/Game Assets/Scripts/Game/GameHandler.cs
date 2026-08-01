@@ -43,6 +43,10 @@ public class GameHandler : MonoBehaviour
     {
         instance = this;
 
+        // Must run before anything places a runtime object, or fresh objects
+        // reuse IDs handed out in a previous session.
+        SaveController.InitializeIds();
+
         FirstTime = PlayerPrefs.GetInt(FirstTimeData, 0) == 0;
         if (FirstTime)
         {
