@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using LastOrders.Data;
 using UnityEditor;
 using UnityEngine;
@@ -141,11 +140,7 @@ namespace LastOrders.EditorTools
         /// </summary>
         static void CreateNew(Dictionary<string, PlacedObjectTypeSO> existing)
         {
-            if (!AssetDatabase.IsValidFolder(NewFolder))
-            {
-                Directory.CreateDirectory(NewFolder);
-                AssetDatabase.Refresh();
-            }
+            ContentGenerator.EnsureFolder(NewFolder);
 
             PlacedObjectTypeSO wallSource = Get(existing, "Wall");
             PlacedObjectTypeSO propSource = Get(existing, "BarrelProp") ?? Get(existing, "WellProp");

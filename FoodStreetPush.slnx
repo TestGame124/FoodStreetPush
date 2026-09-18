@@ -108,6 +108,7 @@
   <Project Path="Unity.Purchasing.AppleStub.csproj" />
   <Project Path="Unity.Services.Core.Registration.csproj" />
   <Project Path="Unity.AI.Assistant.Bridge.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.AI.Generators.Sdk.csproj" />
   <Project Path="Unity.Purchasing.Stores.XboxCloudServices.csproj" />
   <Project Path="Unity.Services.Core.Device.csproj" />
@@ -120,7 +121,6 @@
   <Project Path="Unity.Services.Core.Scheduler.csproj" />
   <Project Path="Unity.AI.Toolkit.Async.csproj" />
   <Project Path="glTFast.dots.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
   <Project Path="Unity.Services.Core.Networking.csproj" />
   <Project Path="Unity.AI.Generators.Contexts.csproj" />

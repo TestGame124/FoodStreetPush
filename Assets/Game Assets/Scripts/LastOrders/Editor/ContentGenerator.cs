@@ -670,23 +670,36 @@ namespace LastOrders.EditorTools
         {
             string[] folders =
             {
-                Root, $"{Root}/Enemies", $"{Root}/Walls", $"{Root}/Customers", $"{Root}/Recipes",
+                $"{Root}/Enemies", $"{Root}/Walls", $"{Root}/Customers", $"{Root}/Recipes",
                 $"{Root}/Crisis", $"{Root}/PlotTiers", $"{Root}/Roles", $"{Root}/Traits",
                 $"{Root}/Waves", $"{Root}/NamedNights", $"{Root}/Dispatch",
             };
 
-            foreach (string folder in folders)
-            {
-                if (AssetDatabase.IsValidFolder(folder)) continue;
-
-                string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
-                string leaf = Path.GetFileName(folder);
-
-                if (!AssetDatabase.IsValidFolder(parent)) Directory.CreateDirectory(parent);
-                AssetDatabase.CreateFolder(parent, leaf);
-            }
+            foreach (string folder in folders) EnsureFolder(folder);
 
             AssetDatabase.Refresh();
+        }
+
+        /// <summary>
+        /// Creates a folder and every missing ancestor, through the AssetDatabase.
+        ///
+        /// Recursive rather than a flat loop because "Assets/Game Assets/Content/LastOrders"
+        /// has two levels that may not exist, and AssetDatabase.CreateFolder silently fails
+        /// when its parent is not itself a known asset folder. Creating the directory on disk
+        /// instead would leave the AssetDatabase unaware of it until a refresh, which is the
+        /// same bug one step later.
+        /// </summary>
+        internal static void EnsureFolder(string folder)
+        {
+            if (string.IsNullOrEmpty(folder) || AssetDatabase.IsValidFolder(folder)) return;
+
+            string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
+            string leaf = Path.GetFileName(folder);
+
+            if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return;
+
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, leaf);
         }
 
         /// <summary>Loads the asset if it exists, creates it otherwise. Keeps the generator

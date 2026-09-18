@@ -32,21 +32,27 @@ namespace LastOrders.EditorTools
         ///
         /// W wall   D door   H hearth (indestructible)   T table
         /// P pantry   C cellar   G garden plot   .  open floor
+        /// o  continuation of the multi-tile object whose origin is below-left of it
         ///
-        /// One door, north, facing the road the customers and the horde both use. Enough
-        /// seating to earn, nothing spare to defend with. The first few nights are survivable
-        /// and the first expansion is not - which is the intended shape of Act I.
+        /// The 'o' cells matter: a Table is 3x3 in this project, not 1x1, and an origin sits
+        /// at the minimum corner of its footprint. Writing the footprint out means the layout
+        /// below is what the plot actually looks like rather than a diagram that happens to
+        /// place one table and silently drop three.
+        ///
+        /// Two 4-tops fill the entire north half of the interior. That is the whole point of
+        /// Tier 1: eight seats and a single door, with no room left for defense. The player
+        /// is supposed to feel the plot is too small before they are allowed to expand.
         /// </summary>
         static readonly string[] Layout =
         {
-            "WWWDWWWW", // z = 7  (north, the road side)
-            "W..TT..W", // z = 6
-            "W..TT..W", // z = 5
-            "W......W", // z = 4
-            "WH.....W", // z = 3
-            "WP.....W", // z = 2
-            "WC....GW", // z = 1
-            "WWWWWWWW", // z = 0  (south)
+            "WWWDWWWW", // z = 7  north, the road side. The one door faces the highway.
+            "WooooooW", // z = 6  table footprints
+            "WooooooW", // z = 5  table footprints
+            "WTooTooW", // z = 4  two 3x3 tables, origins at x=1 and x=4
+            "WH.....W", // z = 3  the Hearth, indestructible
+            "WP.....W", // z = 2  pantry - what the Glutton comes for
+            "WC....GW", // z = 1  cellar, and a garden plot in the corner
+            "WWWWWWWW", // z = 0  south
         };
 
         [MenuItem("Last Orders/Build Starting Scene", priority = 2)]
@@ -229,12 +235,27 @@ namespace LastOrders.EditorTools
                 for (int x = 0; x < line.Length; x++)
                 {
                     char symbol = line[x];
-                    if (symbol == '.') continue;
+
+                    // '.' is open floor, 'o' is a tile already covered by a multi-tile
+                    // object's footprint. Neither places anything.
+                    if (symbol == '.' || symbol == 'o') continue;
 
                     if (!palette.TryGetValue(symbol, out PlacedObjectTypeSO type) || type == null)
                         continue;
 
-                    if (PlaceOne(grid, type, new Vector2Int(x, z), parent)) placed++;
+                    if (PlaceOne(grid, type, new Vector2Int(x, z), parent))
+                    {
+                        placed++;
+                        continue;
+                    }
+
+                    // Loud on purpose. A silent skip here means the layout and the assets'
+                    // footprints have drifted apart, and the result is a restaurant that
+                    // looks subtly wrong and plays very wrong.
+                    Debug.LogWarning(
+                        $"[Last Orders] Could not place '{type.nameString}' " +
+                        $"({type.width}x{type.height}) at ({x}, {z}). The layout and this " +
+                        "asset's footprint disagree.");
                 }
             }
 
@@ -269,7 +290,13 @@ namespace LastOrders.EditorTools
 
             // Instantiated directly rather than via PlacedObject_Done.Create, which pulls from
             // the type's runtime pool. Pools do not exist at edit time.
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(type.prefab.gameObject);
+            //
+            // InstantiatePrefab keeps the scene object linked to its prefab, which is what we
+            // want, but it returns null if the reference is not a prefab root. Some of these
+            // assets point at a child transform, so fall back to a plain clone rather than
+            // dropping the object.
+            var instance = PrefabUtility.InstantiatePrefab(type.prefab.gameObject) as GameObject;
+            if (instance == null) instance = Object.Instantiate(type.prefab.gameObject);
             instance.transform.SetParent(parent, false);
             instance.transform.position = world;
             instance.transform.rotation = Quaternion.Euler(0f, type.GetRotationAngle(PlacedObjectTypeSO.Dir.Down), 0f);
