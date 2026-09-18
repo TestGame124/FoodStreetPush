@@ -241,29 +241,55 @@ namespace LastOrders.EditorTools
         {
             return new[]
             {
-                Recipe("GardenSalad", coin: 10, heat: 1f, unlocked: true,
-                       new ResourceAmount(ResourceType.Veg, 2)),
+                // Safe and poor: no Meat, single Heat, available from day one.
+                Recipe("GardenSalad", coin: 10, heat: 1f, unlocked: true, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Veg, 2),
+                }),
 
-                Recipe("Flatbread", coin: 14, heat: 1f, unlocked: true,
-                       new ResourceAmount(ResourceType.Grain, 2)),
+                Recipe("Flatbread", coin: 14, heat: 1f, unlocked: true, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Grain, 2),
+                }),
 
-                Recipe("VegStew", coin: 18, heat: 1f, unlocked: true,
-                       new ResourceAmount(ResourceType.Veg, 2), new ResourceAmount(ResourceType.Grain, 1)),
+                Recipe("VegStew", coin: 18, heat: 1f, unlocked: true, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Veg, 2),
+                    new ResourceAmount(ResourceType.Grain, 1),
+                }),
 
-                Recipe("GrilledSkewers", coin: 30, heat: 2f, unlocked: false, rep: 15,
-                       new ResourceAmount(ResourceType.Meat, 2), new ResourceAmount(ResourceType.Spice, 1)),
+                // From here the menu starts costing Heat. Triple the money of a salad, and
+                // double the Heat per dish - this is where the menu becomes a risk decision.
+                Recipe("GrilledSkewers", coin: 30, heat: 2f, unlocked: false, rep: 15, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Meat, 2),
+                    new ResourceAmount(ResourceType.Spice, 1),
+                }),
 
-                Recipe("SmokedBrisket", coin: 48, heat: 2f, unlocked: false, rep: 40,
-                       new ResourceAmount(ResourceType.Meat, 3), new ResourceAmount(ResourceType.Spice, 2)),
+                Recipe("SmokedBrisket", coin: 48, heat: 2f, unlocked: false, rep: 40, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Meat, 3),
+                    new ResourceAmount(ResourceType.Spice, 2),
+                }),
 
-                Recipe("FeastPlatter", coin: 80, heat: 2f, unlocked: false, rep: 70,
-                       new ResourceAmount(ResourceType.Meat, 3), new ResourceAmount(ResourceType.Luxury, 2),
-                       new ResourceAmount(ResourceType.Spice, 1)),
+                Recipe("FeastPlatter", coin: 80, heat: 2f, unlocked: false, rep: 70, ingredients: new[]
+                {
+                    new ResourceAmount(ResourceType.Meat, 3),
+                    new ResourceAmount(ResourceType.Luxury, 2),
+                    new ResourceAmount(ResourceType.Spice, 1),
+                }),
             };
         }
 
-        static RecipeDefinition Recipe(string name, int coin, float heat, bool unlocked, int rep = 0,
-                                       params ResourceAmount[] ingredients)
+        /// <summary>
+        /// Ingredients are an explicit array rather than a params tail.
+        ///
+        /// With params last and an optional int before it, a positional ResourceAmount binds
+        /// to that int instead of the array - a trap that costs a confusing compile error
+        /// every time someone adds a recipe without naming every argument.
+        /// </summary>
+        static RecipeDefinition Recipe(string name, int coin, float heat, bool unlocked,
+                                       ResourceAmount[] ingredients, int rep = 0)
         {
             var asset = CreateOrLoad<RecipeDefinition>($"{Root}/Recipes/Recipe_{name}.asset");
 
