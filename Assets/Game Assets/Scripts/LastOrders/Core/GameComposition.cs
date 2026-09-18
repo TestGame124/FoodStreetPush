@@ -122,6 +122,51 @@ namespace LastOrders.Core
             Perimeter.SeedNavigationFields();
         }
 
+        /// <summary>
+        /// Seeds a brand new campaign. Called only when there is no save to restore, so a
+        /// returning player is never handed a second starting kit.
+        /// </summary>
+        public void SeedNewGame()
+        {
+            Ledger.Add(Balance.startingResources);
+
+            for (int i = 0; i < Balance.startingSurvivorCount; i++)
+            {
+                Survivors.Add(new Survivor
+                {
+                    Id = $"survivor_{i}",
+                    Name = NameFor(i),
+
+                    // The first Survivor is a Cook. With nobody in the kitchen the player
+                    // does every station themselves and the clock destroys them, so this is
+                    // the one role the game cannot open without.
+                    Role = RoleFor(i),
+                    Trait = null,
+                });
+            }
+        }
+
+        string NameFor(int index)
+        {
+            string[] names = Balance.survivorNames;
+            if (names == null || names.Length == 0) return $"Survivor {index + 1}";
+            return names[index % names.Length];
+        }
+
+        SurvivorRoleDefinition RoleFor(int index)
+        {
+            SurvivorRoleDefinition[] roles = Balance.survivorRoles;
+            if (roles == null || roles.Length == 0) return null;
+
+            if (index == 0)
+            {
+                for (int i = 0; i < roles.Length; i++)
+                    if (roles[i] != null && roles[i].role == SurvivorRole.Cook) return roles[i];
+            }
+
+            return roles[index % roles.Length];
+        }
+
         /// <summary>Starts the cycle. Separate from construction so every listener can
         /// subscribe before the first Dawn fires - otherwise the game misses the event that
         /// starts it.</summary>

@@ -3,7 +3,9 @@
   <Project Path="Unity.PlasticSCM.Editor.csproj" />
   <Project Path="Unity.Services.Core.Internal.csproj" />
   <Project Path="Unity.ProBuilder.csproj" />
+  <Project Path="Unity.ScriptableBuildPipeline.Editor.csproj" />
   <Project Path="Unity.Mathematics.csproj" />
+  <Project Path="Unity.Addressables.Editor.csproj" />
   <Project Path="Unity.Purchasing.PaymentProviderService.csproj" />
   <Project Path="Unity.VisualScripting.Core.Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Runtime.csproj" />
@@ -24,12 +26,14 @@
   <Project Path="Unity.Purchasing.Stores.csproj" />
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="Unity.ProBuilder.Editor.csproj" />
+  <Project Path="Unity.ResourceManager.csproj" />
   <Project Path="glTFast.csproj" />
   <Project Path="Unity.VisualScripting.Core.csproj" />
   <Project Path="Unity.AI.Assistant.Editor.csproj" />
   <Project Path="Unity.Services.Core.Environments.Editor.csproj" />
   <Project Path="Unity.AI.Pbr.csproj" />
   <Project Path="Unity.Burst.CodeGen.csproj" />
+  <Project Path="Unity.Addressables.DocExampleCode.Editor.Tests.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.VisualScripting.Flow.csproj" />
   <Project Path="Unity.PerformanceTesting.csproj" />
@@ -60,6 +64,7 @@
   <Project Path="Unity.Services.Core.Editor.csproj" />
   <Project Path="Unity.Timeline.csproj" />
   <Project Path="Unity.Microsoft.GDK.Tools.Editor.csproj" />
+  <Project Path="Unity.AutoGroupGenerator.Editor.csproj" />
   <Project Path="Unity.TestTools.CodeCoverage.Editor.csproj" />
   <Project Path="glTFast.Documentation.Examples.csproj" />
   <Project Path="Unity.TestTools.CodeCoverage.Editor.OpenCover.Mono.Reflection.csproj" />
@@ -76,6 +81,7 @@
   <Project Path="Unity.AI.Assistant.AssetGenerators.Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Unity.Services.Core.Configuration.csproj" />
+  <Project Path="Unity.Addressables.csproj" />
   <Project Path="Unity.AI.Assistant.Annotations.Editor.csproj" />
   <Project Path="Unity.Purchasing.Utilities.csproj" />
   <Project Path="Unity.Services.Core.Telemetry.csproj" />
@@ -86,6 +92,7 @@
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.ProBuilder.AssetIdRemapUtility.csproj" />
   <Project Path="Unity.AI.Pbr.Srp.csproj" />
+  <Project Path="Unity.Profiling.Core.csproj" />
   <Project Path="glTFast.Editor.csproj" />
   <Project Path="Unity.Services.Core.Analytics.csproj" />
   <Project Path="Unity.EditorCoroutines.Editor.csproj" />
@@ -124,6 +131,7 @@
   <Project Path="Unity.AI.Toolkit.GenerationObjectPicker.csproj" />
   <Project Path="Unity.Services.Core.Environments.csproj" />
   <Project Path="Unity.AI.Toolkit.Compliance.csproj" />
+  <Project Path="Unity.ScriptableBuildPipeline.csproj" />
   <Project Path="Unity.Purchasing.AppleMacosStub.csproj" />
   <Project Path="Unity.Recorder.csproj" />
   <Project Path="Unity.ProBuilder.AddOns.Editor.csproj" />

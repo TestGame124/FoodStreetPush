@@ -36,14 +36,27 @@ public class GridBuildingSystem3D : MonoBehaviour {
 
     public bool CanBuild { get; private set; }
     public void Initialize() {
+        Initialize(50, 50, 1f, Vector3.zero);
+    }
+
+    /// <summary>
+    /// Builds the grid at an explicit size.
+    ///
+    /// Added for the Last Orders plot tiers (GDD 6.2), where the playable grid grows from
+    /// 8x8 to 16x14 across the campaign and the grid itself is the progression track.
+    ///
+    /// The object database is optional here. It belongs to the shop and inventory flow,
+    /// which a grey-box Last Orders scene does not run, and requiring it would mean the new
+    /// scene could not start without dragging in the whole of the old bootstrap.
+    /// </summary>
+    public void Initialize(int gridWidth, int gridHeight, float cellSize, Vector3 origin) {
         Instance = this;
 
-        objectDataHandler.RegisterDatabases();
+        if (objectDataHandler != null) {
+            objectDataHandler.RegisterDatabases();
+        }
 
-        int gridWidth = 50;
-        int gridHeight = 50;
-        float cellSize = 1f;
-        grid = new GridXZ<GridObject>(gridWidth, gridHeight, cellSize, new Vector3(0, 0, 0), (GridXZ<GridObject> g, int x, int y) => new GridObject(g, x, y));
+        grid = new GridXZ<GridObject>(gridWidth, gridHeight, cellSize, origin, (GridXZ<GridObject> g, int x, int y) => new GridObject(g, x, y));
 
         placedObjectTypeSO = null;// placedObjectTypeSOList[0];
     }
@@ -87,6 +100,9 @@ public class GridBuildingSystem3D : MonoBehaviour {
     }
 
     private void Update() {
+
+        if (grid == null)
+            return;
 
         if (UIGame.IsPointerOverUI())
             return;

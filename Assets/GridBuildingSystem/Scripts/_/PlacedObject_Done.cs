@@ -145,6 +145,24 @@ public class PlacedObject_Done : MonoBehaviour, IInteractableObjectEditorState {
         IsPlaced = true;
     }
 
+    /// <summary>
+    /// Assigns placement data only, with none of the side effects of the runtime Setup path.
+    ///
+    /// Setup allocates a save ID and increments a ShopItem count, both of which need the
+    /// full game bootstrap. Authoring a scene - placing the Last Orders starting area from
+    /// an editor script - has no bootstrap and wants neither: the objects are saved with the
+    /// scene, and counting them as purchases would be wrong.
+    ///
+    /// Without this an authored object has a null type internally, so every system that asks
+    /// the grid what is on a tile silently skips it.
+    /// </summary>
+    public void ConfigurePlacement(PlacedObjectTypeSO type, Vector2Int origin, PlacedObjectTypeSO.Dir dir) {
+        this.placedObjectTypeSO = type;
+        this.origin = origin;
+        this.dir = dir;
+        IsPlaced = true;
+    }
+
     public List<Vector2Int> GetGridPositionList() {
         return placedObjectTypeSO.GetGridPositionList(origin, dir);
     }

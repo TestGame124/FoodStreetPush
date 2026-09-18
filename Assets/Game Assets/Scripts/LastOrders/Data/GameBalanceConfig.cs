@@ -111,6 +111,35 @@ namespace LastOrders.Data
                  "which is what lets the Threat Profile be honest.")]
         public int campaignSeed = 20260918;
 
+        [Header("New game")]
+        [Tooltip("What the player starts day 1 with. Enough to build a perimeter and cook, " +
+                 "not enough to be comfortable.")]
+        public ResourceAmount[] startingResources =
+        {
+            new ResourceAmount(ResourceType.Coin, 120),
+            new ResourceAmount(ResourceType.Scrap, 60),
+            new ResourceAmount(ResourceType.Parts, 10),
+            new ResourceAmount(ResourceType.Ammo, 20),
+            new ResourceAmount(ResourceType.Medicine, 2),
+            new ResourceAmount(ResourceType.Veg, 12),
+            new ResourceAmount(ResourceType.Grain, 12),
+            new ResourceAmount(ResourceType.Meat, 6),
+            new ResourceAmount(ResourceType.Spice, 4),
+        };
+
+        [Tooltip("Survivors on the roster at the start. 17 makes staffing the progression " +
+                 "system that unlocks the rest of the game, so this is deliberately small: " +
+                 "with no staff the player does everything and the clock destroys them, and " +
+                 "feeling that is what makes the first recruit matter.")]
+        public int startingSurvivorCount = 1;
+
+        [Tooltip("Names drawn for starting and recruited Survivors.")]
+        public string[] survivorNames =
+        {
+            "Kira", "Mahmoud", "Tess", "Osei", "Bex", "Ruiz", "Halvard", "Nnamdi",
+            "Sana", "Petra", "Yusuf", "Lowell",
+        };
+
         [Header("Content registries")]
         public HeatWeightsConfig heatWeights;
         public PlotTierDefinition[] plotTiers;

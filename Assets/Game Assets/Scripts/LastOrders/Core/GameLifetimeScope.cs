@@ -120,7 +120,28 @@ namespace LastOrders.Core
             // anything is placed, or the first placements go unheard.
             FoodStreet.Navigation.NavigationSystem.Bootstrap();
 
-            composition.Start();
+            // Load before seeding, so a returning player is never handed a second starting
+            // kit on top of what they already earned.
+            FoodStreet.Saving.SaveSystem.Initialize();
+
+            var participant = new Save.LastOrdersSaveParticipant(composition);
+            FoodStreet.Saving.SaveSystem.Register(participant);
+
+            bool isNewCampaign = FoodStreet.Saving.SaveSystem.StartedFresh;
+
+            if (isNewCampaign)
+            {
+                composition.SeedNewGame();
+                composition.Start();
+                return;
+            }
+
+            // RestoreState drops the machine straight into the saved phase, including mid
+            // night, so Start would be a second entry into a phase already entered.
+            participant.RestoreState(FoodStreet.Saving.SaveSystem.Data);
+
+            if (!composition.Machine.IsRunning)
+                composition.Start();
         }
 
         public void Tick() => composition.Tick(Time.deltaTime);

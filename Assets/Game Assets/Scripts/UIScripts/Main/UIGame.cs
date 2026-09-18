@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -80,6 +80,12 @@ public class UIGame : MonoBehaviour
     public static bool IsPointerOverUI()
     {
         EventSystem eventSystem = EventSystem.current;
+
+        // No EventSystem means no UI to be over. Previously this threw on the RaycastAll
+        // below, every frame, in any scene that did not happen to contain one.
+        if (eventSystem == null)
+            return false;
+
         PointerEventData eventData = new PointerEventData(eventSystem);
         eventData.position = Input.mousePosition;
         List<RaycastResult> results = new List<RaycastResult>();
