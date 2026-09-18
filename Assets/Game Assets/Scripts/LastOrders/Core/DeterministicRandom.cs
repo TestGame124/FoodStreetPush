@@ -62,6 +62,31 @@ namespace LastOrders.Core
             }
         }
 
+        /// <summary>
+        /// A hash that is the same in every process, on every platform, forever.
+        ///
+        /// string.GetHashCode is explicitly not that: .NET randomises it per process, so a
+        /// value seeded from one would produce a different result after every restart. Any
+        /// determinism that has to survive a save file being closed and reopened - a pending
+        /// Dispatch outcome, a night replayed from a snapshot - has to seed from this instead.
+        /// </summary>
+        public static int StableHash(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return 0;
+
+            unchecked
+            {
+                // FNV-1a, 32-bit.
+                uint hash = 2166136261u;
+                for (int i = 0; i < value.Length; i++)
+                {
+                    hash ^= value[i];
+                    hash *= 16777619u;
+                }
+                return (int)hash;
+            }
+        }
+
         public uint NextUInt()
         {
             uint t = x ^ (x << 11);

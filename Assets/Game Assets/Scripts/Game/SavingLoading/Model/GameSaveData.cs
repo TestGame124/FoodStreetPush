@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace FoodStreet.Saving
 {
@@ -24,6 +24,13 @@ namespace FoodStreet.Saving
         public WorldSaveData world = new WorldSaveData();
 
         /// <summary>
+        /// The Last Orders section: day cycle, Heat, Reputation, the roster and the
+        /// ghost outlines awaiting rebuild. Null in any file written before it existed,
+        /// which EnsureComplete fills in rather than migrating.
+        /// </summary>
+        public LastOrders.Save.LastOrdersSaveData lastOrders = new LastOrders.Save.LastOrdersSaveData();
+
+        /// <summary>
         /// A file that has been through migration can still be missing whole
         /// sections if it was hand-truncated. Fill in the gaps so no caller has
         /// to null-check its way down the tree.
@@ -34,10 +41,12 @@ namespace FoodStreet.Saving
             if (economy == null) economy = new EconomySaveData();
             if (progress == null) progress = new ProgressSaveData();
             if (world == null) world = new WorldSaveData();
+            if (lastOrders == null) lastOrders = new LastOrders.Save.LastOrdersSaveData();
 
             profile.EnsureComplete();
             progress.EnsureComplete();
             world.EnsureComplete();
+            lastOrders.EnsureComplete();
         }
     }
 
