@@ -132,6 +132,22 @@ namespace LastOrders.DayCycle
 
         public bool CanAfford(float clockMinutes) => ClockMinutesRemaining >= clockMinutes;
 
+        /// <summary>
+        /// Gives clock-minutes back. Only ever called by a command being undone (6.3), so
+        /// that an undo returns both currencies the build spent.
+        ///
+        /// Deliberately does not rewind <see cref="ClockMinutesWhole"/> or re-fire the
+        /// per-minute event. Those minutes already happened: parties were scheduled against
+        /// them and Heat was accrued for them. Un-ringing that bell would spawn the day's
+        /// arrivals twice. The player gets their working time back; the world does not
+        /// travel backwards.
+        /// </summary>
+        public void RefundClockMinutes(float minutes)
+        {
+            if (minutes <= 0f) return;
+            ClockMinutes = Mathf.Max(0f, ClockMinutes - minutes);
+        }
+
         /// <summary>Restores the clock from a save without firing the per-minute events —
         /// replaying forty minute-ticks on load would spawn forty parties.</summary>
         public void RestoreFromSave(int day, float clockMinutes)

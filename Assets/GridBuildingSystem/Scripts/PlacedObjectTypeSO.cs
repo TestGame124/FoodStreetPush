@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using LastOrders.Data;
 using UnityEngine.Pool;
 
 [CreateAssetMenu()]
@@ -141,6 +142,111 @@ public class PlacedObjectTypeSO : ScriptableObject {
         }
         return gridPositionList;
     }
+
+    // ------------------------------------------------------------------
+    // Last Orders (GDD 6.1) - the buildable's role in the day/night loop.
+    //
+    // Added to this existing asset rather than to a parallel type so that every
+    // buildable already authored keeps working and the build system needs no
+    // changes to place them. Unset values mean "not a Last Orders buildable yet",
+    // which is exactly what the legacy assets are.
+    //
+    // Pillar 2 is the reason these live together: a table and a barricade compete
+    // for the same tile, so one asset type has to answer both the economic and the
+    // tactical question about any given object.
+    // ------------------------------------------------------------------
+
+    [Header("Last Orders - Category")]
+    public BuildCategory buildCategory = BuildCategory.Service;
+
+    [Header("Last Orders - Cost")]
+    [Tooltip("Materials consumed. Every build costs materials AND clock-minutes (6.3).")]
+    public ResourceAmount[] buildCost;
+
+    [Tooltip("Clock-minutes to build. GDD: wall 2, table 1, turret 10, generator 15. " +
+             "Every minute building is a minute not earning, and every minute earning is Heat.")]
+    public float buildClockMinutes = 1f;
+
+    [Header("Last Orders - Durability (15.4)")]
+    public float maxHealth = 100f;
+
+    [Tooltip("Output while Damaged, as a fraction. GDD says 60 to 90 percent.")]
+    [Range(0f, 1f)] public float damagedEfficiency = 0.75f;
+
+    [Tooltip("Perimeter objects can be Destroyed and leave a ghost outline. Interior objects " +
+             "can only ever be Wrecked, never removed - a wrecked restaurant still looks " +
+             "like the player's restaurant at dawn, which matters more than it sounds.")]
+    public bool isPerimeter;
+
+    [Tooltip("The starting stove. Indestructible: it can be Damaged but never disabled. " +
+             "One flag solves the entire softlock problem (15.1).")]
+    public bool isHearth;
+
+    [Header("Last Orders - Heat (11.1)")]
+    [Tooltip("Heat contributed per occupied tile, per day, simply by existing.")]
+    public float heatPerTile = 0.5f;
+
+    [Tooltip("A powered light. Adds 3 Heat each if still burning after dusk.")]
+    public bool isPoweredLight;
+
+    [Tooltip("Adds 5 Heat while running, and powers turrets and lights.")]
+    public bool isGenerator;
+
+    [Tooltip("Adds 4 Heat while playing, and changes the soundtrack. Good music is a risk.")]
+    public bool isJukebox;
+
+    [Header("Last Orders - Role")]
+    [Tooltip("Seats this many customers. Table sizes are 2, 4 and 6.")]
+    public int seatCapacity;
+
+    [Tooltip("Customers enter ONLY through doors, and enemies path to doors first. " +
+             "Revenue capacity and defensive integrity are the same variable, expressed " +
+             "in doors (7).")]
+    public bool isDoor;
+
+    [Tooltip("Part of the perimeter shell for integrity and breach calculations.")]
+    public bool isWall;
+
+    [Tooltip("Shelters customers caught by dusk, and its contents cannot be stolen (15.6). " +
+             "One of the most valuable buildables in the game.")]
+    public bool isCellar;
+
+    [Tooltip("Stores ingredients. What the Glutton beelines for.")]
+    public bool isPantry;
+
+    [Tooltip("Lets the player feed the Last Party at the door for half payment (9.4).")]
+    public bool isTakeawayWindow;
+
+    [Header("Last Orders - Defense")]
+    [Tooltip("Damage per second to enemies in range. Turrets resolve combat automatically; " +
+             "the player's build IS the strategy (13.2).")]
+    public float defenseDps;
+
+    public float defenseRangeTiles;
+
+    [Tooltip("Consumes Ammo per shot and must be reloaded via the Crisis Bar.")]
+    public bool consumesAmmo;
+
+    [Header("Last Orders - Production")]
+    [Tooltip("Recipes this station can cook. Stations cook automatically when staffed.")]
+    public RecipeDefinition[] recipes;
+
+    [Tooltip("Wall material, when this is a wall segment (6.4).")]
+    public WallMaterialDefinition wallMaterial;
+
+    [Header("Last Orders - Comfort")]
+    [Tooltip("Multiplies the daily customer pool. Comfort ranges 0.9 to 1.2 (9.2).")]
+    public float comfortMultiplier = 1f;
+
+    [Header("Last Orders - Unlock")]
+    [Tooltip("Reputation gate. Plot tiers and Blueprints are the other two gates.")]
+    public int requiredReputation;
+
+    [Tooltip("Unlocked by a Blueprint from Dispatch, a Named Night, or a faction.")]
+    public bool requiresBlueprint;
+
+    /// <summary>Total Heat this object contributes per day at rest, before anything it does.</summary>
+    public float PassiveHeat => heatPerTile * Mathf.Max(1, width * height);
 
    
 }

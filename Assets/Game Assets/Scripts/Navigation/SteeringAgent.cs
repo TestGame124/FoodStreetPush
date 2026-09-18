@@ -40,6 +40,20 @@ namespace FoodStreet.Navigation
         public float Speed => speed;
         public float Radius => radius;
 
+        /// <summary>
+        /// Overrides the authored movement profile at runtime.
+        ///
+        /// Needed because pooled agents are shared across archetypes: one enemy prefab's
+        /// instances serve as Shamblers at 1.0 and Runners at 2.2, and the pool hands back
+        /// whichever instance is free. Without this the archetype's speed would be whatever
+        /// the previous occupant happened to leave behind.
+        /// </summary>
+        public void ConfigureBody(float newSpeed, float newRadius)
+        {
+            speed = Mathf.Max(0.05f, newSpeed);
+            radius = Mathf.Max(0.05f, newRadius);
+        }
+
         /// <summary>Metres per second actually travelled last frame. Animators read this.</summary>
         public Vector3 Velocity => velocity;
 
