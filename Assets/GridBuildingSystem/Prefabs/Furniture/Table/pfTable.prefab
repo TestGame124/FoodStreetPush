@@ -140,7 +140,6 @@ GameObject:
   - component: {fileID: 9183959527346404516}
   - component: {fileID: 2443522381953138177}
   - component: {fileID: 4803322566533479493}
-  - component: {fileID: 2252649222123331067}
   m_Layer: 0
   m_Name: pfTable
   m_TagString: Untagged
@@ -246,22 +245,6 @@ MonoBehaviour:
     gettingServed: 0
     isSitted: 0
     foodPlatePos: {fileID: 7096210488073138246}
---- !u!208 &2252649222123331067
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4782235985580720506}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 0.47, y: 0.15, z: 0.39}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 1.5, y: 0, z: 1.5}
-  m_TimeToStationary: 0.5
 --- !u!1 &4820482931590373724
 GameObject:
   m_ObjectHideFlags: 0

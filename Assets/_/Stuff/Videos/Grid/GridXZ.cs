@@ -77,6 +77,10 @@ public class GridXZ<TGridObject> {
         return cellSize;
     }
 
+    public Vector3 GetOriginPosition() {
+        return originPosition;
+    }
+
     public Vector3 GetWorldPosition(int x, int z) {
         return new Vector3(x, 0, z) * cellSize + originPosition;
     }

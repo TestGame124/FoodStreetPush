@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4782235985580720507}
   - component: {fileID: 9183959527346404516}
-  - component: {fileID: 3175272100946502693}
   - component: {fileID: -2890234390156455182}
   m_Layer: 0
   m_Name: PfCafe
@@ -54,22 +53,6 @@ MonoBehaviour:
   sellingPrice: 0
   placedPosition: {x: 0, y: 0, z: 0}
   isRemoved: 0
---- !u!208 &3175272100946502693
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4782235985580720506}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 3, y: 0.2, z: 3}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 3, y: 0, z: 3}
-  m_TimeToStationary: 0.5
 --- !u!65 &-2890234390156455182
 BoxCollider:
   m_ObjectHideFlags: 0

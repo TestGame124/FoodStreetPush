@@ -1,4 +1,4 @@
-﻿/* 
+/* 
     ------------------- Code Monkey -------------------
 
     Thank you for downloading this package
@@ -15,6 +15,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+namespace CodeMonkey.Tutorials {
+
+// Renamed into a namespace: this tutorial leftover used to sit in the global
+// namespace as SaveSystem, shadowing FoodStreet.Saving.SaveSystem in every
+// gameplay file that imported it.
 public static class SaveSystem {
 
     private const string SAVE_EXTENSION = "txt";
@@ -115,5 +120,7 @@ public static class SaveSystem {
             return default(TSaveObject);
         }
     }
+
+}
 
 }

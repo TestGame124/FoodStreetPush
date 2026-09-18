@@ -86,6 +86,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: BigWallVisualWood
       objectReference: {fileID: 0}
+    - target: {fileID: 1456656668474129271, guid: 82d58d55370c557489ef6a8a12a635b7, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2499414142690952232, guid: 82d58d55370c557489ef6a8a12a635b7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

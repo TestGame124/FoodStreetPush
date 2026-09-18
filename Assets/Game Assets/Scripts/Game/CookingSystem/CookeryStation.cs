@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FoodStreet.Saving;
 using UnityEngine;
 
 public class CookeryStation : MonoBehaviour, IInteractableObject
@@ -104,45 +105,90 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     }
 
     #region Saving Loading
-    public CookStationData Save()
+
+    private PlacedObject_Done owner;
+
+    /// <summary>
+    /// The ID of the placed object this station is part of. Cooks are keyed by
+    /// it, so a station that is built or sold cannot shuffle everybody else's
+    /// pans onto the wrong stove.
+    /// </summary>
+    public int OwnerId
     {
-
-        CookRecipeData[] recipiesData = new CookRecipeData[recipiesInProgress.Count];
-
-        for (int i = 0; i < recipiesData.Length; i++)
+        get
         {
-            recipiesData[i] = recipiesInProgress[i];
-        }
+            if (owner == null)
+                owner = GetComponentInParent<PlacedObject_Done>();
 
-        return new CookStationData(recipiesData);
+            return owner != null ? owner.ID : 0;
+        }
     }
 
-    public void Load(CookStationData data)
+    public CookStationSaveData Save()
+    {
+        CookStationSaveData data = new CookStationSaveData { ownerId = OwnerId };
+
+        for (int i = 0; i < recipiesInProgress.Count; i++)
+        {
+            CookRecipeData recipe = recipiesInProgress[i];
+            if (recipe == null)
+                continue;
+
+            data.recipes.Add(new CookRecipeSaveData
+            {
+                // The result item identifies the recipe. The old format stored
+                // the sprite's asset name, which broke the moment art was
+                // renamed.
+                resultType = recipe.results.item.type,
+                remainingSeconds = recipe.timer,
+                totalSeconds = recipe.totalTime,
+                active = recipe.active
+            });
+        }
+
+        return data;
+    }
+
+    public void Load(CookStationSaveData data)
     {
         if (data == null)
+            return;
+
+        for (int i = 0; i < data.recipes.Count; i++)
         {
-            data = Save();
+            CookRecipeSaveData saved = data.recipes[i];
+
+            CookingRecipe recipe = FindRecipe(saved.resultType);
+            if (recipe == null)
+            {
+                // The station no longer offers what was cooking - a recipe was
+                // removed or moved since this save. Drop it rather than crash.
+                Debug.LogWarning($"[CookeryStation] Dropping saved cook for '{saved.resultType}': this station no longer makes it.");
+                continue;
+            }
+
+            CookRecipeData restored = new CookRecipeData(this, recipe, InventorySystem.instance)
+            {
+                timer = Mathf.Clamp(saved.remainingSeconds, 0, saved.totalSeconds),
+                active = saved.active
+            };
+
+            recipiesInProgress.Add(restored);
+            StartCoroutine(restored.StartCookingTimer(this, true));
         }
-
-
-        for (int i = 0; i < data.recipiesInProgress.Length; i++)
-        {
-            recipiesInProgress.Add(data.recipiesInProgress[i]);
-            StartCoroutine(data.recipiesInProgress[i].StartCookingTimer(this));
-        }
-
     }
+
+    private CookingRecipe FindRecipe(ItemType resultType)
+    {
+        for (int i = 0; i < recipies.Length; i++)
+        {
+            if (recipies[i] != null && recipies[i].Results.item != null && recipies[i].Results.item.type == resultType)
+                return recipies[i];
+        }
+        return null;
+    }
+
     #endregion
 
-}
-[System.Serializable]
-public class CookStationData
-{
-    public CookRecipeData[] recipiesInProgress;
-
-    public CookStationData(CookRecipeData[] recipiesInProgress)
-    {
-        this.recipiesInProgress = recipiesInProgress;
-    }
 }
 

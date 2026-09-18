@@ -1,10 +1,8 @@
 using DG.Tweening;
+using FoodStreet.Navigation;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.AI;
 
 public class VisitorBehaviour : MonoBehaviour
 {
@@ -28,7 +26,7 @@ public class VisitorBehaviour : MonoBehaviour
     private Vector3 startPosition;
 
     [HideInInspector] Animator animator;
-    [HideInInspector]public NavMeshAgent agent;
+    [HideInInspector]public PathFollower agent;
 
     private Zone zone;
 
@@ -56,8 +54,9 @@ public class VisitorBehaviour : MonoBehaviour
         currentState= States.Arriving;
         if (agent == null)
         {
-            agent = GetComponent<NavMeshAgent>();
+            agent = NavAgentSetup.Ensure(gameObject);
         }
+        agent.enabled = true;
         if(animator == null)
             animator= GetComponentInChildren<Animator>();
 
@@ -73,7 +72,7 @@ public class VisitorBehaviour : MonoBehaviour
     {
         if (!isInitialized)
             return;
-        animator.SetFloat(MOVE_HASH, agent.velocity.magnitude / agent.speed);
+        animator.SetFloat(MOVE_HASH, agent.Velocity.magnitude / agent.Speed);
         switch (currentState)
         {
             case States.Arriving:
@@ -245,7 +244,11 @@ public class VisitorBehaviour : MonoBehaviour
 
         transform.SetParent(null);
 
-        agent.enabled = true;
+        if (agent != null)
+        {
+            agent.enabled = true;
+            agent.Stop();
+        }
 
         isMoving = false;
         stateEntered = false;
@@ -263,7 +266,7 @@ public class VisitorBehaviour : MonoBehaviour
     public void MoveVisitor(Vector3 targetPos, System.Action onReached)
     {
         agent.SetDestination(targetPos);
-        movingCoroutine = StartCoroutine(IsMoving(targetPos,onReached));
+        movingCoroutine = StartCoroutine(IsMoving(onReached));
     }
 
     public void ChangeState(States state)
@@ -284,10 +287,15 @@ public class VisitorBehaviour : MonoBehaviour
         isMoving = false;
     }
 
-    IEnumerator IsMoving(Vector3 targetPos,Action onReached)
+    // Arrival comes from the follower rather than from a distance test against the target.
+    // A chair or a counter sits on a solid tile, so the visitor is routed to the nearest
+    // spot it actually fits — a distance test against the target itself would never be
+    // satisfied and the visitor would wait there forever.
+    IEnumerator IsMoving(Action onReached)
     {
         isMoving= true;
-        while(Vector3.Distance(transform.position, targetPos) > agent.stoppingDistance)
+        yield return null;
+        while(!agent.HasArrived)
         {
             yield return null;
         }

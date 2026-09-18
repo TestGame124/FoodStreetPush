@@ -34,9 +34,19 @@ public class CookRecipeData
         this.inventory = inventory;
     }
 
-    public IEnumerator StartCookingTimer(CookeryStation manager)
+    /// <summary>
+    /// Runs the cook down to zero and hands over the results.
+    /// </summary>
+    /// <param name="resume">
+    /// True when the cook is being restored from a save. The timer then keeps
+    /// the value it was loaded with instead of restarting at the full duration -
+    /// reloading used to hand the player back a full-length cook.
+    /// </param>
+    public IEnumerator StartCookingTimer(CookeryStation manager, bool resume = false)
     {
-        timer = totalTime;
+        if (!resume)
+            timer = totalTime;
+
         while (timer > 0)
         {
             UpdateTimer?.Invoke(timer, this);

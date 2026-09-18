@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 1556009326894732811}
   - component: {fileID: -5101677624059125589}
   - component: {fileID: 3665794386092119041}
-  - component: {fileID: 6462297201111936804}
   m_Layer: 0
   m_Name: pfSoupStove
   m_TagString: Untagged
@@ -94,22 +93,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.51, z: 2}
   m_Center: {x: 1, y: 0.15, z: 1}
---- !u!208 &6462297201111936804
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2738897271142769183}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 1, y: 0.15, z: 1}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 1, y: 0, z: 1}
-  m_TimeToStationary: 0.5
 --- !u!1 &6740269504063400342
 GameObject:
   m_ObjectHideFlags: 0

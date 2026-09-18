@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FoodStreet.Saving;
 using UnityEngine;
 
 public class InventorySystem : MonoBehaviour
@@ -126,43 +127,57 @@ public class InventorySystem : MonoBehaviour
 
     #region Saving Loading
 
-    public InventoryData Save()
+    public InventorySaveData Save()
     {
-       
-        return new InventoryData(items.ToArray(), inventorySize);
+        InventorySaveData data = new InventorySaveData { size = inventorySize };
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            Item item = items[i];
+            if (item == null || item.itemDataSO == null)
+                continue;
+
+            // Type and count only. The old format wrote the whole ItemDataSO
+            // asset into the save file for every stack.
+            data.items.Add(new InventoryEntrySaveData
+            {
+                type = item.type,
+                amount = item.itemsAmount
+            });
+        }
+
+        return data;
     }
 
-    public void Load(InventoryData data)
+    public void Load(InventorySaveData data)
     {
-        //if(data == null)
-        //{
-        //    data = Save(true);
-        //}
-       
-        for (int i = 0; i < data.items.Length; i++)
+        if (data == null)
+            return;
+
+        items.Clear();
+        itemDict.Clear();
+
+        inventorySize = data.size > 0 ? data.size : inventorySize;
+
+        for (int i = 0; i < data.items.Count; i++)
         {
-            Item item = data.items[i];
-            Item newItem = new(ItemController.GetItem(item.type),item.itemsAmount);
-            AddItem(newItem);
+            InventoryEntrySaveData entry = data.items[i];
+            if (entry.amount <= 0)
+                continue;
+
+            ItemDataSO itemData = ItemController.GetItem(entry.type);
+            if (itemData == null)
+                continue;
+
+            // Rebuilt directly rather than through AddItem: that path adds one
+            // at a time and would restore a stack of 40 as a stack of 1.
+            Item item = new Item(itemData, entry.amount);
+            items.Add(item);
+            itemDict[item.type] = item;
         }
-        inventorySize = data.inventorySize;
+
+        onInventoryChangedCallback?.Invoke();
     }
 
     #endregion
-}
-
-
-[Serializable]
-public class InventoryData
-{
-    public Item[] items;
-    public int inventorySize;
-
-
-    public InventoryData(Item[]items, int inventorySize)
-    {
-        this.items = items;
-        this.inventorySize = inventorySize;
-    }
-    
 }

@@ -2,12 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Unity.VisualScripting;
+using FoodStreet.Saving;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Zone : MonoBehaviour
+public class Zone : MonoBehaviour, ISaveParticipant
 {
 
     [SerializeField] InventorySystem inventory;
@@ -156,67 +155,91 @@ public class Zone : MonoBehaviour
     #endregion
 
     #region Saving Loading
-    public ZoneData Save()
+
+    // Runs after the build grid, so every pot and station has been spawned and
+    // has an ID by the time state is pushed into it.
+    public int SaveOrder => 100;
+
+    private bool restored;
+
+    /// <summary>
+    /// Copies the live restaurant into the save model. Called on the main thread
+    /// immediately before each write.
+    /// </summary>
+    public void CaptureState(GameSaveData data)
     {
-       
-        InventoryData inventoryData = inventory.Save();
-        PotData[] potData = new PotData[plantPots.Count];
-
-        for (int i = 0; i < potData.Length; i++)
-        {
-            potData[i] = plantPots[i].Save();
-        }
-
-        CookStationData[] cookData = new CookStationData[cookingBuildings.Count];
-
-        for(int i = 0; i < cookData.Length; i++)
-        {
-            cookData[i] = cookingBuildings[i].Save();
-        }
-
-        return new ZoneData(inventoryData, potData, cookData);
-    }
-
-    public void Load(ZoneData data)
-    {
-        if (!TutorialController.TutorialCompleted())
+        // Until the scene has been filled in from the file, the live zone is an
+        // empty authored shell. Capturing it would write that emptiness over the
+        // player's restaurant - the exact failure the old two-second save loop
+        // could hit when it fired mid-load. Leave the saved sections untouched.
+        if (!restored)
             return;
-        if (data == null)
-        {
-            data = Save();
-        }
 
-        inventory.Load(data.inventory);
+        data.world.inventory = inventory.Save();
+
+        data.world.pots.Clear();
         for (int i = 0; i < plantPots.Count; i++)
         {
-            plantPots[i].Load(data.potsData[i]);
+            PlantPot pot = plantPots[i];
+            if (pot == null || pot.OwnerId == 0)
+                continue;
+
+            data.world.pots.Add(pot.Save());
+        }
+
+        data.world.stations.Clear();
+        for (int i = 0; i < cookingBuildings.Count; i++)
+        {
+            CookeryStation station = cookingBuildings[i];
+            if (station == null || station.OwnerId == 0)
+                continue;
+
+            data.world.stations.Add(station.Save());
+        }
+    }
+
+    /// <summary>
+    /// Pushes saved state back into the scene, matching by owner ID. Anything
+    /// with no entry in the file is simply left in its authored state, and an
+    /// entry with no matching object is skipped - neither is an error, because
+    /// players build and sell things between sessions.
+    /// </summary>
+    public void RestoreState(GameSaveData data)
+    {
+        if (!TutorialController.TutorialCompleted())
+        {
+            // Nothing to restore during the tutorial, but the zone is now live
+            // and its state is the truth - start capturing it.
+            restored = true;
+            return;
+        }
+
+        inventory.Load(data.world.inventory);
+
+        for (int i = 0; i < plantPots.Count; i++)
+        {
+            PlantPot pot = plantPots[i];
+            if (pot == null)
+                continue;
+
+            PotSaveData saved = data.world.FindPot(pot.OwnerId);
+            if (saved != null)
+                pot.Load(saved);
         }
 
         for (int i = 0; i < cookingBuildings.Count; i++)
         {
+            CookeryStation station = cookingBuildings[i];
+            if (station == null)
+                continue;
 
-            cookingBuildings[i].Load(data.cookData[i]);
+            CookStationSaveData saved = data.world.FindStation(station.OwnerId);
+            if (saved != null)
+                station.Load(saved);
         }
+
+        restored = true;
     }
 
-    
     #endregion
-}
-
-[System.Serializable]
-public class ZoneData
-{
-
-
-    public InventoryData inventory;
-    public PotData[] potsData;
-    public CookStationData[] cookData;
-    public ZoneData(InventoryData inventory, PotData[] potsData, CookStationData[] cookData)
-    {
-        this.inventory = inventory;
-        this.potsData = potsData;
-        this.cookData = cookData;
-    }
-   
-
 }

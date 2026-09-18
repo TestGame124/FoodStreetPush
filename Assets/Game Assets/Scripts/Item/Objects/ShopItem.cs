@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FoodStreet.Saving;
 using UnityEngine;
 
 [Serializable]
@@ -17,19 +18,24 @@ public class ShopItem
     private bool isUnlocked;
     public bool IsUnlocked => isUnlocked;
 
-    public ShopItem(int id,PlacedObjectTypeSO itemData, int itemsAmount, ItemUiButton itemUI)
+    public ShopItem(int id, PlacedObjectTypeSO itemData, int itemsAmount, ItemUiButton itemUI)
     {
         this.id = id;
         this.itemData = itemData;
         this.itemsAmount = itemsAmount;
         this.itemUI = itemUI;
-        this.isUnlocked = itemData.isUnlocked;
+
+        // An unlock recorded in the save file always wins. Levelling is only one
+        // of the ways an item can open up, and a granted unlock must survive a
+        // rebalance that raises the required level.
+        this.isUnlocked = itemData.isUnlocked || IsRecordedAsUnlocked();
+
         itemUI.AssignShopItem(this);
 
         Unlock();
 
-        if (!isUnlocked) {
-
+        if (!isUnlocked)
+        {
             // Catch the case where the player is already one level away from
             // unlocking this item, then keep watching for future level-ups.
             AddReward(LevelUpSystem.GetLevel());
@@ -46,7 +52,7 @@ public class ShopItem
             if (itemsAmount >= itemData.maxItems)
                 return false;
         }
-        return true ;
+        return true;
     }
 
     public void IncreaseItemCount()
@@ -69,29 +75,49 @@ public class ShopItem
         if (itemUI != null)
         {
             itemUI.limitationText.SetText($"{itemsAmount}/{itemData.maxItems}");
-            if (!CanPurchase())
-            {
-                itemUI.ButtonState(false);
-            }
-            else
-            {
-                itemUI.ButtonState(true);
-            }
+            itemUI.ButtonState(CanPurchase());
         }
     }
 
     public void Unlock()
     {
-        if (itemData.isUnlocked || isUnlocked)
+        if (isUnlocked)
+        {
+            itemUI.Redraw();
+            return;
+        }
+
+        if (itemData.isUnlocked || LevelUpSystem.GetLevel() >= itemData.requiredLevel)
+        {
+            isUnlocked = true;
+            RecordUnlock();
+
+            // Stop listening once it can never be relevant again - these are
+            // static events, and a ShopItem is rebuilt on every scene load.
+            LevelUpSystem.OnLevelUp -= AddReward;
+        }
+
+        itemUI.Redraw();
+    }
+
+    private bool IsRecordedAsUnlocked()
+    {
+        return SaveSystem.IsReady
+            && SaveSystem.Data.progress.IsUnlocked(itemData.categoryType, itemData.type);
+    }
+
+    /// <summary>
+    /// Writes the unlock into the save file. Unlocks were previously derived
+    /// from level on every boot and never stored, so nothing granted outside
+    /// levelling could survive a restart.
+    /// </summary>
+    private void RecordUnlock()
+    {
+        if (!SaveSystem.IsReady)
             return;
 
-        Debug.Log("Before Unlock Item");
-        if(LevelUpSystem.GetLevel() >= itemData.requiredLevel)
-        {
-            Debug.Log("After Unlock Item");
-            isUnlocked = true ;
-        }
-            itemUI.Redraw();
+        if (SaveSystem.Data.progress.MarkUnlocked(itemData.categoryType, itemData.type))
+            SaveSystem.MarkDirty();
     }
 
     private void AddReward(int level)
@@ -104,6 +130,4 @@ public class ShopItem
             LevelUpSystem.AddReward(this);
         }
     }
-
-    
 }

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 1556009326894732811}
   - component: {fileID: 8783775160805292862}
   - component: {fileID: 3345797960380302717}
-  - component: {fileID: 6700238814503197602}
   m_Layer: 0
   m_Name: pfBreadStove
   m_TagString: Untagged
@@ -95,22 +94,6 @@ MonoBehaviour:
   recipiesInProgress: []
   MaxCookRecipies: 0
   centerPoint: {fileID: 2739181951041425887}
---- !u!208 &6700238814503197602
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2738897271142769183}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 1, y: 0.5, z: 1}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 1, y: 0, z: 1}
-  m_TimeToStationary: 0.5
 --- !u!1 &9084848429662728445
 GameObject:
   m_ObjectHideFlags: 0
@@ -220,22 +203,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3997620240393340808, guid: ec9905e35d6096b49914fa385140cbed, type: 3}
   m_PrefabInstance: {fileID: 4306201445554640090}
   m_PrefabAsset: {fileID: 0}
---- !u!208 &6146589250691001378
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 916716771182924626}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 0.5, y: 0.5, z: 0.5}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!4 &1832121232693154034 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2499414142690952232, guid: ec9905e35d6096b49914fa385140cbed, type: 3}

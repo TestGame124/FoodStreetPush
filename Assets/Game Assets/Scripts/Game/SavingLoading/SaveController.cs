@@ -1,100 +1,143 @@
-
-using UnityEngine;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System;
-using BayatGames.SaveGameFree;
-using System.Collections;
-using DG.Tweening;
-using Unity.Burst;
-using Unity.Jobs;
-using Unity.Collections;
-using BayatGames.SaveGameFree.Serializers;
+using FoodStreet.Saving;
+using UnityEngine;
 
-#region Old save FIle
-public class SaveController : MonoBehaviour
+/// <summary>
+/// The build grid's view of persistence.
+///
+/// All of the real work now lives in <see cref="SaveSystem"/>; this type stays
+/// because the grid building package calls into it from a dozen places, and
+/// because placed objects deserve an API that speaks in objects rather than in
+/// files. Every method here edits the in-memory model and marks it dirty - none
+/// of them touch the disk, so placing a hundred tiles costs a hundred list
+/// operations and one write.
+/// </summary>
+public static class SaveController
 {
-    public readonly static string persistentDataPath = Application.persistentDataPath;
-    private readonly static string cookSaveFilePath = Application.persistentDataPath + "/cookRecipes.json";
+    /// <inheritdoc cref="SaveIds.RuntimeIdBase"/>
+    public const int RUNTIME_ID_BASE = SaveIds.RuntimeIdBase;
 
-    public const string PlacedObjectDataID = "placedObjectList";
-
-    public static bool SaveIsRequired;
-
-    private const string IdCounterKey = "placedObjectIdCounter";
-
-    /// <summary>
-    /// Objects authored into the scene take IDs 1..N from their index in the
-    /// zone's list, which is stable across sessions. Runtime-placed objects
-    /// allocate above this base from a persisted counter, so a runtime ID is
-    /// never reused and never collides with a scene object's ID.
-    /// </summary>
-    public const int RUNTIME_ID_BASE = 100000;
-
-    public static int uID = RUNTIME_ID_BASE;
-
-    public const int SAVE_DELAY = 2;
-
-    public static readonly object fileLock = new object();
-
-    static ISaveGameSerializer serializer;
-
-    // Authoritative in-memory copy of the placed-object list. The save file is
-    // deserialized once per session; every mutation edits this list and writes
-    // it back, instead of doing a full load + scan + save on every placement.
-    private static List<PlacedObjectData> cachedPlacedObjects;
-
-    private static List<PlacedObjectData> GetCache()
+    private static List<PlacedObjectData> PlacedObjects
     {
-        if (cachedPlacedObjects == null)
+        get
         {
-            if (serializer == null)
-                serializer = new SaveGameBinarySerializer();
-
-            PlacedObjectDataListWrapper wrapper = SaveGame.Load<PlacedObjectDataListWrapper>(PlacedObjectDataID, serializer);
-            cachedPlacedObjects = wrapper != null && wrapper.placedObjectDataList != null
-                ? wrapper.placedObjectDataList
-                : new List<PlacedObjectData>();
+            if (!SaveSystem.IsReady)
+            {
+                Debug.LogError("[SaveController] Placed objects touched before SaveSystem.Initialize.");
+                return null;
+            }
+            return SaveSystem.Data.world.placedObjects;
         }
-        return cachedPlacedObjects;
     }
 
-    private static void Persist()
-    {
-        if (serializer == null)
-            serializer = new SaveGameBinarySerializer();
+    #region Placed objects
 
-        PlacedObjectDataListWrapper placedObj = new PlacedObjectDataListWrapper { placedObjectDataList = GetCache() };
-        SaveGame.Save(PlacedObjectDataID, placedObj, serializer);
+    /// <summary>
+    /// A copy, so callers can iterate while placement code mutates the model.
+    /// </summary>
+    public static List<PlacedObjectData> LoadPlacedObjects()
+    {
+        List<PlacedObjectData> stored = PlacedObjects;
+        return stored == null
+            ? new List<PlacedObjectData>()
+            : new List<PlacedObjectData>(stored);
     }
 
     public static void SavePlacedObjects(List<PlacedObjectData> placedObjectDataList)
     {
-        cachedPlacedObjects = placedObjectDataList ?? new List<PlacedObjectData>();
-        Persist();
-    }
-#if UNITY_EDITOR
-    [UnityEditor.MenuItem("Saving/Clear Data")]
-    public static void RemoveAllSave()
-    {
-        PlayerPrefs.DeleteAll();
-        SaveGame.Clear();
-        cachedPlacedObjects = null;
-    }
-#endif
+        List<PlacedObjectData> stored = PlacedObjects;
+        if (stored == null)
+            return;
 
-    public static bool isSavingPlacedObject;
+        stored.Clear();
+        if (placedObjectDataList != null)
+            stored.AddRange(placedObjectDataList);
+
+        SaveSystem.MarkDirty();
+    }
 
     public static void SavePlacedObject(PlacedObjectData placedObjectData)
     {
-        List<PlacedObjectData> placedObjectDataList = GetCache();
+        List<PlacedObjectData> stored = PlacedObjects;
+        if (stored == null || IndexOfId(stored, placedObjectData.Id) >= 0)
+            return;
 
-        if (IndexOfId(placedObjectDataList, placedObjectData.Id) < 0)
+        stored.Add(placedObjectData);
+        SaveSystem.MarkDirty();
+    }
+
+    public static void UpdatePlacedObject(PlacedObjectData placedObjectData)
+    {
+        List<PlacedObjectData> stored = PlacedObjects;
+        if (stored == null)
+            return;
+
+        int index = IndexOfId(stored, placedObjectData.Id);
+        if (index >= 0)
         {
-            placedObjectDataList.Add(placedObjectData);
-            Persist();
+            if (stored[index].Equals(placedObjectData))
+                return;
+
+            stored[index] = placedObjectData;
         }
+        else
+        {
+            stored.Add(placedObjectData);
+        }
+
+        SaveSystem.MarkDirty();
+    }
+
+    public static void RemoveObject(PlacedObjectData placedObjectData)
+    {
+        List<PlacedObjectData> stored = PlacedObjects;
+        if (stored == null)
+            return;
+
+        int index = IndexOfId(stored, placedObjectData.Id);
+        if (index < 0)
+            return;
+
+        stored.RemoveAt(index);
+        SaveSystem.MarkDirty();
+    }
+
+    public static void BatchSavePlacedObjects(List<PlacedObjectData> placedObjectsBatch, List<PlacedObjectData> removedObjectsBatch)
+    {
+        List<PlacedObjectData> stored = PlacedObjects;
+        if (stored == null)
+            return;
+
+        bool changed = false;
+
+        if (removedObjectsBatch != null)
+        {
+            for (int i = 0; i < removedObjectsBatch.Count; i++)
+            {
+                int index = IndexOfId(stored, removedObjectsBatch[i].Id);
+                if (index < 0)
+                    continue;
+
+                stored.RemoveAt(index);
+                changed = true;
+            }
+        }
+
+        if (placedObjectsBatch != null)
+        {
+            for (int i = 0; i < placedObjectsBatch.Count; i++)
+            {
+                PlacedObjectData placed = placedObjectsBatch[i];
+                if (IndexOfId(stored, placed.Id) >= 0)
+                    continue;
+
+                stored.Add(placed);
+                changed = true;
+            }
+        }
+
+        if (changed)
+            SaveSystem.MarkDirty();
     }
 
     private static int IndexOfId(List<PlacedObjectData> list, int id)
@@ -107,125 +150,78 @@ public class SaveController : MonoBehaviour
         return -1;
     }
 
-    public static void BatchSavePlacedObjects(List<PlacedObjectData> placedObjectsBatch, List<PlacedObjectData> removedObjectsBatch)
+    #endregion
+
+    #region Runtime IDs
+
+    /// <summary>
+    /// Raises the counter above every ID already in the file. Must run before
+    /// anything places a runtime object.
+    ///
+    /// The counter itself travels inside the save file, so it can no longer
+    /// drift out of step with the object list the way the old PlayerPrefs copy
+    /// could - whichever write lands last carries both. This scan only matters
+    /// for a file restored from a backup whose counter is behind its contents.
+    /// </summary>
+    public static void InitializeIds()
     {
-        List<PlacedObjectData> placedObjectDataList = GetCache();
-
-        foreach (var removedObjectData in removedObjectsBatch)
+        if (!SaveSystem.IsReady)
         {
-            int index = IndexOfId(placedObjectDataList, removedObjectData.Id);
-            if (index >= 0)
-                placedObjectDataList.RemoveAt(index);
+            Debug.LogError("[SaveController] InitializeIds called before SaveSystem.Initialize.");
+            return;
         }
 
-        foreach (var placedObjectData in placedObjectsBatch)
+        ProfileSaveData profile = SaveSystem.Data.profile;
+        int highest = Mathf.Max(profile.placedObjectIdCounter, SaveIds.RuntimeIdBase);
+
+        List<PlacedObjectData> stored = SaveSystem.Data.world.placedObjects;
+        for (int i = 0; i < stored.Count; i++)
         {
-            if (IndexOfId(placedObjectDataList, placedObjectData.Id) < 0)
-                placedObjectDataList.Add(placedObjectData);
+            if (stored[i].Id > highest)
+                highest = stored[i].Id;
         }
 
-        Persist();
+        if (highest == profile.placedObjectIdCounter)
+            return;
+
+        profile.placedObjectIdCounter = highest;
+        SaveSystem.MarkDirty();
     }
 
-
-    public static void RemoveObject(PlacedObjectData placedObjectData)
+    /// <summary>Hands out an ID no live or saved object is using.</summary>
+    public static int GiveUniqueID()
     {
-        List<PlacedObjectData> placedObjectDataList = GetCache();
-
-        int index = IndexOfId(placedObjectDataList, placedObjectData.Id);
-        if (index >= 0)
+        if (!SaveSystem.IsReady)
         {
-            placedObjectDataList.RemoveAt(index);
-            Persist();
+            Debug.LogError("[SaveController] GiveUniqueID called before SaveSystem.Initialize.");
+            return SaveIds.RuntimeIdBase;
         }
+
+        ProfileSaveData profile = SaveSystem.Data.profile;
+        if (profile.placedObjectIdCounter < SaveIds.RuntimeIdBase)
+            profile.placedObjectIdCounter = SaveIds.RuntimeIdBase;
+
+        profile.placedObjectIdCounter++;
+        SaveSystem.MarkDirty();
+        return profile.placedObjectIdCounter;
+    }
+
+    #endregion
+
+    /// <summary>Kept so existing call sites keep compiling; requesting a save is now free.</summary>
+    public static void MarkAsSaveIsRequired()
+    {
+        SaveSystem.MarkDirty();
     }
 
     /// <summary>
-    /// Returns a snapshot of the saved placed objects. Callers get their own
-    /// list so they can iterate it while placement code mutates the cache.
+    /// The legacy binary payload. Only <see cref="SaveMigrations"/> reads it -
+    /// the type has to keep this exact name and shape or BinaryFormatter cannot
+    /// resolve the old file.
     /// </summary>
-    public static List<PlacedObjectData> LoadPlacedObjects()
-    {
-        return new List<PlacedObjectData>(GetCache());
-    }
-
-    public static void UpdatePlacedObject(PlacedObjectData placedObjectData)
-    {
-        List<PlacedObjectData> placedObjectDataList = GetCache();
-
-        int index = IndexOfId(placedObjectDataList, placedObjectData.Id);
-        if (index >= 0)
-        {
-            placedObjectDataList[index] = placedObjectData;
-            Persist();
-        }
-        else
-        {
-            SavePlacedObject(placedObjectData);
-        }
-    }
-    
     [System.Serializable]
     public class PlacedObjectDataListWrapper
     {
         public List<PlacedObjectData> placedObjectDataList;
-    }
-
-
-    public static void MarkAsSaveIsRequired()
-    {
-        SaveIsRequired = true;
-    }
-
-    /// <summary>
-    /// Restores the runtime ID counter. Must run before any runtime object is
-    /// placed, otherwise fresh objects reuse IDs from a previous session.
-    /// </summary>
-    public static void InitializeIds()
-    {
-        uID = PlayerPrefs.GetInt(IdCounterKey, RUNTIME_ID_BASE);
-        if (uID < RUNTIME_ID_BASE)
-            uID = RUNTIME_ID_BASE;
-    }
-
-    public static int GiveUniqueID()
-    {
-        if (uID < RUNTIME_ID_BASE)
-            uID = RUNTIME_ID_BASE;
-
-        uID++;
-        PlayerPrefs.SetInt(IdCounterKey, uID);
-        return uID;
-    }
-
-  
-}
-#endregion
-
-
-[System.Serializable]
-public struct SerializableVector3
-{
-    public float x;
-    public float y;
-    public float z;
-
-    public SerializableVector3(float x, float y, float z)
-    {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-
-    public SerializableVector3(Vector3 vector3)
-    {
-        this.x = vector3.x;
-        this.y = vector3.y;
-        this.z = vector3.z;
-    }
-
-    public Vector3 ToVector3()
-    {
-        return new Vector3(x, y, z);
     }
 }

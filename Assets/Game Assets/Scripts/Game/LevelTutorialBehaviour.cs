@@ -49,7 +49,31 @@ public class LevelTutorialBehaviour : MonoBehaviour
 
     [Space]
     [SerializeField] SignBoard signBoard;
-    public static int numOfTimesEventWillRun = 0;
+
+    /// <summary>
+    /// Reads and writes straight through to the save file. It used to be a
+    /// plain static that several call sites incremented without saving, so a
+    /// player who closed the game mid-tutorial came back a step behind.
+    /// </summary>
+    public static int numOfTimesEventWillRun
+    {
+        get
+        {
+            return FoodStreet.Saving.SaveSystem.IsReady
+                ? FoodStreet.Saving.SaveSystem.Data.progress.tutorialEventRuns
+                : 0;
+        }
+        set
+        {
+            if (!FoodStreet.Saving.SaveSystem.IsReady)
+                return;
+            if (FoodStreet.Saving.SaveSystem.Data.progress.tutorialEventRuns == value)
+                return;
+
+            FoodStreet.Saving.SaveSystem.Data.progress.tutorialEventRuns = value;
+            FoodStreet.Saving.SaveSystem.MarkDirty();
+        }
+    }
     private void Awake()
     {
         instance = this;

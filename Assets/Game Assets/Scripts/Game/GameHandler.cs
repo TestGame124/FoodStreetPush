@@ -1,6 +1,6 @@
+using FoodStreet.Navigation;
+using FoodStreet.Saving;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class GameHandler : MonoBehaviour
@@ -15,7 +15,6 @@ public class GameHandler : MonoBehaviour
     public static GameState currentState = GameState.PlayState;
 
     public static bool FirstTime;
-    public const string FirstTimeData = "FirstTime";
 
     [Space]
 
@@ -43,14 +42,20 @@ public class GameHandler : MonoBehaviour
     {
         instance = this;
 
+        // Before anything else reads or writes progress: this loads, verifies and
+        // decrypts the save file, and takes over any data the old save system
+        // left behind.
+        SaveSystem.Initialize();
+
         // Must run before anything places a runtime object, or fresh objects
         // reuse IDs handed out in a previous session.
         SaveController.InitializeIds();
 
-        FirstTime = PlayerPrefs.GetInt(FirstTimeData, 0) == 0;
+        FirstTime = !SaveSystem.Data.profile.hasPlayedBefore;
         if (FirstTime)
         {
-            PlayerPrefs.SetInt(FirstTimeData, 1);
+            SaveSystem.Data.profile.hasPlayedBefore = true;
+            SaveSystem.MarkDirty();
         }
 
 
@@ -59,6 +64,11 @@ public class GameHandler : MonoBehaviour
         currenciesController.Initialise();
         levelUpSystem.Initialize();
         gridBuildingSystem.Initialize();
+
+        // Straight after the build grid and before anything is placed on it: the nav grid
+        // mirrors the build grid's dimensions, and it listens for placements from here on.
+        NavigationSystem.Bootstrap();
+
         objectDatabaseHandler.Initialize();
         itemController.Initialize();
         shopItemDataContainer.Initialize(objectDatabaseHandler.ObjectsDatabases, uiGame.uiItemsWindow);

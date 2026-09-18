@@ -23,7 +23,8 @@ public class SignBoardUIPanel : MonoBehaviour
     {
         if (inputField.text == string.Empty)
             return;
-        PlayerPrefs.SetString(SignBoard.NameSave, inputField.text);
+
+        SignBoard.RestaurantName = inputField.text;
 
         gameObject.SetActive(false);
 

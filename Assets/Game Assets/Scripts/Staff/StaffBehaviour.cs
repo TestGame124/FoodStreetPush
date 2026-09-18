@@ -1,9 +1,8 @@
 using DG.Tweening;
+using FoodStreet.Navigation;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 public class StaffBehaviour : MonoBehaviour
 {
@@ -12,7 +11,7 @@ public class StaffBehaviour : MonoBehaviour
     public static int HAND_HASH = 1;
 
     Zone zone;
-    NavMeshAgent agent;
+    PathFollower agent;
     Animator animator;
 
     public enum StaffStates
@@ -33,7 +32,7 @@ public class StaffBehaviour : MonoBehaviour
     private GameObject itemInHand;
     private void Awake()
     {
-        agent = GetComponent<NavMeshAgent>();
+        agent = NavAgentSetup.Ensure(gameObject);
         animator = GetComponentInChildren<Animator>();
     }
 
@@ -44,7 +43,7 @@ public class StaffBehaviour : MonoBehaviour
 
     private void Update()
     {
-        animator.SetFloat(MOVE_HASH, agent.velocity.magnitude / agent.speed);
+        animator.SetFloat(MOVE_HASH, agent.Velocity.magnitude / agent.Speed);
 
         switch (currentState)
         {
@@ -179,13 +178,18 @@ public class StaffBehaviour : MonoBehaviour
     public void MoveVisitor(Vector3 targetPos, System.Action onReached)
     {
         agent.SetDestination(targetPos);
-        StartCoroutine(IsMoving(targetPos, onReached));
+        StartCoroutine(IsMoving(onReached));
     }
 
-    IEnumerator IsMoving(Vector3 targetPos, System.Action onReached)
+    // Arrival comes from the follower rather than from a distance test against the target.
+    // The counter and the tables sit on solid tiles, so the server is routed to the nearest
+    // spot it actually fits — a distance test against the target itself would never be
+    // satisfied and the server would stand there forever.
+    IEnumerator IsMoving(System.Action onReached)
     {
         isMoving = true;
-        while (Vector3.Distance(transform.position, targetPos) > agent.stoppingDistance)
+        yield return null;
+        while (!agent.HasArrived)
         {
             yield return null;
         }
@@ -196,7 +200,7 @@ public class StaffBehaviour : MonoBehaviour
     public void StopMovement(Action onStop)
     {
         isMoving = false;
-        agent.SetDestination(transform.position);
+        agent.Stop();
         onStop?.Invoke();
     }
     

@@ -1,29 +1,39 @@
-using BayatGames.SaveGameFree;
-using DG.Tweening;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
+using DG.Tweening;
+using FoodStreet.Saving;
 using UnityEngine;
 
+/// <summary>
+/// Player level and experience.
+///
+/// The numbers live in the encrypted save payload - level gates which shop
+/// items exist, so it is worth as much to a cheater as the coin balance is.
+/// </summary>
 public class LevelUpSystem : MonoBehaviour
 {
-
     public static LevelUpSystem Instance { get; private set; }
 
-    private const string xpSaveID = "XpData";
-
-    private static ExperienceData XpController;
-    private static string savePath;
-
-
-    public static Action<int,float,float> OnXpChanged;
+    public static Action<int, float, float> OnXpChanged;
     public static Action<int> OnLevelUp;
 
     public List<CurrencyReward> rewardConfigs;
 
     private static Dictionary<int, CurrencyReward> rewardConfigDictionary;
     private static RewardManager rewardManager;
+
+    private static ProgressSaveData Progress
+    {
+        get
+        {
+            if (!SaveSystem.IsReady)
+            {
+                Debug.LogError("[LevelUp] Progress read before SaveSystem.Initialize.");
+                return null;
+            }
+            return SaveSystem.Data.progress;
+        }
+    }
 
     void Awake()
     {
@@ -39,141 +49,123 @@ public class LevelUpSystem : MonoBehaviour
     public void Initialize()
     {
         Instance = this;
-        savePath = Path.Combine(Application.persistentDataPath, "level.json");
-        LoadXpData();
 
-        //if (XpController.Level == 0)
-        //{
-        //    InitializePlayerData();
-        //}
-
-        AddXP(0);
-
-    }
-
-    private static void InitializePlayerData()
-    {
-        XpController = new ExperienceData();
-        XpController.Level = 1;
-        XpController.CurrentXP = 0;
-        XpController.XPToNextLevel = 3;
-        OnXpChanged?.Invoke(XpController.Level,XpController.CurrentXP,XpController.XPToNextLevel);
-        OnLevelUp?.Invoke(XpController.Level);
-
-        SaveXpData();
+        // The save file already carries level and XP. All that is left is to
+        // let the UI catch up - deliberately without running the level-up
+        // check, which would replay the level-up popup on every boot.
+        Broadcast();
     }
 
     public static int GetLevel()
     {
-        return XpController.Level;
+        ProgressSaveData progress = Progress;
+        return progress == null ? 1 : progress.level;
     }
 
     public static int GetCurrentXP()
     {
-        return XpController.CurrentXP;
+        ProgressSaveData progress = Progress;
+        return progress == null ? 0 : progress.currentXp;
     }
 
     public static int GetXPToNextLevel()
     {
-        return XpController.XPToNextLevel;
+        ProgressSaveData progress = Progress;
+        return progress == null ? 3 : progress.xpToNextLevel;
     }
 
     public static void AddXP(int amount)
     {
-        XpController.CurrentXP += amount;
-       
-            CheckLevelUp();
+        ProgressSaveData progress = Progress;
+        if (progress == null || amount <= 0)
+            return;
 
-            OnXpChanged?.Invoke(XpController.Level, XpController.CurrentXP, XpController.XPToNextLevel);
-        SaveXpData();
-        
+        progress.currentXp += amount;
+        CheckLevelUp();
+
+        SaveSystem.MarkDirty();
+        Broadcast();
     }
 
     public static void CheckLevelUp()
     {
-        while (XpController.CurrentXP >= XpController.XPToNextLevel)
+        ProgressSaveData progress = Progress;
+        if (progress == null)
+            return;
+
+        while (progress.currentXp >= progress.xpToNextLevel)
         {
-            XpController.CurrentXP -= XpController.XPToNextLevel;
-            XpController.Level++;
-            if (TutorialController.TutorialCompleted())
+            progress.currentXp -= progress.xpToNextLevel;
+            progress.level++;
+
+            if (TutorialController.TutorialCompleted() && UIGame.GetUI() != null)
             {
                 UIGame.GetUI().levelUpUi.gameObject.SetActive(true);
                 UIGame.GetUI().levelUpUi.GetComponent<CanvasGroup>().DOFade(1, 0.5f).From(0);
             }
-            ApplyRewards(XpController.Level);
-            //OnLevelUp?.Invoke(XpController.Level);
-            XpController.XPToNextLevel = CalculateXPToNextLevel(XpController.Level);
+
+            ApplyRewards(progress.level);
+            progress.xpToNextLevel = CalculateXPToNextLevel(progress.level);
         }
-       
     }
 
     public static void GetReward()
     {
-        OnLevelUp?.Invoke(XpController.Level);
+        OnLevelUp?.Invoke(GetLevel());
     }
 
     public static void OnLevelUpFunc()
     {
-        OnLevelUp?.Invoke(XpController.Level);
-
+        OnLevelUp?.Invoke(GetLevel());
     }
 
     private static int CalculateXPToNextLevel(int level)
     {
-        return 3 + (level - 1) * 2; // Example formula: increase XP requirement with level
+        return 3 + (level - 1) * 2;
     }
+
     public static void ApplyRewards(int level)
     {
-        //if (rewardConfigDictionary.TryGetValue(level, out var config))
-        //{
-        //foreach (var currencyReward in config)
-        //{
-        //rewardManager.AddReward(config);
         CurrencyReward reward = new CurrencyReward(CurrencyType.Coins, 50 * level);
-        UIGame.GetUI().levelUpUi.OnLevelUp(reward);
+
+        if (UIGame.GetUI() != null)
+            UIGame.GetUI().levelUpUi.OnLevelUp(reward);
+
         rewardManager.AddReward(reward);
-            //}
-            
-            
-        //}
-            rewardManager.GiveAllRewards();
+        rewardManager.GiveAllRewards();
     }
 
     public static void AddReward(ShopItem shopItem)
     {
-        Debug.Log($"Item Reward Added : {shopItem}");
-
         ItemReward reward = new ItemReward(shopItem);
-        UIGame.GetUI().levelUpUi.OnLevelUp(reward);
+
+        if (UIGame.GetUI() != null)
+            UIGame.GetUI().levelUpUi.OnLevelUp(reward);
+
         rewardManager.AddReward(reward);
     }
 
-    private static void SaveXpData()
+    private static void Broadcast()
     {
-        //if (!TutorialController.TutorialCompleted())
-            //return;
-        SaveGame.Save(xpSaveID, XpController);
-
-    }
-
-    private void LoadXpData()
-    {
-        if (!TutorialController.TutorialCompleted())
-        {
-            InitializePlayerData();
+        ProgressSaveData progress = Progress;
+        if (progress == null)
             return;
-        }
-        XpController = SaveGame.Load<ExperienceData>(xpSaveID);
-        if(XpController == null)
-        {
-            InitializePlayerData();
-        }
-     
+
+        OnXpChanged?.Invoke(progress.level, progress.currentXp, progress.xpToNextLevel);
     }
 
     public static void ResetXpData()
     {
-        InitializePlayerData();
-        SaveXpData();
+        ProgressSaveData progress = Progress;
+        if (progress == null)
+            return;
+
+        progress.level = 1;
+        progress.currentXp = 0;
+        progress.xpToNextLevel = 3;
+
+        SaveSystem.MarkDirty();
+        Broadcast();
+        OnLevelUp?.Invoke(progress.level);
     }
 }
