@@ -87,7 +87,7 @@ public class SeedsInventoryUI : MonoBehaviour
             CameraController.Focus (CameraController.CameraType.Focus, activePot.transform, null, 0.7f);
 
         }
-        else if(TutorialController.currentStage == TutorialStage.Done)
+        else
         {
             DeActivatePanel();
         }
@@ -112,14 +112,6 @@ public class SeedsInventoryUI : MonoBehaviour
 
         activePot.Plant(seed);
 
-        if(TutorialController.currentStage != TutorialStage.Done)
-        {
-            if (TutorialController.currentStage == TutorialStage.PlantingStage)
-            {
-                TutorialController.OnPlanting?.Invoke();
-            }
-        }
-        
         ActivatePanel();
       
     }

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ab58a892bce82e47a7664ee5e3bac4b, type: 3}
+  m_Name: Enemy_Flanker
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.EnemyDefinition
+  displayName: Flanker
+  description: They do not come at the front. They find the thin part.
+  silhouetteColour: {r: 0.55, g: 0.3, b: 0.7, a: 1}
+  navigation: 2
+  isNonCombatant: 0
+  heatPerSecond: 0
+  ignitesStructures: 0
+  stealsResources: 0
+  immuneToSlow: 0
+  structureDps: 8
+  maxHealth: 35
+  moveSpeed: 1.4
+  agentRadius: 0.35
+  attackRange: 0.6
+  prefab: {fileID: 2210883807797046269, guid: ef56796435b8d844e842cb068d2c030c, type: 3}
+  poolPrewarm: 16
+  threatCost: 3
+  earliestDay: 15
+  drops:
+  - type: 1
+    amount: 1

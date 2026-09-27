@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 709c5c1bb30e42e4487c55975b056f83, type: 3}
+  m_Name: GameBalance
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.GameBalanceConfig
+  realSecondsPerClockMinute: 6
+  duskWarningSeconds: 45
+  basePartyCount: 4
+  reputationToParties: 0.24
+  arrivalCurveByBlock:
+  - 0.05
+  - 0.15
+  - 0.3
+  - 0.15
+  - 0.2
+  - 0.15
+  partySizeWeights:
+  - 0.4
+  - 0.3
+  - 0.2
+  - 0.1
+  queuePatienceClockMinutes: 8
+  queueAbandonReputationPenalty: 2
+  lastPartyWindow: {x: 48, y: 52}
+  lastPartyHeat: 8
+  lastPartyTurnAwayReputation: -5
+  lastPartyDoorServiceHeat: 2
+  doorAdmissionClockSeconds: 90
+  reputationTiers:
+  - 0
+  - 25
+  - 50
+  - 75
+  reputationDecayPerDay: 2
+  maxStructureLossFraction: 0.65
+  maxTheftFractionPerResource: 0.5
+  rebuildCostFraction: 0.4
+  repairCostFraction: 0.15
+  injuryDaysRange: {x: 1, y: 3}
+  incomingWarningSeconds: 6
+  dawnGraceSeconds: 20
+  dinerDangerRadius: 3.5
+  injuryPressureThreshold: 5
+  injuryChanceAtThreshold: 0.35
+  injuryChancePerPressureSecond: 0.03
+  hospital: {fileID: 11400000, guid: 81df9236eed7ad1489704230012f5515, type: 2}
+  closedForRepairsBuildBonus: 0.5
+  closedForRepairsReputationCost: 15
+  incompleteForecastChance: 0.16666667
+  undoWindowSeconds: 5
+  campaignSeed: 20260918
+  startingResources:
+  - type: 0
+    amount: 120
+  - type: 1
+    amount: 60
+  - type: 2
+    amount: 10
+  - type: 3
+    amount: 20
+  - type: 4
+    amount: 2
+  - type: 12
+    amount: 12
+  - type: 11
+    amount: 12
+  - type: 10
+    amount: 6
+  - type: 13
+    amount: 4
+  startingSurvivorCount: 1
+  startingGuardCount: 1
+  survivorNames:
+  - Kira
+  - Mahmoud
+  - Tess
+  - Osei
+  - Bex
+  - Ruiz
+  - Halvard
+  - Nnamdi
+  - Sana
+  - Petra
+  - Yusuf
+  - Lowell
+  heatWeights: {fileID: 11400000, guid: 13275d65e36de004da7c1eaab47a6901, type: 2}
+  plotTiers:
+  - {fileID: 11400000, guid: b36ec0eccc496694e84fd86dd896a573, type: 2}
+  - {fileID: 11400000, guid: 10dcbba4813c36447b2800178e2b7c70, type: 2}
+  - {fileID: 11400000, guid: d7c3666b3454ff24d847efb78fe6dba0, type: 2}
+  - {fileID: 11400000, guid: 00a15ecb60e2d2b4f986034999c4065d, type: 2}
+  - {fileID: 11400000, guid: 87d6c8e36618aa345b3ecf58267ab7ab, type: 2}
+  enemies:
+  - {fileID: 11400000, guid: ebe86074562b92e448961f24e61ce708, type: 2}
+  - {fileID: 11400000, guid: 5b69b88acf15c5b4a92f59e8a10642be, type: 2}
+  - {fileID: 11400000, guid: 5f384982dd7bbb248b8f5094ff4d09ac, type: 2}
+  - {fileID: 11400000, guid: b2edab93b0d2fde47b8bed517024a0df, type: 2}
+  - {fileID: 11400000, guid: ee651dea4aec97147ae3dab0024da484, type: 2}
+  - {fileID: 11400000, guid: f27f37aacb49d7643953d3b391b4458c, type: 2}
+  - {fileID: 11400000, guid: 9b6b921202709394fa284fe2bc85af7d, type: 2}
+  - {fileID: 11400000, guid: 11f2d0770b4de724e8109fe8d17f69ce, type: 2}
+  waveManifests:
+  - {fileID: 11400000, guid: d67632761ae02ab41ad263c0bfe99811, type: 2}
+  - {fileID: 11400000, guid: edaeb45c5592dda4f9cd378ca113cf7a, type: 2}
+  - {fileID: 11400000, guid: 3a8d586144bf58c4091452ba65624cbd, type: 2}
+  - {fileID: 11400000, guid: 5579d86d7d6f5d54d8ad37929a0465eb, type: 2}
+  - {fileID: 11400000, guid: a65e35279c36a3b4bb5e61a2214681c0, type: 2}
+  namedNights:
+  - {fileID: 11400000, guid: 77582f54dfacfad41ab4c2de4c074348, type: 2}
+  - {fileID: 11400000, guid: 0eb40cb50866d36448177a2c8a5d452e, type: 2}
+  - {fileID: 11400000, guid: 2549d26d44c6cf04e9cfb45543420a7f, type: 2}
+  - {fileID: 11400000, guid: 44ff7635b99594346a01d1b2af5213ae, type: 2}
+  - {fileID: 11400000, guid: d6f6992345e47154998856bc9166b676, type: 2}
+  - {fileID: 11400000, guid: e3764d37c7559bb4b9f07279441c4122, type: 2}
+  - {fileID: 11400000, guid: 7af7f8b63c35ca54e8506b973ebf5c50, type: 2}
+  recipes:
+  - {fileID: 11400000, guid: 00d0355b7dae46b4cb31b0b6eaaa197c, type: 2}
+  - {fileID: 11400000, guid: 23efc8077fe6a2440ba406a8828861ba, type: 2}
+  - {fileID: 11400000, guid: 9f13b23f36f7b514db9e2a9ade5c86c4, type: 2}
+  - {fileID: 11400000, guid: fdc939a91ea203a4babd3b437f71e9c7, type: 2}
+  - {fileID: 11400000, guid: 0b3ec0946bfee074ebd45d4a7e1960e4, type: 2}
+  - {fileID: 11400000, guid: 124797ca9d40ac443b3a3c15a98b3c87, type: 2}
+  wallMaterials:
+  - {fileID: 11400000, guid: fa35c14de698e994b9373f57ca0e9f92, type: 2}
+  - {fileID: 11400000, guid: f4875f2e042eb3b4dbd6c5fe718c7ed6, type: 2}
+  - {fileID: 11400000, guid: 127127a4b73d4aa41a5b955e41ce0874, type: 2}
+  - {fileID: 11400000, guid: 1e940e6b5c6d57543a394370d34fe740, type: 2}
+  survivorRoles:
+  - {fileID: 11400000, guid: ae5fabc62cc227948aa4c7725485674b, type: 2}
+  - {fileID: 11400000, guid: 9e0d0fd770d95684187ee5f455f644d1, type: 2}
+  - {fileID: 11400000, guid: f02b814378723434ca529bfa8fe73c53, type: 2}
+  - {fileID: 11400000, guid: 968ab2b48358c5b43922fa5373fec20f, type: 2}
+  - {fileID: 11400000, guid: 4b7e719d23ebf784ab0c0627859c40c4, type: 2}
+  - {fileID: 11400000, guid: 2efc5e7af3a286347a076e59c8f78ef3, type: 2}
+  survivorTraits:
+  - {fileID: 11400000, guid: 2555c4fde87329c44bea17686077d1c6, type: 2}
+  - {fileID: 11400000, guid: b735c6191f6c6da4989604b66b2d13a7, type: 2}
+  - {fileID: 11400000, guid: 0cb4b8ae06f3b854ea727ac8750304f8, type: 2}
+  - {fileID: 11400000, guid: d534808c958286d4ba445228f7c35c65, type: 2}
+  - {fileID: 11400000, guid: be9c38d3530a7b34a8e4fc7d88f26238, type: 2}
+  dispatchDestinations:
+  - {fileID: 11400000, guid: af3efbd79ceaae744968521c4c16c570, type: 2}
+  - {fileID: 11400000, guid: df8b07d7f62f27b4f9ddca646d49b847, type: 2}
+  crisisAbilities:
+  - {fileID: 11400000, guid: 415e603a0004f714f9d087a6b7741eac, type: 2}
+  - {fileID: 11400000, guid: 9b3af5b8556de5b43bcee9ca2b091060, type: 2}
+  - {fileID: 11400000, guid: 8683a2f1d3546dd40ae1846d78fdbebf, type: 2}
+  - {fileID: 11400000, guid: ca1dce287933d8341a77389d82bc4e2b, type: 2}
+  - {fileID: 11400000, guid: dcd592d444c2ef846985003b69d05b6d, type: 2}
+  - {fileID: 11400000, guid: ba8b3f7ee67f12348a0af2d92e236f56, type: 2}
+  - {fileID: 11400000, guid: bf1f2e274449b394891a3421aa429ef5, type: 2}
+  worldUi: {fileID: 11400000, guid: edb4172dcced8ae4996e100415008819, type: 2}

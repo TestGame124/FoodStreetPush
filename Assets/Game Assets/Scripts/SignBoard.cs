@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using FoodStreet.Saving;
 using TMPro;
 using UnityEngine;
 
@@ -9,28 +8,16 @@ public class SignBoard : MonoBehaviour, IInteractableObject
     [SerializeField] TextMeshPro signText;
 
     /// <summary>
-    /// The restaurant name now lives in the save file rather than PlayerPrefs,
-    /// so clearing the save clears the name with it.
+    /// The restaurant name, for the length of the session only. Nothing is
+    /// persisted, so it starts empty on every launch.
     /// </summary>
     public static string RestaurantName
     {
-        get
-        {
-            return SaveSystem.IsReady ? SaveSystem.Data.profile.restaurantName : string.Empty;
-        }
-        set
-        {
-            if (!SaveSystem.IsReady)
-                return;
-
-            string name = value ?? string.Empty;
-            if (SaveSystem.Data.profile.restaurantName == name)
-                return;
-
-            SaveSystem.Data.profile.restaurantName = name;
-            SaveSystem.MarkDirty();
-        }
+        get => restaurantName;
+        set => restaurantName = value ?? string.Empty;
     }
+
+    private static string restaurantName = string.Empty;
 
     public void Initialize()
     {
@@ -39,15 +26,13 @@ public class SignBoard : MonoBehaviour, IInteractableObject
 
     }
 
-    public void OnTouch()
+    public bool OnTouch()
     {
-        UIGame.GetUI().signBoardUI.gameObject.SetActive(true);
+        UIGame ui = UIGame.GetUI();
+        if (ui == null || ui.signBoardUI == null) return false;
 
-        if (!TutorialController.TutorialCompleted())
-        {
-            TutorialController.OnRestaurantNameSubmit?.Invoke();
-        }
-
+        ui.signBoardUI.gameObject.SetActive(true);
+        return true;
     }
 
 

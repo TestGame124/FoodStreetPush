@@ -25,3 +25,30 @@ MonoBehaviour:
   height: 1
   maxItems: 6
   previewImage: {fileID: 0}
+  buildCategory: 1
+  buildCost:
+  - type: 1
+    amount: 3
+  buildClockMinutes: 2
+  maxHealth: 40
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.2
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

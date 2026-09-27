@@ -27,6 +27,8 @@ public class PlacedObjectConfirm : ConfirmationUiPanel
     // Sell Button
     public override void Confirm()
     {
+        if (gridBuildingSystem.selectedObject == null || gridBuildingSystem.Placement == null ||
+            !gridBuildingSystem.Placement.CanRemove(gridBuildingSystem.selectedObject)) return;
         Debug.Log("Sold !!");
         CurrenciesController.AddCurrency(CurrencyType.Coins, gridBuildingSystem.selectedObject.sellingPrice);
         

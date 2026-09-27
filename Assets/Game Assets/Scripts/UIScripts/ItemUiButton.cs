@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -86,7 +86,7 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     {
         if (shopItem.IsUnlocked && shopItem.CanPurchase())
         {
-            CameraTarget.stopDrag = true;
+            CameraPanZoomRig.InputBlocked = true;
 
             OnClickOnButton?.Invoke();
 
@@ -95,7 +95,7 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        CameraTarget.stopDrag = false;
+        CameraPanZoomRig.InputBlocked = false;
     }
 
     

@@ -90,6 +90,41 @@ namespace LastOrders.Data
                  "cut (15.5) and lives only behind an off-by-default Harsh Mode.")]
         public Vector2Int injuryDaysRange = new Vector2Int(1, 3);
 
+        [Header("Night danger")]
+        [Tooltip("Seconds of warning before each group of the night arrives. Long enough to look " +
+                 "at the road, short enough that the warning is about this group and not the last.")]
+        [Min(0f)] public float incomingWarningSeconds = 6f;
+
+        [Tooltip("Seconds after the night's own length that anything still standing is left to " +
+                 "the guards. Past that, dawn comes anyway and the rest shamble off - a zombie " +
+                 "at a door nothing can reach would otherwise hold the night open for ever.")]
+        [Min(0f)] public float dawnGraceSeconds = 20f;
+
+        [Tooltip("Metres from the diner door within which a zombie counts as having reached it.")]
+        [Min(0.5f)] public float dinerDangerRadius = 3.5f;
+
+        [Tooltip("Zombie-seconds at the diner door before the night counts as difficult. One " +
+                 "zombie at the door for this long, or several for less.")]
+        [Min(0f)] public float injuryPressureThreshold = 5f;
+
+        [Tooltip("Chance someone is hurt on a night that has just reached the threshold.")]
+        [Range(0f, 1f)] public float injuryChanceAtThreshold = 0.35f;
+
+        [Tooltip("Added to that chance for every zombie-second beyond the threshold.")]
+        [Min(0f)] public float injuryChancePerPressureSecond = 0.03f;
+
+        [Header("Hospital")]
+        [Tooltip("The tent's cots and recovery times. Defaults stand in when this is empty.")]
+        public HospitalDefinition hospital;
+
+        [Header("Repairs")]
+        [Tooltip("Who fixes what the night broke, and how long it takes them.")]
+        public RepairTuning repair = new RepairTuning();
+
+        [Header("Restaurant")]
+        [Tooltip("The restaurant's own walls: the line no zombie crosses, and growing it.")]
+        public RestaurantTuning restaurant = new RestaurantTuning();
+
         [Header("Closed for Repairs (15.10)")]
         [Tooltip("Build speed bonus when the player skips serving entirely for a day.")]
         public float closedForRepairsBuildBonus = 0.5f;
@@ -133,6 +168,11 @@ namespace LastOrders.Data
                  "feeling that is what makes the first recruit matter.")]
         public int startingSurvivorCount = 1;
 
+        [Tooltip("Guards on the roster at the start, on top of the Survivors above. The " +
+                 "restaurant opens with one guard tower and the starter guard who mans it - " +
+                 "a tower with nobody in it cannot fire.")]
+        [Min(0)] public int startingGuardCount = 1;
+
         [Tooltip("Names drawn for starting and recruited Survivors.")]
         public string[] survivorNames =
         {
@@ -146,13 +186,15 @@ namespace LastOrders.Data
         public EnemyDefinition[] enemies;
         public WaveManifest[] waveManifests;
         public NamedNightDefinition[] namedNights;
-        public CustomerArchetypeDefinition[] customerArchetypes;
         public RecipeDefinition[] recipes;
         public WallMaterialDefinition[] wallMaterials;
         public SurvivorRoleDefinition[] survivorRoles;
         public SurvivorTraitDefinition[] survivorTraits;
         public DispatchDestinationDefinition[] dispatchDestinations;
         public CrisisAbilityDefinition[] crisisAbilities;
+
+        [Tooltip("The world-space UI prefabs: the action prompt, the work timer, the floating text.")]
+        public LastOrders.UI.World.WorldUiCatalog worldUi;
 
         /// <summary>Which Reputation tier a value falls in. Shared by the archetype weighting,
         /// the Heat contribution and the expansion gates so they cannot disagree.</summary>
@@ -170,6 +212,9 @@ namespace LastOrders.Data
         void OnValidate()
         {
             realSecondsPerClockMinute = Mathf.Max(0.1f, realSecondsPerClockMinute);
+
+            if (repair == null) repair = new RepairTuning();
+            if (restaurant == null) restaurant = new RestaurantTuning();
 
             // The arrival curve is a distribution; if it does not sum to 1 the day quietly
             // serves the wrong number of customers and every downstream number is off.

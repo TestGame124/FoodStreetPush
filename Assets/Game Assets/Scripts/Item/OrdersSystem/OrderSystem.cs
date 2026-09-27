@@ -50,12 +50,6 @@ public class OrderSystem : MonoBehaviour
             int randAmountItem = Random.Range(1, allAvailableItems.Count);
             Order newOrder = new Order(allAvailableItems, randAmountItem);
 
-            if (TutorialController.currentStage != TutorialStage.Done && i == 0)
-            {
-                newOrder = new Order(new Item(ItemController.GetItem(ItemType.Bread), 1), 1, 3);   
-            }
-           
-           
             allOrders.Add(newOrder);
         }
 

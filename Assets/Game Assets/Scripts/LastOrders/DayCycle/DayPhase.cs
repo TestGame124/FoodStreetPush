@@ -34,10 +34,5 @@ namespace LastOrders.DayCycle
         /// <summary>True while the Crisis Bar replaces the build UI (§23).</summary>
         public static bool IsSiege(this DayPhase phase) =>
             phase == DayPhase.Dusk || phase == DayPhase.Night;
-
-        /// <summary>True when the phase is a safe point to write a full save. Night is
-        /// excluded — it saves through a separate mid-night snapshot (§24.5).</summary>
-        public static bool IsSaveBoundary(this DayPhase phase) =>
-            phase == DayPhase.Dawn || phase == DayPhase.Resolution;
     }
 }

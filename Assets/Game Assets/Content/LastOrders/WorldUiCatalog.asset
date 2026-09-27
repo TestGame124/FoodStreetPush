@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 292f3fbd07ebdd64485b224e406cbf46, type: 3}
+  m_Name: WorldUiCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.UI.World.WorldUiCatalog
+  actionPrompt: {fileID: 3806636856447199408, guid: 9282cc4ad48574349b1de07ee27cbef7, type: 3}
+  workProgress: {fileID: 4075571599177153434, guid: f2f572da3005bec4fb6797150afbfacf, type: 3}
+  floatingText: {fileID: 9160944422742145667, guid: cb07c584b6134434c83d24bcff298fa4, type: 3}
+  expandPrompt: {fileID: 2189995453505706794, guid: e3e8d79646ed36b45b4a1fc69ad7e23e, type: 3}
+  expansionProgress: {fileID: 2017795596010039706, guid: 56231b61046618e46952874704cc26e5, type: 3}
+  healthBar: {fileID: 8701831802815428233, guid: c8dcb770fb9dde248a5e2c09cb0c84f9, type: 3}
+  repairPrompt: {fileID: 6010878323785592684, guid: a5d68cb0e13aca4448585682031a95a4, type: 3}
+  expansionPopup: {fileID: 4659460283448189333, guid: bdb60b5f767c11a45bc7a8d1f27e74ab, type: 3}
+  defensePopup: {fileID: 3820012427921058909, guid: 8fa547896a36d6c41a007fa665e70302, type: 3}
+  shelterPopup: {fileID: 5435377906654482448, guid: 7012b92a2f23f1a4eb3a3e052d31ecd7, type: 3}
+  workerPanel: {fileID: 7526627918924389885, guid: 96795f3b565c43945b27c384875a4958, type: 3}
+  restaurantExpansionPopup: {fileID: 5384621540198965367, guid: 92928d424b6bda0409cf01133e8bff23, type: 3}
+  promptOffset: {x: 0, y: 0.9, z: 0}
+  progressOffset: {x: 0, y: 0.4, z: 0}
+  floatingTextOffset: {x: 0, y: 0.8, z: 0}
+  expandPromptOffset: {x: 0, y: 1.2, z: 0}
+  expansionProgressOffset: {x: 0, y: 2.2, z: 0}
+  repairPromptOffset: {x: 0, y: 0.9, z: 0}
+  healthBarOffset: {x: 0, y: 2.35, z: 0}
+  experienceTextColour: {r: 1, g: 0.86, b: 0.3, a: 1}
+  dangerTextColour: {r: 1, g: 0.38, b: 0.3, a: 1}

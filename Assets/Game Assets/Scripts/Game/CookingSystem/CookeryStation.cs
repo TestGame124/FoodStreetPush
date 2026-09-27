@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using FoodStreet.Saving;
 using UnityEngine;
 
 public class CookeryStation : MonoBehaviour, IInteractableObject
@@ -22,6 +21,15 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
 
     [SerializeField] int MaxCookRecipies;
     public Transform centerPoint;
+
+    /// <summary>
+    /// What this station can cook.
+    ///
+    /// Exposed so the restaurant's menu can be built from the kitchen that exists rather than
+    /// from a second list somebody has to keep in step with it. A dish the player can cook and
+    /// a dish customers can order should never be two different answers.
+    /// </summary>
+    public CookingRecipe[] Recipes => recipies;
 
     private void Start()
     {
@@ -58,19 +66,18 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
        
     }
 
-    public void OnTouch()
+    public bool OnTouch()
     {
-        cookPanel = UIGame.GetUI().cookingUIPanel;
+        UIGame ui = UIGame.GetUI();
+        if (ui == null) return false;
+
+        cookPanel = ui.cookingUIPanel;
         cookPanel.gameObject.SetActive(true);
         cookPanel.Setup(recipies,this);
         MaxCookRecipies = cookPanel.GetSlotsCount();
 
-        if (LevelTutorialBehaviour.numOfTimesEventWillRun < 1)
-        {
-            if (!TutorialController.TutorialCompleted())
-                TutorialController.OnTappingFirstCookingStation?.Invoke();
-        }
         Initialize();
+        return true;
     }
     
     
@@ -81,9 +88,6 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
             return false;
         }
         CookRecipeData newRecipe = new CookRecipeData(this, recipe, inventory);
-        
-        if(!TutorialController.TutorialCompleted())
-            TutorialController.OnCookButtonClick?.Invoke();
 
         if (recipiesInProgress.Count == 0)
             newRecipe.active = true;
@@ -103,92 +107,5 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     {
         recipiesInProgress.Remove(recipeData);
     }
-
-    #region Saving Loading
-
-    private PlacedObject_Done owner;
-
-    /// <summary>
-    /// The ID of the placed object this station is part of. Cooks are keyed by
-    /// it, so a station that is built or sold cannot shuffle everybody else's
-    /// pans onto the wrong stove.
-    /// </summary>
-    public int OwnerId
-    {
-        get
-        {
-            if (owner == null)
-                owner = GetComponentInParent<PlacedObject_Done>();
-
-            return owner != null ? owner.ID : 0;
-        }
-    }
-
-    public CookStationSaveData Save()
-    {
-        CookStationSaveData data = new CookStationSaveData { ownerId = OwnerId };
-
-        for (int i = 0; i < recipiesInProgress.Count; i++)
-        {
-            CookRecipeData recipe = recipiesInProgress[i];
-            if (recipe == null)
-                continue;
-
-            data.recipes.Add(new CookRecipeSaveData
-            {
-                // The result item identifies the recipe. The old format stored
-                // the sprite's asset name, which broke the moment art was
-                // renamed.
-                resultType = recipe.results.item.type,
-                remainingSeconds = recipe.timer,
-                totalSeconds = recipe.totalTime,
-                active = recipe.active
-            });
-        }
-
-        return data;
-    }
-
-    public void Load(CookStationSaveData data)
-    {
-        if (data == null)
-            return;
-
-        for (int i = 0; i < data.recipes.Count; i++)
-        {
-            CookRecipeSaveData saved = data.recipes[i];
-
-            CookingRecipe recipe = FindRecipe(saved.resultType);
-            if (recipe == null)
-            {
-                // The station no longer offers what was cooking - a recipe was
-                // removed or moved since this save. Drop it rather than crash.
-                Debug.LogWarning($"[CookeryStation] Dropping saved cook for '{saved.resultType}': this station no longer makes it.");
-                continue;
-            }
-
-            CookRecipeData restored = new CookRecipeData(this, recipe, InventorySystem.instance)
-            {
-                timer = Mathf.Clamp(saved.remainingSeconds, 0, saved.totalSeconds),
-                active = saved.active
-            };
-
-            recipiesInProgress.Add(restored);
-            StartCoroutine(restored.StartCookingTimer(this, true));
-        }
-    }
-
-    private CookingRecipe FindRecipe(ItemType resultType)
-    {
-        for (int i = 0; i < recipies.Length; i++)
-        {
-            if (recipies[i] != null && recipies[i].Results.item != null && recipies[i].Results.item.type == resultType)
-                return recipies[i];
-        }
-        return null;
-    }
-
-    #endregion
-
 }
 

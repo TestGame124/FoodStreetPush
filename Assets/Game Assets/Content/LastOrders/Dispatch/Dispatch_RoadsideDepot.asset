@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b60ebbf764d3c204a890d09592a3db3c, type: 3}
+  m_Name: Dispatch_RoadsideDepot
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DispatchDestinationDefinition
+  title: The Roadside Depot
+  teaser: Picked over twice already. There is always something in the back.
+  risk: 0
+  durationDays: 1
+  likelyRewards:
+  - type: 1
+    amount: 10
+  possibleRareRewards: []
+  outcomes:
+  - narrative: Nothing dramatic. A full bag of scrap and a quiet walk back.
+    tier: 1
+    haul:
+    - type: 1
+      amount: 10
+    reputationDelta: 0
+    extraDaysAway: 0
+    weight: 7
+  - narrative: The office safe was still shut. It is not any more.
+    tier: 0
+    haul:
+    - type: 1
+      amount: 14
+    - type: 2
+      amount: 4
+    reputationDelta: 0
+    extraDaysAway: 0
+    weight: 1
+  - narrative: Someone got there first. Scraps of scraps.
+    tier: 2
+    haul:
+    - type: 1
+      amount: 4
+    reputationDelta: 0
+    extraDaysAway: 0
+    weight: 2
+  choices: []
+  earliestDay: 4
+  requiredReputation: 0
+  repeatable: 1

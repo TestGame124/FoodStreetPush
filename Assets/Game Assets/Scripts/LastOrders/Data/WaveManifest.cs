@@ -58,6 +58,15 @@ namespace LastOrders.Data
                  "the 45-second dusk warning, so the player can reposition before it matters.")]
         [Range(1, 6)] public int approachLanes = 2;
 
+        [Tooltip("Smallest and largest group the night arrives in. Each group comes up one lane " +
+                 "together, and each one is announced before it arrives - a warning for every " +
+                 "single zombie stops being a warning.")]
+        public Vector2Int groupSize = new Vector2Int(2, 4);
+
+        [Tooltip("Seconds between members of one group arriving. Close enough to read as a " +
+                 "group, far enough apart that they do not arrive stacked on one spot.")]
+        [Min(0f)] public float groupStaggerSeconds = 1.2f;
+
         [Header("Budget")]
         [Tooltip("Threat budget per point of Heat. The director spends Heat x this on entries, " +
                  "paying each archetype's threatCost. This is the single dial that decides how " +

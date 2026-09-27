@@ -59,7 +59,6 @@ namespace LastOrders.DayCycle.States
             context.ThreatProfile.Forecast(day, heatCarriedIn);
 
             context.Dispatch.RefreshBoard(day);
-            context.Customers.PlanDay(day, MenuVariety(), Comfort(), DamageState(), FactionEvent());
 
             OnDawnReady?.Invoke(context.Report);
         }
@@ -103,47 +102,5 @@ namespace LastOrders.DayCycle.States
 
             return count;
         }
-
-        /// <summary>Menu variety multiplier for the daily pool (9.2). More distinct recipes
-        /// available means a broader draw of customers.</summary>
-        float MenuVariety()
-        {
-            int recipes = context.Balance.recipes != null ? context.Balance.recipes.Length : 0;
-            return Mathf.Lerp(0.8f, 1.3f, Mathf.Clamp01(recipes / 12f));
-        }
-
-        float Comfort()
-        {
-            GridXZ<GridBuildingSystem3D.GridObject> grid = GridBuildingSystem3D.GetGrid();
-            if (grid == null) return 1f;
-
-            float total = 1f;
-            var counted = new System.Collections.Generic.HashSet<PlacedObject_Done>();
-
-            int width = grid.GetWidth();
-            int height = grid.GetHeight();
-
-            for (int x = 0; x < width; x++)
-            {
-                for (int z = 0; z < height; z++)
-                {
-                    PlacedObject_Done occupant = grid.GetGridObject(x, z)?.GetPlacedObject();
-                    if (occupant == null || !counted.Add(occupant)) continue;
-
-                    PlacedObjectTypeSO type = occupant.PlacedObjectTypeSO;
-                    if (type != null && type.buildCategory == BuildCategory.Comfort)
-                        total += type.comfortMultiplier - 1f;
-                }
-            }
-
-            return Mathf.Clamp(total, 0.9f, 1.2f);
-        }
-
-        /// <summary>A damaged restaurant draws fewer people. The 0.5 floor is what makes a
-        /// bad night self-limiting rather than a spiral: fewer customers means less Heat,
-        /// which means a survivable night tomorrow.</summary>
-        float DamageState() => Mathf.Clamp(context.Perimeter.Current.Integrity, 0.5f, 1f);
-
-        float FactionEvent() => 1f;
     }
 }

@@ -3,6 +3,8 @@ using FoodStreet.Navigation;
 using LastOrders.Consequence;
 using LastOrders.Core;
 using LastOrders.Data;
+using LastOrders.Defense;
+using LastOrders.Perimeter;
 using UnityEngine;
 
 namespace LastOrders.Night
@@ -21,11 +23,19 @@ namespace LastOrders.Night
     /// a decision either: it is what happens when the next cell on the path is a wall.
     /// Walls are expensive rather than impassable, so the field is always solvable and there
     /// is no fallback logic to get wrong.
+    ///
+    /// The compound's outer wall and its gates are not on the grid, so they cannot be the next
+    /// cell. They are what the steering refuses a step into instead, and the rule is the same:
+    /// whatever stopped the zombie is what it starts hitting - a blow a second, arms coming down
+    /// on it - until it falls or opens.
     /// </summary>
     [RequireComponent(typeof(SteeringAgent))]
-    public sealed class EnemyAgent : MonoBehaviour, IPoolable
+    public sealed class EnemyAgent : MonoBehaviour, IPoolable, IDefenseTarget
     {
         enum State { Moving, Attacking, Dying }
+
+        /// <summary>Seconds between blows on the compound wall. Slow enough that each one reads.</summary>
+        const float BlowInterval = 1f;
 
         [SerializeField] FlowFieldFollower follower;
         [SerializeField] SteeringAgent steering;
@@ -36,6 +46,13 @@ namespace LastOrders.Night
         float attackAccumulator;
         DamageableStructure target;
 
+        /// <summary>The wall section or gate being battered, when it is one of those rather than
+        /// something on the grid.</summary>
+        IBreakable breaking;
+
+        float blowCooldown;
+        ZombieBody body;
+
         /// <summary>Raised when this agent dies, with itself and its definition, so the night
         /// can tally kills and drops without walking a list of live agents.</summary>
         public event Action<EnemyAgent, EnemyDefinition> OnDied;
@@ -44,10 +61,19 @@ namespace LastOrders.Night
 
         public bool IsAlive => state != State.Dying;
 
+        public Vector3 Position => transform.position;
+
+        public string DisplayName => definition != null ? definition.displayName : name;
+
         void Awake()
         {
             if (steering == null) steering = GetComponent<SteeringAgent>();
             if (follower == null) follower = GetComponent<FlowFieldFollower>();
+
+            // Stopped by every wall and let through no gate.
+            if (steering != null) steering.Mover = MoverKind.Hostile;
+
+            body = GetComponent<ZombieBody>();
         }
 
         /// <summary>
@@ -61,6 +87,7 @@ namespace LastOrders.Night
             state = State.Moving;
             attackAccumulator = 0f;
             target = null;
+            breaking = null;
 
             transform.position = spawnPosition;
 
@@ -107,19 +134,43 @@ namespace LastOrders.Night
         {
             // The only question asked each frame: is the thing in front of me something I
             // have to go through? The flow field has already decided the direction.
+            if (definition.isNonCombatant) return;
+
             DamageableStructure blocker = FindBlockingStructure();
 
-            if (blocker != null && !definition.isNonCombatant)
+            if (blocker != null)
             {
                 target = blocker;
-                state = State.Attacking;
-                if (follower != null) follower.active = false;
-                if (steering != null) steering.Halt();
+                StartAttacking();
+                return;
             }
+
+            // Walked into the compound wall or a shut gate.
+            if (steering != null && steering.BlockedBy is IBreakable wall && wall.IsInTheWay)
+            {
+                breaking = wall;
+
+                // Out of step with the rest of the crowd at it, so the blows land one by one.
+                blowCooldown = UnityEngine.Random.Range(0.15f, 0.6f);
+                StartAttacking();
+            }
+        }
+
+        void StartAttacking()
+        {
+            state = State.Attacking;
+            if (follower != null) follower.active = false;
+            if (steering != null) steering.Halt();
         }
 
         void TickAttacking(float deltaTime)
         {
+            if (breaking != null)
+            {
+                TickBreaking(deltaTime);
+                return;
+            }
+
             if (target == null || target.State == DamageState.Destroyed || !target.IsFunctional)
             {
                 ResumeMoving();
@@ -141,9 +192,41 @@ namespace LastOrders.Night
             if (target.ApplyDamage(damage)) ResumeMoving();
         }
 
+        /// <summary>
+        /// Batters the wall section or gate in front of it: a blow every second, each worth a
+        /// second of the archetype's structure damage, so a Brute still goes through a wall four
+        /// times faster than a Shambler. Stops the moment it falls, or a gate in it opens.
+        /// </summary>
+        void TickBreaking(float deltaTime)
+        {
+            if (breaking == null || (breaking is UnityEngine.Object o && o == null) || !breaking.IsInTheWay)
+            {
+                ResumeMoving();
+                return;
+            }
+
+            Vector3 toward = breaking.ClosestPoint(transform.position) - transform.position;
+            toward.y = 0f;
+            if (toward.sqrMagnitude > 1e-4f)
+            {
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation, Quaternion.LookRotation(toward), 360f * deltaTime);
+            }
+
+            blowCooldown -= deltaTime;
+            if (blowCooldown > 0f) return;
+
+            blowCooldown = BlowInterval;
+
+            if (body != null) body.Pound();
+
+            if (breaking.TakeHit(definition.structureDps * BlowInterval, transform.position)) ResumeMoving();
+        }
+
         void ResumeMoving()
         {
             target = null;
+            breaking = null;
             attackAccumulator = 0f;
             state = State.Moving;
             if (follower != null) follower.active = true;
@@ -218,14 +301,21 @@ namespace LastOrders.Night
             // target is the classic leak: it keeps a destroyed structure alive and makes the
             // next occupant of this instance attack a wall that no longer exists.
             target = null;
+            breaking = null;
             definition = null;
 
             OnDied = null;
 
             health = 0f;
             attackAccumulator = 0f;
+            blowCooldown = 0f;
             HeatEmitted = 0f;
             state = State.Moving;
+
+            // Steering turns the agent to face where it walks. Nothing reset that until
+            // something could kill an enemy mid-walk - the guard towers - and every pooled
+            // death then failed the integrity check.
+            transform.localRotation = Quaternion.identity;
 
             if (follower != null) follower.active = false;
             if (steering != null) steering.Halt();

@@ -1,5 +1,4 @@
 using FoodStreet.Navigation;
-using FoodStreet.Saving;
 using System;
 using UnityEngine;
 
@@ -13,8 +12,6 @@ public class GameHandler : MonoBehaviour
     }
 
     public static GameState currentState = GameState.PlayState;
-
-    public static bool FirstTime;
 
     [Space]
 
@@ -31,9 +28,6 @@ public class GameHandler : MonoBehaviour
     [Space]
     [SerializeField]GridBuildingSystem3D gridBuildingSystem;
 
-    [Space]
-    [SerializeField] LevelTutorialBehaviour levelTutorialBehaviour;
-    
     [Header("UI")]
     [SerializeField]UIGame uiGame;
 
@@ -41,25 +35,6 @@ public class GameHandler : MonoBehaviour
     private void Start()
     {
         instance = this;
-
-        // Before anything else reads or writes progress: this loads, verifies and
-        // decrypts the save file, and takes over any data the old save system
-        // left behind.
-        SaveSystem.Initialize();
-
-        // Must run before anything places a runtime object, or fresh objects
-        // reuse IDs handed out in a previous session.
-        SaveController.InitializeIds();
-
-        FirstTime = !SaveSystem.Data.profile.hasPlayedBefore;
-        if (FirstTime)
-        {
-            SaveSystem.Data.profile.hasPlayedBefore = true;
-            SaveSystem.MarkDirty();
-        }
-
-
-        TutorialController.Initialize();
 
         currenciesController.Initialise();
         levelUpSystem.Initialize();
@@ -74,28 +49,18 @@ public class GameHandler : MonoBehaviour
         shopItemDataContainer.Initialize(objectDatabaseHandler.ObjectsDatabases, uiGame.uiItemsWindow);
 
         levelController.Initialize();
-        gridBuildingSystem.LoadPlacedObjects();
-        levelController.LoadData(gridBuildingSystem.isLoadingData);
 
         inventorySystem.Initialize();
 
-
-
-        //Loading Data
-
-
         orderSystem.Initialize(inventorySystem);
         uiGame.Initialize();
-
-
-        levelTutorialBehaviour.Initialize();
-        
     }
 
 
     public void ChangeGameState(GameState state, Action onStateChange = null)
     {
         currentState = state;
+        if(gridBuildingSystem.gridVisualization != null){
         switch (currentState)
         {
             case GameState.EditState:
@@ -105,6 +70,7 @@ public class GameHandler : MonoBehaviour
                 gridBuildingSystem.gridVisualization.SetActive(false);
                 break;
 
+        }
         }
         onStateChange?.Invoke();
 

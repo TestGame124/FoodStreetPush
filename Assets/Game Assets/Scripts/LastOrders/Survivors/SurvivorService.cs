@@ -28,7 +28,11 @@ namespace LastOrders.Survivors
         /// are simply not here.</summary>
         public int AwayDaysRemaining;
 
-        public bool IsInjured => InjuryDaysRemaining > 0;
+        /// <summary>In a cot in the hospital tent. The tent owns their recovery, so it is timed
+        /// there in seconds of treatment rather than here in days.</summary>
+        public bool InHospital;
+
+        public bool IsInjured => InjuryDaysRemaining > 0 || InHospital;
 
         public bool IsAway => AwayDaysRemaining > 0;
 
@@ -217,14 +221,6 @@ namespace LastOrders.Survivors
                 if (roster[i].Id == id) return roster[i];
 
             return null;
-        }
-
-        public void RestoreFromSave(IEnumerable<Survivor> saved)
-        {
-            roster.Clear();
-            if (saved == null) return;
-
-            foreach (Survivor survivor in saved) roster.Add(survivor);
         }
     }
 }

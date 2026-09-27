@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using LastOrders.Data;
+using LastOrders.Progression;
 using UnityEditor;
 using UnityEngine;
 
@@ -34,7 +35,6 @@ namespace LastOrders.EditorTools
             balance.heatWeights = heat;
             balance.enemies = GenerateEnemies();
             balance.wallMaterials = GenerateWallMaterials();
-            balance.customerArchetypes = GenerateCustomers();
             balance.recipes = GenerateRecipes();
             balance.crisisAbilities = GenerateCrisisAbilities();
             balance.plotTiers = GeneratePlotTiers();
@@ -44,12 +44,21 @@ namespace LastOrders.EditorTools
             balance.namedNights = GenerateNamedNights(balance.waveManifests);
             balance.dispatchDestinations = GenerateDispatch();
 
+            // Without these the definitions have null prefabs, and the night reports spawns
+            // that never appear on screen while the road stays empty all day.
+            PrefabGenerator.EnsureEnemyPrefab(balance.enemies);
+
+            // The expansion loop's debris and first area, and the world UI it shows. Both only
+            // fill in what is missing, so hand-tuned values and restyled prefabs survive.
+            ExpansionContentGenerator.Generate();
+            WorldUiPrefabGenerator.Ensure(balance);
+
             EditorUtility.SetDirty(balance);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             Debug.Log($"[Last Orders] Generated starting content under {Root}.\n" +
-                      $"{balance.enemies.Length} enemies, {balance.customerArchetypes.Length} archetypes, " +
+                      $"{balance.enemies.Length} enemies, " +
                       $"{balance.recipes.Length} recipes, {balance.plotTiers.Length} plot tiers.");
 
             Selection.activeObject = balance;
@@ -60,13 +69,20 @@ namespace LastOrders.EditorTools
         // Every archetype exists to break one specific dominant strategy. The behavioural
         // difference is entirely the navigation field - there is no per-enemy code anywhere.
 
+        /// <summary>What the player calls the starting threat. The archetype's role in the
+        /// roster is still the Shambler - the asset keeps that name - but on screen it is a zombie.</summary>
+        public const string ZombieName = "Zombie";
+
+        public const string ZombieDescription =
+            "They wander the ruined town by day. After dark the lights draw them in, a few at a time.";
+
         static EnemyDefinition[] GenerateEnemies()
         {
             return new[]
             {
                 Enemy("Shambler", ThreatNavigation.Doors, dps: 6, hp: 30, speed: 1.0f,
                       colour: new Color(0.55f, 0.65f, 0.45f), cost: 1f, day: 1,
-                      desc: "Slow ones on the road. Plenty of them."),
+                      desc: ZombieDescription, display: ZombieName),
 
                 Enemy("Runner", ThreatNavigation.Doors, dps: 4, hp: 20, speed: 2.2f,
                       colour: new Color(1f, 0.55f, 0.1f), cost: 1.5f, day: 3,
@@ -105,11 +121,11 @@ namespace LastOrders.EditorTools
         static EnemyDefinition Enemy(string name, ThreatNavigation nav, float dps, float hp, float speed,
                                      Color colour, float cost, int day, string desc,
                                      bool ignites = false, bool steals = false, bool immuneToSlow = false,
-                                     bool nonCombatant = false, float heatPerSecond = 0f)
+                                     bool nonCombatant = false, float heatPerSecond = 0f, string display = null)
         {
             var asset = CreateOrLoad<EnemyDefinition>($"{Root}/Enemies/Enemy_{name}.asset");
 
-            asset.displayName = name;
+            asset.displayName = display ?? name;
             asset.description = desc;
             asset.silhouetteColour = colour;
             asset.navigation = nav;
@@ -166,67 +182,6 @@ namespace LastOrders.EditorTools
             asset.heatPerSegment = heat;
             asset.requiredPlotTier = tier;
             asset.cost = cost;
-
-            EditorUtility.SetDirty(asset);
-            return asset;
-        }
-
-        // --- Customers (GDD 9.6) ----------------------------------------------
-        //
-        // The weights per Reputation tier are what make the clientele visibly improve as the
-        // restaurant does, which the GDD calls a strong and free progression signal.
-
-        static CustomerArchetypeDefinition[] GenerateCustomers()
-        {
-            return new[]
-            {
-                Customer("Drifter", 1, 1, coin: 12, patience: 4f, weights: new[] { 4f, 2f, 1f, 0.5f }),
-
-                Customer("Family", 3, 4, coin: 22, patience: 9f, weights: new[] { 1f, 3f, 3f, 2f },
-                         satisfied: 2f, recruit: 0.05f),
-
-                Customer("Trader", 1, 2, coin: 10, patience: 6f, weights: new[] { 1f, 2f, 2f, 2f },
-                         tips: new[] { new ResourceAmount(ResourceType.Scrap, 3), new ResourceAmount(ResourceType.Parts, 1) }),
-
-                Customer("Soldier", 1, 2, coin: 18, patience: 3f, weights: new[] { 0.5f, 1.5f, 2f, 2f },
-                         tips: new[] { new ResourceAmount(ResourceType.Ammo, 2) }, recruit: 0.15f),
-
-                Customer("Regular", 1, 1, coin: 16, patience: 14f, weights: new[] { 0.5f, 2f, 3f, 3f },
-                         satisfied: 1.5f, regular: true),
-
-                Customer("Envoy", 2, 3, coin: 45, patience: 2f, weights: new[] { 0f, 0f, 2f, 3f },
-                         satisfied: 4f, failed: 5f, rareDrop: 0.3f),
-
-                Customer("Wounded", 1, 1, coin: 0, patience: 8f, weights: new[] { 1f, 1f, 1f, 1f },
-                         satisfied: 5f, wounded: true, recruit: 0.35f,
-                         treatment: new[] { new ResourceAmount(ResourceType.Medicine, 1) }),
-            };
-        }
-
-        static CustomerArchetypeDefinition Customer(
-            string name, int minSize, int maxSize, int coin, float patience, float[] weights,
-            float satisfied = 1f, float failed = 2f, bool regular = false, float recruit = 0f,
-            float rareDrop = 0f, bool wounded = false,
-            ResourceAmount[] tips = null, ResourceAmount[] treatment = null)
-        {
-            var asset = CreateOrLoad<CustomerArchetypeDefinition>($"{Root}/Customers/Customer_{name}.asset");
-
-            asset.displayName = name;
-            asset.minPartySize = minSize;
-            asset.maxPartySize = maxSize;
-            asset.baseCoinPayment = coin;
-            asset.patienceClockMinutes = patience;
-            asset.weightByReputationTier = weights;
-            asset.reputationOnSatisfied = satisfied;
-            asset.reputationOnFailed = failed;
-            asset.becomesRegular = regular;
-            asset.recruitChance = recruit;
-            asset.rareDropChance = rareDrop;
-            asset.isWounded = wounded;
-            asset.tips = tips ?? new ResourceAmount[0];
-            asset.treatmentCost = treatment ?? new ResourceAmount[0];
-            asset.heatMultiplier = 1f;
-            asset.poolPrewarm = 8;
 
             EditorUtility.SetDirty(asset);
             return asset;
@@ -451,10 +406,12 @@ namespace LastOrders.EditorTools
 
         static WaveManifest[] GenerateWaveManifests(EnemyDefinition[] enemies)
         {
+            // By asset name, not display name: the Shambler is shown as a Zombie, and a
+            // manifest that looked for "Shambler" on screen would find nobody to send.
             EnemyDefinition Find(string name)
             {
                 for (int i = 0; i < enemies.Length; i++)
-                    if (enemies[i].displayName == name) return enemies[i];
+                    if (enemies[i].name == $"Enemy_{name}") return enemies[i];
                 return null;
             }
 
@@ -696,7 +653,7 @@ namespace LastOrders.EditorTools
         {
             string[] folders =
             {
-                $"{Root}/Enemies", $"{Root}/Walls", $"{Root}/Customers", $"{Root}/Recipes",
+                $"{Root}/Enemies", $"{Root}/Walls", $"{Root}/Recipes",
                 $"{Root}/Crisis", $"{Root}/PlotTiers", $"{Root}/Roles", $"{Root}/Traits",
                 $"{Root}/Waves", $"{Root}/NamedNights", $"{Root}/Dispatch",
             };

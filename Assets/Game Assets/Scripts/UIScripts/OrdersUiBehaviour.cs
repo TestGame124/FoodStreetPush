@@ -29,11 +29,7 @@ public class OrdersUiBehaviour : MonoBehaviour
 
     public void OrderCloseButton()
     {
-        if (!TutorialController.TutorialCompleted())
-            TutorialController.OnOrderButtonClick?.Invoke();
-
         gameObject.SetActive(false);
-
     }
     public List<OrdersBoardUI> GetAllOrdersBoard()
     {

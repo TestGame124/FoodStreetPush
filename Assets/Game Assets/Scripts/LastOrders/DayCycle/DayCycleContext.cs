@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using LastOrders.Build;
 using LastOrders.Consequence;
 using LastOrders.Core;
-using LastOrders.Customers;
 using LastOrders.Data;
 using LastOrders.Dispatch;
 using LastOrders.Economy;
@@ -33,6 +32,13 @@ namespace LastOrders.DayCycle
         public int StructuresDestroyed;
 
         public readonly List<string> InjuredSurvivors = new List<string>();
+
+        /// <summary>Customers hurt while sheltering in the diner, now in the hospital tent.</summary>
+        public readonly List<string> InjuredVisitors = new List<string>();
+
+        /// <summary>How many zombies got past the guards and reached the diner door.</summary>
+        public int ZombiesAtTheDoor;
+
         public ResourceAmount[] Stolen;
 
         public float ReputationDelta;
@@ -65,6 +71,8 @@ namespace LastOrders.DayCycle
             StructuresWrecked = 0;
             StructuresDestroyed = 0;
             InjuredSurvivors.Clear();
+            InjuredVisitors.Clear();
+            ZombiesAtTheDoor = 0;
             Stolen = null;
             ReputationDelta = 0f;
             ClosestCall = 1f;
@@ -89,7 +97,6 @@ namespace LastOrders.DayCycle
         public readonly ReputationService Reputation;
         public readonly ResourceLedger Ledger;
         public readonly PerimeterService Perimeter;
-        public readonly CustomerDirector Customers;
         public readonly WaveDirector Waves;
         public readonly ThreatProfileService ThreatProfile;
         public readonly CrisisBarService CrisisBar;
@@ -116,7 +123,6 @@ namespace LastOrders.DayCycle
             ReputationService reputation,
             ResourceLedger ledger,
             PerimeterService perimeter,
-            CustomerDirector customers,
             WaveDirector waves,
             ThreatProfileService threatProfile,
             CrisisBarService crisisBar,
@@ -133,7 +139,6 @@ namespace LastOrders.DayCycle
             Reputation = reputation;
             Ledger = ledger;
             Perimeter = perimeter;
-            Customers = customers;
             Waves = waves;
             ThreatProfile = threatProfile;
             CrisisBar = crisisBar;

@@ -1,4 +1,3 @@
-using LastOrders.Customers;
 using UnityEngine;
 
 namespace LastOrders.DayCycle.States
@@ -8,9 +7,16 @@ namespace LastOrders.DayCycle.States
     /// and serving, and that do not pause for indecision.
     ///
     /// This state owns the clock - it is the only phase that advances
-    /// <see cref="TimeService.TickWorkingDay"/> - and it releases arrivals from the schedule
-    /// the director built at dawn. Everything else during the day is other systems reacting
-    /// to the minute tick, not to this class.
+    /// <see cref="TimeService.TickWorkingDay"/>. Everything else during the day is other
+    /// systems reacting to the minute tick, not to this class.
+    ///
+    /// Arrival TIMING deliberately does not live here. The visitor director pulls the next
+    /// planned party when the restaurant has food and a seat for them, rather than the clock
+    /// pushing parties at a diner that may have neither; releasing on the curve into a
+    /// one-table restaurant produced a queue of people who timed out at the door, which is a
+    /// loss the player was given no way to avoid. What the day's schedule still decides is
+    /// who arrives and how many the day holds, so Reputation remains what makes the clientele
+    /// visibly improve.
     /// </summary>
     public sealed class DayState : IDayPhaseState
     {
@@ -25,14 +31,9 @@ namespace LastOrders.DayCycle.States
 
         public DayPhase Phase => DayPhase.Day;
 
-        /// <summary>Raised when a party reaches the road tile, for the spawner to build them.</summary>
-        public event System.Action<ScheduledParty> OnPartyArrived;
-
         public void OnEnter(DayPhase previous)
         {
-            context.Time.OnClockMinutePassed += HandleMinutePassed;
             context.Time.OnWorkingDayEnded += HandleWorkingDayEnded;
-            context.Customers.OnPartyArrived += HandlePartyArrived;
         }
 
         public void OnTick(float deltaSeconds)
@@ -47,24 +48,12 @@ namespace LastOrders.DayCycle.States
             // Unsubscribed in OnExit rather than relying on the object being discarded,
             // because the state instance is reused every single day. A missed unsubscribe
             // here would have the day fifty state handling forty-nine duplicate minute ticks.
-            context.Time.OnClockMinutePassed -= HandleMinutePassed;
             context.Time.OnWorkingDayEnded -= HandleWorkingDayEnded;
-            context.Customers.OnPartyArrived -= HandlePartyArrived;
 
             // A placement made during the day cannot be undone after the shutters drop: by
             // then the player has seen what the layout was worth.
             context.Commands.ExpireUndoWindow();
         }
-
-        void HandleMinutePassed(int minute)
-        {
-            // Closed for Repairs means no service at all, but the clock still runs and the
-            // build bonus still applies - the player traded the day, they did not skip it.
-            if (!context.ClosedForRepairs)
-                context.Customers.ReleaseDue(minute);
-        }
-
-        void HandlePartyArrived(ScheduledParty party) => OnPartyArrived?.Invoke(party);
 
         void HandleWorkingDayEnded()
         {
@@ -91,13 +80,15 @@ namespace LastOrders.DayCycle.States
         /// 11.2 and open question 28.3. Refusing a party at the door is the cleanest Heat
         /// control in the game and the most morally interesting decision in it. Worth
         /// instrumenting carefully - if it becomes dominant, the Heat economy is wrong.
+        ///
+        /// Takes the Reputation cost as a number rather than a customer. Who is at the door
+        /// belongs to FoodStreet.Visitors now, and this phase has no business knowing the
+        /// shape of them - it only needs to know what turning one away is worth.
         /// </summary>
-        public void RefuseAtDoor(CustomerIdentity customer)
+        public void RefuseAtDoor(float reputationCost = 1f)
         {
             context.Heat.ApplyRefusedCustomer();
-            context.Reputation.Add(customer != null
-                ? customer.ReputationFor(VisitOutcome.RefusedAtDoor)
-                : -1f);
+            context.Reputation.Add(-Mathf.Abs(reputationCost));
 
             context.Report.CustomersTurnedAway++;
         }

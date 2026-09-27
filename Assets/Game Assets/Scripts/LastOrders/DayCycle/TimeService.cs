@@ -147,15 +147,5 @@ namespace LastOrders.DayCycle
             if (minutes <= 0f) return;
             ClockMinutes = Mathf.Max(0f, ClockMinutes - minutes);
         }
-
-        /// <summary>Restores the clock from a save without firing the per-minute events —
-        /// replaying forty minute-ticks on load would spawn forty parties.</summary>
-        public void RestoreFromSave(int day, float clockMinutes)
-        {
-            CurrentDay = Mathf.Max(1, day);
-            ClockMinutes = Mathf.Clamp(clockMinutes, 0f, MinutesPerDay);
-            ClockMinutesWhole = Mathf.FloorToInt(ClockMinutes);
-            PhaseElapsedSeconds = 0f;
-        }
     }
 }

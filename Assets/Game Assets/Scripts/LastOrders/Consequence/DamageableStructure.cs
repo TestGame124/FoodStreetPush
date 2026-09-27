@@ -1,5 +1,8 @@
 using System;
+using LastOrders.Core;
 using LastOrders.Data;
+using LastOrders.Night;
+using LastOrders.Repair;
 using UnityEngine;
 
 namespace LastOrders.Consequence
@@ -17,12 +20,18 @@ namespace LastOrders.Consequence
     /// The Hearth is exempt from everything. It can be Damaged but never disabled, which
     /// guarantees the player can always cook tomorrow and closes the softlock hole with one
     /// flag (15.1).
+    ///
+    /// Anything below full health is on the repair list while it is in the world, and comes back
+    /// whole once a worker has been over and fixed it.
     /// </summary>
     [RequireComponent(typeof(PlacedObject_Done))]
-    public sealed class DamageableStructure : MonoBehaviour
+    public sealed class DamageableStructure : MonoBehaviour, IRepairable
     {
         PlacedObject_Done placed;
         PlacedObjectTypeSO type;
+        GameComposition composition;
+        Transform repairAnchor;
+        string repairId;
 
         public DamageState State { get; private set; } = DamageState.Intact;
 
@@ -51,6 +60,81 @@ namespace LastOrders.Consequence
             placed = GetComponent<PlacedObject_Done>();
             type = placed != null ? placed.PlacedObjectTypeSO : null;
             ResetToIntact();
+        }
+
+        void Start()
+        {
+            GameLifetimeScope scope = FindFirstObjectByType<GameLifetimeScope>();
+            composition = scope != null ? scope.Composition : null;
+            composition?.Repairs.Register(this);
+        }
+
+        // Pooled with the placed object: back on the list when it is placed again.
+        void OnEnable() => composition?.Repairs.Register(this);
+
+        void OnDisable() => composition?.Repairs.Unregister(this);
+
+        // --- Being repaired ----------------------------------------------------------------
+
+        public string RepairId => repairId ??= $"placed:{name}:{GetInstanceID()}";
+
+        public string DisplayName =>
+            type != null && !string.IsNullOrEmpty(type.nameString) ? type.nameString : name;
+
+        public bool IsDestroyed => State == DamageState.Destroyed;
+
+        public bool IsRepairableNow => isActiveAndEnabled && placed != null && !placed.isRemoved;
+
+        public Transform RepairTarget => transform;
+
+        /// <summary>Just over the top of it, made the first time it is asked for.</summary>
+        public Transform RepairAnchor
+        {
+            get
+            {
+                if (repairAnchor != null) return repairAnchor;
+
+                Bounds bounds = VisualBounds();
+                repairAnchor = new GameObject("RepairAnchor").transform;
+                repairAnchor.SetParent(transform, false);
+                repairAnchor.position = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+                return repairAnchor;
+            }
+        }
+
+        /// <summary>Beside it, on whichever side faces the middle of the restaurant.</summary>
+        public Vector3 RepairPoint
+        {
+            get
+            {
+                Bounds bounds = VisualBounds();
+                Vector3 centre = new Vector3(bounds.center.x, transform.position.y, bounds.center.z);
+
+                NightShelter shelter = FindFirstObjectByType<NightShelter>();
+                Vector3 room = shelter != null ? shelter.Footprint.center : centre + Vector3.back;
+                room.y = centre.y;
+
+                Vector3 toward = room - centre;
+                if (toward.sqrMagnitude < 1e-4f) toward = Vector3.back;
+
+                // Out along whichever of its own faces points most toward the room.
+                Vector3 face = Mathf.Abs(toward.x) > Mathf.Abs(toward.z)
+                    ? new Vector3(Mathf.Sign(toward.x), 0f, 0f)
+                    : new Vector3(0f, 0f, Mathf.Sign(toward.z));
+
+                float reach = Mathf.Abs(face.x) > 0f ? bounds.extents.x : bounds.extents.z;
+                return centre + face * (reach + 0.7f);
+            }
+        }
+
+        Bounds VisualBounds()
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return new Bounds(transform.position + Vector3.up, Vector3.one);
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            return bounds;
         }
 
         public void ResetToIntact()

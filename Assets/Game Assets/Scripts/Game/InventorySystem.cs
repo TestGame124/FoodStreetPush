@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using FoodStreet.Saving;
 using UnityEngine;
 
 public class InventorySystem : MonoBehaviour
@@ -97,6 +96,34 @@ public class InventorySystem : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Takes a whole amount of one item, or nothing at all.
+    ///
+    /// RemoveItem decrements by exactly one per call and drops the entry when it reaches one,
+    /// so spending three of something is three calls with an off-by-one waiting in it. Worse,
+    /// a caller that checks the count and then removes in a loop can leave a visitor half paid
+    /// for if the count was wrong. This checks first and moves once, so a purchase either
+    /// happens or does not.
+    /// </summary>
+    public bool TryConsume(ItemType type, int amount)
+    {
+        if (amount <= 0) return true;
+
+        Item stored = GetItem(type);
+        if (stored == null || stored.itemsAmount < amount) return false;
+
+        stored.itemsAmount -= amount;
+
+        if (stored.itemsAmount <= 0)
+        {
+            items.Remove(stored);
+            itemDict.Remove(type);
+        }
+
+        onInventoryChangedCallback?.Invoke();
+        return true;
+    }
+
     public int ItemCount(ItemType itemtype)
     {
         if(GetItem(itemtype) != null)
@@ -124,60 +151,4 @@ public class InventorySystem : MonoBehaviour
     {
         return items;
     }
-
-    #region Saving Loading
-
-    public InventorySaveData Save()
-    {
-        InventorySaveData data = new InventorySaveData { size = inventorySize };
-
-        for (int i = 0; i < items.Count; i++)
-        {
-            Item item = items[i];
-            if (item == null || item.itemDataSO == null)
-                continue;
-
-            // Type and count only. The old format wrote the whole ItemDataSO
-            // asset into the save file for every stack.
-            data.items.Add(new InventoryEntrySaveData
-            {
-                type = item.type,
-                amount = item.itemsAmount
-            });
-        }
-
-        return data;
-    }
-
-    public void Load(InventorySaveData data)
-    {
-        if (data == null)
-            return;
-
-        items.Clear();
-        itemDict.Clear();
-
-        inventorySize = data.size > 0 ? data.size : inventorySize;
-
-        for (int i = 0; i < data.items.Count; i++)
-        {
-            InventoryEntrySaveData entry = data.items[i];
-            if (entry.amount <= 0)
-                continue;
-
-            ItemDataSO itemData = ItemController.GetItem(entry.type);
-            if (itemData == null)
-                continue;
-
-            // Rebuilt directly rather than through AddItem: that path adds one
-            // at a time and would restore a stack of 40 as a stack of 1.
-            Item item = new Item(itemData, entry.amount);
-            items.Add(item);
-            itemDict[item.type] = item;
-        }
-
-        onInventoryChangedCallback?.Invoke();
-    }
-
-    #endregion
 }

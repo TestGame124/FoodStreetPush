@@ -3,6 +3,12 @@ using LastOrders.Economy;
 
 namespace LastOrders.Build
 {
+    /// <summary>Optional preflight so a blocked inverse operation stays on the undo stack.</summary>
+    public interface IBuildUndoValidation
+    {
+        bool CanUndo(BuildContext context);
+    }
+
     /// <summary>
     /// Everything a command needs to act on the world. Passed in rather than captured so a
     /// recorded command can be replayed later against a different context, which is what

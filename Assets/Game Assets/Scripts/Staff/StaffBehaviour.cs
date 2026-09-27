@@ -61,7 +61,10 @@ public class StaffBehaviour : MonoBehaviour
     bool stateChanged;
     void Free()
     {
-        if (OrderSystem.instance.TotalOrdersClaimed== 0)
+        // Asked through the bridge rather than read directly. Under Last Orders the meal is
+        // already off the pass by the time a customer is sitting down, so a claimed order is
+        // not what authorises this trip - the seated customer is.
+        if (!LastOrders.Core.LastOrdersBridge.ServiceGateSatisfied)
             return;
         if(stateChanged) return;
         if (zone.ActiveChairs().Count == 0)

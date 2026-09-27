@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
-using FoodStreet.Saving;
 using UnityEngine;
 
 /// <summary>
 /// Player level and experience.
 ///
-/// The numbers live in the encrypted save payload - level gates which shop
-/// items exist, so it is worth as much to a cheater as the coin balance is.
+/// The numbers live in memory for the length of the session; nothing is
+/// persisted, so every launch starts at level one.
 /// </summary>
 public class LevelUpSystem : MonoBehaviour
 {
@@ -22,18 +21,11 @@ public class LevelUpSystem : MonoBehaviour
     private static Dictionary<int, CurrencyReward> rewardConfigDictionary;
     private static RewardManager rewardManager;
 
-    private static ProgressSaveData Progress
-    {
-        get
-        {
-            if (!SaveSystem.IsReady)
-            {
-                Debug.LogError("[LevelUp] Progress read before SaveSystem.Initialize.");
-                return null;
-            }
-            return SaveSystem.Data.progress;
-        }
-    }
+    private const int StartingXpToNextLevel = 3;
+
+    private static int level = 1;
+    private static int currentXp;
+    private static int xpToNextLevel = StartingXpToNextLevel;
 
     void Awake()
     {
@@ -50,62 +42,43 @@ public class LevelUpSystem : MonoBehaviour
     {
         Instance = this;
 
-        // The save file already carries level and XP. All that is left is to
-        // let the UI catch up - deliberately without running the level-up
+        // Let the UI catch up - deliberately without running the level-up
         // check, which would replay the level-up popup on every boot.
         Broadcast();
     }
 
-    public static int GetLevel()
-    {
-        ProgressSaveData progress = Progress;
-        return progress == null ? 1 : progress.level;
-    }
+    public static int GetLevel() => level;
 
-    public static int GetCurrentXP()
-    {
-        ProgressSaveData progress = Progress;
-        return progress == null ? 0 : progress.currentXp;
-    }
+    public static int GetCurrentXP() => currentXp;
 
-    public static int GetXPToNextLevel()
-    {
-        ProgressSaveData progress = Progress;
-        return progress == null ? 3 : progress.xpToNextLevel;
-    }
+    public static int GetXPToNextLevel() => xpToNextLevel;
 
     public static void AddXP(int amount)
     {
-        ProgressSaveData progress = Progress;
-        if (progress == null || amount <= 0)
+        if (amount <= 0)
             return;
 
-        progress.currentXp += amount;
+        currentXp += amount;
         CheckLevelUp();
 
-        SaveSystem.MarkDirty();
         Broadcast();
     }
 
     public static void CheckLevelUp()
     {
-        ProgressSaveData progress = Progress;
-        if (progress == null)
-            return;
-
-        while (progress.currentXp >= progress.xpToNextLevel)
+        while (currentXp >= xpToNextLevel)
         {
-            progress.currentXp -= progress.xpToNextLevel;
-            progress.level++;
+            currentXp -= xpToNextLevel;
+            level++;
 
-            if (TutorialController.TutorialCompleted() && UIGame.GetUI() != null)
+            if (UIGame.GetUI() != null)
             {
                 UIGame.GetUI().levelUpUi.gameObject.SetActive(true);
                 UIGame.GetUI().levelUpUi.GetComponent<CanvasGroup>().DOFade(1, 0.5f).From(0);
             }
 
-            ApplyRewards(progress.level);
-            progress.xpToNextLevel = CalculateXPToNextLevel(progress.level);
+            ApplyRewards(level);
+            xpToNextLevel = CalculateXPToNextLevel(level);
         }
     }
 
@@ -119,9 +92,9 @@ public class LevelUpSystem : MonoBehaviour
         OnLevelUp?.Invoke(GetLevel());
     }
 
-    private static int CalculateXPToNextLevel(int level)
+    private static int CalculateXPToNextLevel(int reachedLevel)
     {
-        return 3 + (level - 1) * 2;
+        return StartingXpToNextLevel + (reachedLevel - 1) * 2;
     }
 
     public static void ApplyRewards(int level)
@@ -147,25 +120,16 @@ public class LevelUpSystem : MonoBehaviour
 
     private static void Broadcast()
     {
-        ProgressSaveData progress = Progress;
-        if (progress == null)
-            return;
-
-        OnXpChanged?.Invoke(progress.level, progress.currentXp, progress.xpToNextLevel);
+        OnXpChanged?.Invoke(level, currentXp, xpToNextLevel);
     }
 
     public static void ResetXpData()
     {
-        ProgressSaveData progress = Progress;
-        if (progress == null)
-            return;
+        level = 1;
+        currentXp = 0;
+        xpToNextLevel = StartingXpToNextLevel;
 
-        progress.level = 1;
-        progress.currentXp = 0;
-        progress.xpToNextLevel = 3;
-
-        SaveSystem.MarkDirty();
         Broadcast();
-        OnLevelUp?.Invoke(progress.level);
+        OnLevelUp?.Invoke(level);
     }
 }

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82a99602943b16748a45dba15c7fadf7, type: 3}
+  m_Name: Vehicle_Hatchback
+  m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VehicleDefinition
+  displayName: Hatchback
+  bodySize: {x: 1.75, y: 0.8, z: 3.7}
+  bodyColour: {r: 0.76862746, g: 0.4117647, b: 0.29411766, a: 1}
+  cabinColour: {r: 0.23137255, g: 0.2901961, b: 0.3882353, a: 1}
+  wheelRadius: 0.35999998
+  driveSpeed: 6.5
+  manoeuvreSpeed: 2.2
+  turnSpeed: 150
+  arriveRadius: 0.6
+  bayFootprint: {x: 2.45, y: 4.3}
+  prefab: {fileID: 3961743747569939596, guid: bea3b51a34e0c304daa10a1b93c9a686, type: 3}

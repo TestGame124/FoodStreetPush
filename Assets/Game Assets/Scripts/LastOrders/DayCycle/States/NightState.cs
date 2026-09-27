@@ -25,6 +25,7 @@ namespace LastOrders.DayCycle.States
 
         float elapsed;
         int nextSpawnIndex;
+        int nextWarningIndex;
 
         public NightState(DayCycleContext context, DayCycleMachine machine)
         {
@@ -47,14 +48,32 @@ namespace LastOrders.DayCycle.States
 
         public int LiveEnemyCount => live.Count;
 
+        /// <summary>Everything on the map tonight that is still alive. What the guard towers
+        /// and turrets choose their targets from.</summary>
+        public IReadOnlyList<EnemyAgent> LiveEnemies => live;
+
         /// <summary>Raised when an enemy should be spawned, with its definition and lane.
         /// The spawner owns the pool and the road positions; this state owns the schedule.</summary>
         public event Action<EnemyDefinition, int> OnSpawnRequested;
+
+        /// <summary>
+        /// A group is about to arrive, a few seconds before the first of it does. The warning the
+        /// player gets for each knot of zombies coming up the road - raised once per group, not
+        /// once per zombie.
+        /// </summary>
+        public event Action<WaveGroup> OnGroupIncoming;
+
+        /// <summary>Seconds of warning before each group, from the balance asset.</summary>
+        float WarningLead => context.Balance != null ? context.Balance.incomingWarningSeconds : 6f;
+
+        /// <summary>Seconds past the night's length before dawn comes whatever is still out there.</summary>
+        float DawnGrace => context.Balance != null ? context.Balance.dawnGraceSeconds : 20f;
 
         public void OnEnter(DayPhase previous)
         {
             elapsed = 0f;
             nextSpawnIndex = 0;
+            nextWarningIndex = 0;
             live.Clear();
         }
 
@@ -63,6 +82,7 @@ namespace LastOrders.DayCycle.States
             elapsed += deltaSeconds;
 
             context.CrisisBar.Tick(deltaSeconds);
+            RaiseDueWarnings();
             ReleaseDueSpawns();
             DrainEmittedHeat();
 
@@ -80,8 +100,33 @@ namespace LastOrders.DayCycle.States
             bool timeUp = elapsed >= plan.DurationSeconds;
             bool allSpawned = nextSpawnIndex >= plan.Spawns.Count;
 
-            if (timeUp && allSpawned && live.Count == 0)
+            if (!timeUp || !allSpawned) return;
+
+            // The hostage case is real: a zombie that reaches a door no tower can see stands
+            // there, alive, for as long as it is allowed to. So the survivors get a grace
+            // period to finish it, and after that the sun comes up regardless. Whatever is left
+            // is dismissed on exit, and what it did at the door has already counted.
+            bool graceOver = elapsed >= plan.DurationSeconds + DawnGrace;
+
+            if (live.Count == 0 || graceOver)
                 machine.RequestTransition(DayPhase.Resolution);
+        }
+
+        /// <summary>Warns about each group a few seconds before it arrives. A group due inside
+        /// the lead at the very start of the night is warned about at once.</summary>
+        void RaiseDueWarnings()
+        {
+            WavePlan plan = context.TonightsWave;
+            if (plan == null) return;
+
+            float lead = WarningLead;
+
+            while (nextWarningIndex < plan.Groups.Count &&
+                   plan.Groups[nextWarningIndex].TimeSeconds - lead <= elapsed)
+            {
+                OnGroupIncoming?.Invoke(plan.Groups[nextWarningIndex]);
+                nextWarningIndex++;
+            }
         }
 
         public void OnExit(DayPhase next)

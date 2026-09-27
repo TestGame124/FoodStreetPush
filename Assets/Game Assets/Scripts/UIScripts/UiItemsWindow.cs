@@ -66,10 +66,6 @@ public class UiItemsWindow : MonoBehaviour
         
 
         GridBuildingSystem3D.Instance.SetPlacingObject(objectDatabase.type, objectDatabase.placedObjectTypeSOList[index].type);
-        if (!TutorialController.TutorialCompleted() && objectDatabase.placedObjectTypeSOList[index].type == ObjectType.SoupStove)
-        {
-            TutorialController.ObjectPlacingStageEvent?.Invoke();
-        }
     }
 
     public Transform GetShopItemCategory(ObjectCategory cat)

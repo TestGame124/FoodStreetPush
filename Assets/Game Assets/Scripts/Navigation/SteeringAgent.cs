@@ -37,6 +37,15 @@ namespace FoodStreet.Navigation
         /// an agent is parked in a chair.</summary>
         public bool avoidsOthers = true;
 
+        /// <summary>Who this agent is to a <see cref="IMovementBarrier"/>. A zombie is stopped by
+        /// every wall and never let through a gate; anything friendly only waits at a shut one.</summary>
+        public MoverKind Mover { get; set; } = MoverKind.Friendly;
+
+        /// <summary>The barrier that refused this agent's last step, or null when it moved
+        /// freely. Held until the next step is tried, so whatever reads it sees it whichever
+        /// order the two run in.</summary>
+        public IMovementBarrier BlockedBy { get; private set; }
+
         public float Speed => speed;
         public float Radius => radius;
 
@@ -73,6 +82,7 @@ namespace FoodStreet.Navigation
             NavigationSystem.UnregisterAgent(this);
             desiredDirection = Vector3.zero;
             velocity = Vector3.zero;
+            BlockedBy = null;
         }
 
         /// <summary>
@@ -93,6 +103,7 @@ namespace FoodStreet.Navigation
         {
             desiredDirection = Vector3.zero;
             velocity = Vector3.zero;
+            BlockedBy = null;
         }
 
         /// <summary>Teleport. Clears momentum, because carrying velocity across a jump
@@ -122,6 +133,10 @@ namespace FoodStreet.Navigation
             {
                 transform.position = Resolve(transform.position, velocity * dt);
                 Face(velocity, dt);
+            }
+            else
+            {
+                BlockedBy = null;
             }
 
             // Consumed. A follower that goes quiet this frame coasts to a stop rather than
@@ -175,23 +190,31 @@ namespace FoodStreet.Navigation
         Vector3 Resolve(Vector3 position, Vector3 step)
         {
             GridService grid = NavigationSystem.Instance != null ? NavigationSystem.Instance.Grid : null;
-            if (grid == null) return position + step;
 
+            // The straight step is the one that says what is in the way. A slide along a wall
+            // afterwards does not clear it: the wall is still what this agent walked into.
             Vector3 candidate = position + step;
-            if (Standable(grid, candidate)) return candidate;
+            BlockedBy = MovementBarriers.FindBlocking(position, candidate, radius, Mover);
+
+            if (BlockedBy == null && Standable(grid, candidate)) return candidate;
 
             Vector3 alongX = position + new Vector3(step.x, 0f, 0f);
-            if (Standable(grid, alongX)) return alongX;
+            if (Passable(grid, position, alongX)) return alongX;
 
             Vector3 alongZ = position + new Vector3(0f, 0f, step.z);
-            if (Standable(grid, alongZ)) return alongZ;
+            if (Passable(grid, position, alongZ)) return alongZ;
 
             velocity = Vector3.zero;
             return position;
         }
 
+        bool Passable(GridService grid, Vector3 from, Vector3 to) =>
+            Standable(grid, to) && MovementBarriers.FindBlocking(from, to, radius, Mover) == null;
+
         bool Standable(GridService grid, Vector3 world)
         {
+            if (grid == null) return true;
+
             Vector2Int cell = grid.Grid.WorldToCell(world);
 
             // Outside the build grid is open world, not a wall. Agents spawn and despawn

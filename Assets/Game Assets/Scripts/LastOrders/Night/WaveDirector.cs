@@ -26,10 +26,42 @@ namespace LastOrders.Night
         }
     }
 
+    /// <summary>
+    /// A handful of arrivals that come up the same lane together. The unit the player is warned
+    /// about: "three coming up the road" is something to act on, where a warning per zombie is
+    /// noise.
+    /// </summary>
+    public readonly struct WaveGroup
+    {
+        /// <summary>Seconds into the night the first of them arrives.</summary>
+        public readonly float TimeSeconds;
+
+        public readonly int Lane;
+        public readonly int Count;
+
+        /// <summary>The first of them, for naming the group in a warning.</summary>
+        public readonly EnemyDefinition Leader;
+
+        public WaveGroup(float timeSeconds, int lane, int count, EnemyDefinition leader)
+        {
+            TimeSeconds = timeSeconds;
+            Lane = lane;
+            Count = count;
+            Leader = leader;
+        }
+
+        /// <summary>"3 zombies", for a warning. Whatever the archetypes, the player's word for
+        /// all of them is zombies.</summary>
+        public string Label => Count == 1 ? "A zombie" : $"{Count} zombies";
+    }
+
     /// <summary>A fully resolved night, produced at dusk and consumed by NightState.</summary>
     public sealed class WavePlan
     {
         public readonly List<WaveSpawn> Spawns = new List<WaveSpawn>();
+
+        /// <summary>The same arrivals, as the groups they come in, in the order they arrive.</summary>
+        public readonly List<WaveGroup> Groups = new List<WaveGroup>();
         public float DurationSeconds;
         public int LaneCount;
         public int Tier;
@@ -95,9 +127,13 @@ namespace LastOrders.Night
             var rng = DeterministicRandom.ForNight(day, Mathf.RoundToInt(heat), balance.campaignSeed);
 
             float budget = Mathf.Max(manifest.minimumBudget, heat * manifest.budgetPerHeat);
-            FillWave(plan, manifest, day, budget, ref rng);
+
+            var picked = new List<EnemyDefinition>();
+            FillWave(manifest, day, budget, picked, ref rng);
+            ScheduleGroups(plan, manifest, picked, ref rng);
 
             plan.Spawns.Sort((a, b) => a.TimeSeconds.CompareTo(b.TimeSeconds));
+            plan.Groups.Sort((a, b) => a.TimeSeconds.CompareTo(b.TimeSeconds));
             return plan;
         }
 
@@ -132,7 +168,10 @@ namespace LastOrders.Night
             return candidates[rng.Range(0, candidates.Count)];
         }
 
-        void FillWave(WavePlan plan, WaveManifest manifest, int day, float budget, ref DeterministicRandom rng)
+        /// <summary>Chooses who comes tonight, into <paramref name="picked"/>, spending the budget.
+        /// When they come is decided afterwards, by <see cref="ScheduleGroups"/>.</summary>
+        void FillWave(WaveManifest manifest, int day, float budget, List<EnemyDefinition> picked,
+                      ref DeterministicRandom rng)
         {
             if (manifest.entries == null || manifest.entries.Length == 0) return;
 
@@ -156,7 +195,7 @@ namespace LastOrders.Night
             {
                 for (int n = 0; n < eligible[i].guaranteedMinimum; n++)
                 {
-                    AddSpawn(plan, eligible[i].enemy, counts, ref rng, manifest);
+                    Pick(eligible[i].enemy, picked, counts);
                     budget -= eligible[i].enemy.threatCost;
                 }
             }
@@ -172,29 +211,62 @@ namespace LastOrders.Night
                 EnemyDefinition enemy = eligible[index].enemy;
                 if (enemy.threatCost > budget) break;
 
-                AddSpawn(plan, enemy, counts, ref rng, manifest);
+                Pick(enemy, picked, counts);
                 budget -= enemy.threatCost;
             }
         }
 
-        void AddSpawn(WavePlan plan, EnemyDefinition enemy, Dictionary<EnemyDefinition, int> counts,
-                      ref DeterministicRandom rng, WaveManifest manifest)
+        static void Pick(EnemyDefinition enemy, List<EnemyDefinition> picked, Dictionary<EnemyDefinition, int> counts)
         {
             counts.TryGetValue(enemy, out int existing);
             counts[enemy] = existing + 1;
+            picked.Add(enemy);
+        }
 
-            // Spawn time is drawn uniformly then reshaped by the manifest's curve, so a
-            // manifest that wants a late surge gets one without needing bespoke scheduling.
-            float t = rng.NextFloat();
-            float shaped = manifest.spawnRateOverNight != null
-                ? Mathf.Clamp01(1f - manifest.spawnRateOverNight.Evaluate(t))
-                : t;
+        /// <summary>
+        /// Splits tonight's arrivals into small groups and gives each group one time and one lane.
+        ///
+        /// Zombies drawn in by the lights come in knots of two to four rather than as a steady
+        /// drip, and a group is the thing the player gets warned about. Members of a group follow
+        /// each other in a second or so apart, up the same road.
+        ///
+        /// The group's time is drawn uniformly then reshaped by the manifest's curve, so a
+        /// manifest that wants a late surge gets one without needing bespoke scheduling.
+        /// </summary>
+        static void ScheduleGroups(WavePlan plan, WaveManifest manifest, List<EnemyDefinition> picked,
+                                   ref DeterministicRandom rng)
+        {
+            int smallest = Mathf.Max(1, manifest.groupSize.x);
+            int largest = Mathf.Max(smallest, manifest.groupSize.y);
+            float stagger = Mathf.Max(0f, manifest.groupStaggerSeconds);
+            int lanes = Mathf.Max(1, plan.LaneCount);
 
-            float time = shaped * plan.DurationSeconds;
-            int lane = rng.Range(0, Mathf.Max(1, plan.LaneCount));
+            int next = 0;
+            while (next < picked.Count)
+            {
+                int size = Mathf.Min(rng.Range(smallest, largest + 1), picked.Count - next);
 
-            plan.Spawns.Add(new WaveSpawn(enemy, time, lane));
-            plan.Composition.Add(enemy);
+                float t = rng.NextFloat();
+                float shaped = manifest.spawnRateOverNight != null
+                    ? Mathf.Clamp01(1f - manifest.spawnRateOverNight.Evaluate(t))
+                    : t;
+
+                // Early enough that the whole group is on the road before the night is over.
+                float latest = Mathf.Max(0f, plan.DurationSeconds - stagger * (size - 1));
+                float start = shaped * latest;
+                int lane = rng.Range(0, lanes);
+
+                plan.Groups.Add(new WaveGroup(start, lane, size, picked[next]));
+
+                for (int k = 0; k < size; k++)
+                {
+                    EnemyDefinition enemy = picked[next + k];
+                    plan.Spawns.Add(new WaveSpawn(enemy, start + stagger * k, lane));
+                    plan.Composition.Add(enemy);
+                }
+
+                next += size;
+            }
         }
 
         /// <summary>Adapts the manifest's entries to the weighting interface, applying each

@@ -13,6 +13,15 @@ namespace LastOrders.Data
         Ammo = 3,
         Medicine = 4,
 
+        // The Last Restaurant v0.2 economy of its 9. Appended at unused values rather than
+        // renumbering, because ResourceType is serialised by value in every save and every
+        // authored cost - shifting one would silently turn stored Scrap into stored Parts.
+        Wood = 5,
+
+        /// <summary>What additional guard towers are bought with. Appended at the next unused
+        /// value for the same reason as Wood.</summary>
+        TradeToken = 6,
+
         // The five ingredients of §8. Kept in the same enum as the hard resources so a
         // recipe cost and a build cost are the same type and share one wallet UI.
         Meat = 10,
@@ -20,6 +29,9 @@ namespace LastOrders.Data
         Veg = 12,
         Spice = 13,
         Luxury = 14,
+
+        /// <summary>The opening crop of that document's 7: two beds, one recipe, one meal.</summary>
+        Tomato = 15,
     }
 
     /// <summary>One line of a cost or a reward. A serialisable pair, so costs author as a
@@ -123,5 +135,10 @@ namespace LastOrders.Data
             }
             return result;
         }
+
+        /// <summary>The name a player reads. The enum's own name everywhere it already reads
+        /// as a word; "TradeToken" does not.</summary>
+        public static string DisplayName(this ResourceType type) =>
+            type == ResourceType.TradeToken ? "Trade Tokens" : type.ToString();
     }
 }

@@ -47,7 +47,7 @@ public class CookingUIPanel : MonoBehaviour
     public void Initialize(InventorySystem inventory)
     {
         inventorySystem= inventory;
-        closeButton.onClick.AddListener(() => CloseButton(true));
+        closeButton.onClick.AddListener(() => CloseButton());
     }
 
     public void Setup(CookingRecipe[] recipies, CookeryStation cookBuilding)
@@ -140,7 +140,7 @@ public class CookingUIPanel : MonoBehaviour
         }
     }
        
-    public void CloseButton(bool tutorial = false)
+    public void CloseButton()
     {
         itemSlotsTimerList.Clear();
         foreach(Transform go in recipiesBoxContainer)
@@ -156,9 +156,6 @@ public class CookingUIPanel : MonoBehaviour
         {
             item.UpdateTimer -= UpdateTimerUI;
         }
-        if(tutorial)
-            if (!TutorialController.TutorialCompleted())
-                TutorialController.OnCookButtonClick?.Invoke();
     }
    
     public void SkipButton()
@@ -170,8 +167,6 @@ public class CookingUIPanel : MonoBehaviour
             cookBuilding.recipiesInProgress[0].FinishRecipe();
             skipButton.SetActive(false);
         }
-        if (!TutorialController.TutorialCompleted())
-            TutorialController.OnCookButtonClick?.Invoke();
     }
   
 }

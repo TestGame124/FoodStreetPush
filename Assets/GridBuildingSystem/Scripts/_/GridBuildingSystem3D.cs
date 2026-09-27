@@ -1,686 +1,214 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
-using CodeMonkey.Utils;
-using System.Threading;
-using BayatGames.SaveGameFree;
-using BayatGames.SaveGameFree.Types;
+using FoodStreet.Placement;
+using FoodStreet.Interaction;
 
-public class GridBuildingSystem3D : MonoBehaviour {
-
+/// <summary>Scene/shop compatibility facade. PlacementService owns rules and mutations.</summary>
+public class GridBuildingSystem3D : MonoBehaviour
+{
     public static GridBuildingSystem3D Instance { get; private set; }
-
     public event EventHandler OnSelectedChanged;
     public event EventHandler OnObjectPlaced;
-
     public delegate void OnObjectPlaceDelegate();
-
     public event OnObjectPlaceDelegate OnObjectPlacedEvent;
-
-    [SerializeField] private BuildingGhost ghostObject;
+    [SerializeField] BuildingGhost ghostObject;
+    [SerializeField] ObjectDatabaseHandler objectDataHandler;
+    [SerializeField] GridSettings settings;
+    [SerializeField] public GameObject gridVisualization;
     public BuildingGhost GhostObject => ghostObject;
-
-    private static GridXZ<GridObject> grid;
-    //[SerializeField] private List<PlacedObjectTypeSO> placedObjectTypeSOList = null;
-
-   [SerializeField] ObjectDatabaseHandler objectDataHandler;
-
-   [SerializeField] public GameObject gridVisualization;
-
+    public GridSettings Settings => settings;
+    public PlacementService Placement { get; private set; }
     public PlacedObject_Done selectedObject;
-
-    private PlacedObjectTypeSO placedObjectTypeSO;
-    private PlacedObjectTypeSO.Dir dir;
-    private ShopItem currentShopItem;
-    public ShopItem CurrentShopItem => currentShopItem;
-
+    public ShopItem CurrentShopItem { get; private set; }
     public bool CanBuild { get; private set; }
-    public void Initialize() {
-        Initialize(50, 50, 1f, Vector3.zero);
-    }
+    public bool IsDragging => brush != null && brush.IsDragging;
+    static GridXZ<GridObject> grid;
+    FloorBrush brush;
+    GridOverlay overlay;
+    PlacedObjectTypeSO placedObjectTypeSO;
+    PlacedObjectTypeSO.Dir dir;
+    Vector3 recentMousePosition;
 
-    /// <summary>
-    /// Builds the grid at an explicit size.
-    ///
-    /// Added for the Last Orders plot tiers (GDD 6.2), where the playable grid grows from
-    /// 8x8 to 16x14 across the campaign and the grid itself is the progression track.
-    ///
-    /// The object database is optional here. It belongs to the shop and inventory flow,
-    /// which a grey-box Last Orders scene does not run, and requiring it would mean the new
-    /// scene could not start without dragging in the whole of the old bootstrap.
-    /// </summary>
-    public void Initialize(int gridWidth, int gridHeight, float cellSize, Vector3 origin) {
-        Instance = this;
+    public void Initialize() => Initialize(settings != null ? settings.width : 50, settings != null ? settings.height : 50,
+        settings != null ? settings.cellSize : 1, settings != null ? settings.origin : Vector3.zero);
 
-        if (objectDataHandler != null) {
-            objectDataHandler.RegisterDatabases();
-        }
-
-        grid = new GridXZ<GridObject>(gridWidth, gridHeight, cellSize, origin, (GridXZ<GridObject> g, int x, int y) => new GridObject(g, x, y));
-
-        placedObjectTypeSO = null;// placedObjectTypeSOList[0];
-    }
-
-    public class GridObject {
-
-        private GridXZ<GridObject> grid;
-        private int x;
-        private int y;
-        public PlacedObject_Done placedObject;
-
-        public GridObject(GridXZ<GridObject> grid, int x, int y) {
-            this.grid = grid;
-            this.x = x;
-            this.y = y;
-            placedObject = null;
-        }
-
-        //public override string ToString() {
-        //    return x + ", " + y + "\n" + placedObject;
-        //}
-
-        public void SetPlacedObject(PlacedObject_Done placedObject) {
-            this.placedObject = placedObject;
-            grid.TriggerGridObjectChanged(x, y);
-        }
-
-        public void ClearPlacedObject() {
-            placedObject = null;
-            grid.TriggerGridObjectChanged(x, y);
-        }
-
-        public PlacedObject_Done GetPlacedObject() {
-            return placedObject;
-        }
-
-        public bool CanBuild() {
-            return placedObject == null || placedObject.shopItemType == ObjectType.Floor1;
-        }
-
-    }
-
-    private void Update() {
-
-        if (grid == null)
-            return;
-
-        if (UIGame.IsPointerOverUI())
-            return;
-        
-#if UNITY_EDITOR
-        // For Rotation
-        if (Input.GetKeyDown(KeyCode.R)) {
-            dir = PlacedObjectTypeSO.GetNextDir(dir);
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha0)) { DeselectObjectType(); }
-        if (Input.GetMouseButtonDown(1))
-        {
-            Vector3 mousePosition = Mouse3D.GetMouseWorldPosition();
-            RemoveObject(mousePosition);
-        }
-#endif
-        if (placedObjectTypeSO != null)
-        {
-            if (placedObjectTypeSO.categoryType == ObjectCategory.Floor)
-            {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    StartDrag();
-                }
-
-                if (Input.GetMouseButton(0) && isDragging)
-                {
-                    ContinueDrag();
-                }
-
-            }
-        }
-        
-    }
-
-    public void RemoveObject(Vector3 worldPos)
+    public void Initialize(int gridWidth, int gridHeight, float cellSize, Vector3 origin)
     {
-        Debug.Log($"Removed Obj Pos : {worldPos}");
-        if (grid.GetGridObject(worldPos) != null)
+        var layout = new FoodStreet.Placement.GridLayout(gridWidth, gridHeight, cellSize, origin);
+        DeselectObjectType();
+        Instance = this;
+        if (objectDataHandler != null) objectDataHandler.RegisterDatabases();
+        grid = new GridXZ<GridObject>(layout.Width, layout.Height, layout.CellSize, layout.Origin, (g, x, z) => new GridObject(g, x, z));
+        Placement = new PlacementService(grid);
+        brush = new FloorBrush(Placement);
+        overlay?.Dispose();
+        if (Application.isPlaying && gridVisualization == null) overlay = new GridOverlay(layout);
+    }
+
+    /// <summary>Independent floor and furniture layers; navigation sees furniture first.</summary>
+    public class GridObject
+    {
+        readonly GridXZ<GridObject> owner;
+        readonly int x, z;
+        public PlacedObject_Done Floor { get; private set; }
+        public PlacedObject_Done Solid { get; private set; }
+        public PlacedObject_Done placedObject => GetPlacedObject();
+        public GridObject(GridXZ<GridObject> owner, int x, int z) { this.owner = owner; this.x = x; this.z = z; }
+        public void SetPlacedObject(PlacedObject_Done value)
         {
-
-            // Valid Grid Position
-            
-                PlacedObject_Done placedObject = grid.GetGridObject(worldPos).GetPlacedObject();
-            if (selectedObject != null)
-                placedObject = selectedObject;
-
-            if (placedObject != null)
-            {
-                // Demolish
-                placedObject.DestroySelf();
-
-                //if (dontClearPosFromGrid)
-                //    return;
-                List<Vector2Int> gridPositionList = placedObject.GetGridPositionList();
-                foreach (Vector2Int gridPosition in gridPositionList)
-                {
-                    grid.GetGridObject(gridPosition.x, gridPosition.y).ClearPlacedObject();
-                }
-            }
-            selectedObject = null;
-
+            if (value == null) return;
+            if (value.IsFloor()) { if (Floor == value) return; Floor = value; }
+            else { if (Solid == value) return; Solid = value; }
+            owner.TriggerGridObjectChanged(x, z);
         }
+        public void Remove(PlacedObject_Done value)
+        {
+            bool changed = false;
+            if (Floor != null && Floor == value) { Floor = null; changed = true; }
+            if (Solid != null && Solid == value) { Solid = null; changed = true; }
+            if (changed) owner.TriggerGridObjectChanged(x, z);
+        }
+        public void ClearPlacedObject() => Remove(GetPlacedObject());
+        public PlacedObject_Done GetPlacedObject() => Solid != null ? Solid : Floor;
+        public bool CanBuild() => Solid == null;
+    }
+
+    void Update()
+    {
+        if (Placement == null) return;
+        if (Input.GetKeyDown(KeyCode.Escape)) { DeselectObjectType(); return; }
+        if (PointerInput.OverUI) return;
+        if (Input.GetKeyDown(KeyCode.R)) RotateObject();
+        if (placedObjectTypeSO == null) return;
+        if (placedObjectTypeSO.categoryType == ObjectCategory.Floor)
+        {
+            if (Input.GetMouseButtonDown(0)) brush.Begin(placedObjectTypeSO, GetGridPosition(ReadPointer()));
+            if (Input.GetMouseButton(0) && IsDragging) brush.Update(GetGridPosition(ReadPointer()));
+        }
+    }
+
+    Vector3 ReadPointer()
+    {
+        // Keep the released placement anchored while the player reaches the confirmation controls.
+        if (ghostObject != null && ghostObject.activeConfirmPanel != null &&
+            ghostObject.activeConfirmPanel.gameObject.activeSelf && !Input.GetMouseButton(0)) return recentMousePosition;
+        if (!PointerInput.OverUI)
+        {
+            var camera = Camera.main;
+            if (camera != null && Placement != null)
+            {
+                var ray = camera.ScreenPointToRay(Input.mousePosition);
+                var plane = new Plane(Vector3.up, Placement.Layout.Origin);
+                if (plane.Raycast(ray, out float distance)) recentMousePosition = ray.GetPoint(distance);
+            }
+        }
+        return recentMousePosition;
     }
 
     public bool PlaceObject(PlacedObject_Done selectedplacedObject = null)
     {
-
-        if (placedObjectTypeSO.type == ObjectType.Floor1)
-            return false;
-        Vector3 mousePosition;
-
-        if (!TutorialController.TutorialCompleted() && placedObjectTypeSO.type == ObjectType.SoupStove)
-        {
-            mousePosition = LevelTutorialBehaviour.instance.soupStationPos.transform.position;
-        }
-        else
-        {
-            if (UIGame.IsPointerOverUI())
-            {
-                mousePosition = recentMousePosition;
-            }
-            else
-            {
-                mousePosition = Mouse3D.GetMouseWorldPosition();
-                recentMousePosition = mousePosition;
-            }
-        }
-
-        grid.GetXZ(mousePosition, out int x, out int z);
-
-        Vector2Int placedObjectOrigin = new Vector2Int(x, z);
-        placedObjectOrigin = grid.ValidateGridPosition(placedObjectOrigin);
-
-        // Test Can Build
-        List<Vector2Int> gridPositionList = placedObjectTypeSO.GetGridPositionList(placedObjectOrigin, dir);
-        bool canBuild = true;
-        
-        foreach (Vector2Int gridPosition in gridPositionList)
-        {
-
-            
-            if (!grid.GetGridObject(gridPosition.x, gridPosition.y).CanBuild())
-            {
-                canBuild = false;
-                break;
-            }
-        }
-
-        if (canBuild)
-        {
-            Debug.Log("Can Build");
-            Vector2Int rotationOffset = placedObjectTypeSO.GetRotationOffset(dir);
-            Vector3 placedObjectWorldPosition = grid.GetWorldPosition(placedObjectOrigin.x, placedObjectOrigin.y) + new Vector3(rotationOffset.x, 0, rotationOffset.y) * grid.GetCellSize();
-            PlacedObject_Done placedObject = selectedplacedObject;
-            if (selectedplacedObject == null)
-            {
-                placedObject = PlacedObject_Done.Create(placedObjectWorldPosition, placedObjectOrigin, dir, placedObjectTypeSO);
-                SavePlacedObject(placedObject);
-                
-            }
-            else
-            {
-                placedObject.PlaceSelectedObject(placedObjectWorldPosition, placedObjectOrigin, dir);
-
-                PlacedObjectData data = new PlacedObjectData
-                {
-                    Id = placedObject.ID,
-                    objectType = placedObject.GetPlacedObjectTypeSO().type,
-                    position = new BayatGames.SaveGameFree.Types.Vector3Save(placedObject.transform.position),
-                    direction = placedObject.GetDir()
-                };
-
-                SaveController.UpdatePlacedObject(data);
-            }
-            ghostObject.selectedState = false;
-
-            foreach (Vector2Int gridPosition in gridPositionList)
-                {
-                    grid.GetGridObject(gridPosition.x, gridPosition.y).SetPlacedObject(placedObject);
-                }
-
-
-                OnObjectPlaced?.Invoke(this, EventArgs.Empty);
-            //Debug.Log("")
-
-            //DeselectObjectType();
-            selectedObject = null;
-        }
-        else
-        {
-            // Cannot build here
-            UtilsClass.CreateWorldTextPopup("Cannot Build Here!", mousePosition);
-        }
-        return canBuild;
-    }
-
-    #region Flooring 
-    private Vector2Int dragStartPosition;
-    private Vector2Int dragEndPosition;
-
-    private bool isDragging = false;
-    public bool IsDragging => isDragging;
-    
-
-    private static Dictionary<Vector2Int, PlacedObject_Done> placedTiles = new();
-
-    public static void AddPlacedTiles(Vector2Int pos, PlacedObject_Done tile)
-    {
-        if(!placedTiles.ContainsKey(pos))
-            placedTiles.Add(pos, tile);
-
-    }public static void RemovePlacedTiles(Vector2Int pos)
-    {
-        if(placedTiles.ContainsKey(pos))
-            placedTiles.Remove(pos);
-
-    }
-    private void StartDrag()
-    {
-        ClearPreviewTiles();
-
-        Vector3 mousePosition = Mouse3D.GetMouseWorldPosition();
-        grid.GetXZ(mousePosition, out int x, out int z);
-        dragStartPosition = new Vector2Int(x, z);
-        isDragging = true;
-
-    }
-
-    private void ContinueDrag()
-    {
-        Vector3 mousePosition = Mouse3D.GetMouseWorldPosition();
-        grid.GetXZ(mousePosition, out int x, out int z);
-        dragEndPosition = new Vector2Int(x, z);
-        UpdatePreviewTiles(dragStartPosition, dragEndPosition);
-        
-    }
-
-    public void EndDrag()
-    {
-        ClearPreviewTiles();
-        bool removeFiles = placedObjectTypeSO.type == ObjectType.RemoveFloor;
-        PlaceFloorArea(dragStartPosition, dragEndPosition, removeFiles);
+        if (Placement == null || placedObjectTypeSO == null || placedObjectTypeSO.categoryType == ObjectCategory.Floor) return false;
+        var position = ReadPointer();
+        var origin = Placement.Layout.WorldToCell(position);
+        var target = selectedplacedObject != null ? selectedplacedObject : selectedObject;
+        bool success;
+        if (target != null) success = Placement.TryMove(target, origin, dir);
+        else success = Placement.TryPlace(placedObjectTypeSO, origin, dir, out target);
+        CanBuild = success;
+        if (!success) return false;
         selectedObject = null;
-        isDragging = false;
-
+        if (ghostObject != null) ghostObject.selectedState = false;
+        OnObjectPlaced?.Invoke(this, EventArgs.Empty);
+        OnObjectPlacedEvent?.Invoke();
+        return true;
     }
 
-    private List<Transform> previewTiles = new List<Transform>();
-    private List<PlacedObjectTypeSO>  previewObjectData = new();
-    private Queue<Transform> tilePool = new Queue<Transform>();
-
-    //private void UpdatePreviewTiles(Vector2Int start, Vector2Int end)
-    //{
-    //    ClearPreviewTiles();
-
-    //    int xMin = Mathf.Min(start.x, end.x);
-    //    int xMax = Mathf.Max(start.x, end.x);
-    //    int yMin = Mathf.Min(start.y, end.y);
-    //    int yMax = Mathf.Max(start.y, end.y);
-
-    //    for (int x = xMin; x <= xMax; x++)
-    //    {
-    //        for (int y = yMin; y <= yMax; y++)
-    //        {
-    //            Vector2Int gridPosition = new Vector2Int(x, y);
-    //            //if (!placedTiles.ContainsKey(gridPosition))
-    //            //{
-    //                CreatePreviewTile(gridPosition);
-    //            //}
-    //        }
-    //    }
-    //}
-    private void UpdatePreviewTiles(Vector2Int start, Vector2Int end)
+    public void RemoveObject(Vector3 worldPos)
     {
-        ClearPreviewTiles();
-
-        int xMin = Mathf.Min(start.x, end.x);
-        int xMax = Mathf.Max(start.x, end.x);
-        int yMin = Mathf.Min(start.y, end.y);
-        int yMax = Mathf.Max(start.y, end.y);
-
-        for (int x = xMin; x <= xMax; x++)
-        {
-            for (int y = yMin; y <= yMax; y++)
-            {
-                Vector2Int gridPosition = new Vector2Int(x, y);
-                CreatePreviewTile(gridPosition);
-            }
-        }
+        var target = selectedObject != null ? selectedObject : grid?.GetGridObject(worldPos)?.GetPlacedObject();
+        if (target == null || Placement == null || !Placement.CanRemove(target)) return;
+        target.DestroySelf();
+        selectedObject = null;
     }
-
-    private void CreatePreviewTile(Vector2Int gridPosition)
+    public static void AddPlacedTiles(Vector2Int pos, PlacedObject_Done tile) => Instance?.Placement?.Register(tile);
+    public static void RemovePlacedTiles(Vector2Int pos)
     {
-        Vector3 worldPosition = grid.GetWorldPosition(gridPosition.x, gridPosition.y);
-        
-        Transform previewTile = placedObjectTypeSO.GetVisual();
-        previewTile.position = worldPosition;
-        previewTile.rotation = Quaternion.identity;
-
-        previewTiles.Add(previewTile);
+        var floor = grid?.GetGridObject(pos.x, pos.y)?.Floor;
+        if (floor != null) Instance?.Placement?.Unregister(floor);
     }
+    public void EndDrag() => brush?.Commit();
+    public void ClearPreviewTiles() => brush?.Clear();
 
-   
-    public void ClearPreviewTiles()
+    public void DeselectObjectType(bool drag = false)
     {
-        
-        foreach (Transform previewTile in previewTiles)
+        if (selectedObject != null && Placement != null)
         {
-            
-            placedObjectTypeSO.ReleaseVisual(previewTile);
+            selectedObject.RestorePlacementPose(Placement.Layout.Pivot(selectedObject.PlacedObjectTypeSO, selectedObject.Origin, selectedObject.Dir));
+            var ui = UIGame.GetUI();
+            if (ui != null && ui.uiItemsWindow != null) ui.uiItemsWindow.ActiveState(true);
         }
-        previewTiles.Clear();
-    }
-    private void PlaceFloorArea(Vector2Int start, Vector2Int end, bool removeFloors = false)
-    {
-        int xMin = Mathf.Min(start.x, end.x);
-        int xMax = Mathf.Max(start.x, end.x);
-        int zMin = Mathf.Min(start.y, end.y);
-        int zMax = Mathf.Max(start.y, end.y);
-
-        List<PlacedObjectData> placedObjectsBatch = new List<PlacedObjectData>();
-        List<PlacedObjectData> removedObjectsBatch = new List<PlacedObjectData>();
-        for (int x = xMin; x <= xMax; x++)
+        selectedObject = null;
+        if (!drag) brush?.Clear();
+        placedObjectTypeSO = null;
+        CanBuild = false;
+        overlay?.SetVisible(false);
+        if (ghostObject != null)
         {
-            for (int z = zMin; z <= zMax; z++)
-            {
-        //Debug.Log($"start Pos : {start}, End Pos : {end}");
-                PlaceFloorAtPosition(x, z,placedObjectsBatch,removedObjectsBatch, removeFloors);
-
-            }
+            ghostObject.selectedState = false;
+            if (ghostObject.activeConfirmPanel != null) ghostObject.activeConfirmPanel.gameObject.SetActive(false);
+            ghostObject.activeConfirmPanel = null;
         }
-
-        SaveController.BatchSavePlacedObjects(placedObjectsBatch, removedObjectsBatch);
-
-        if (removeFloors)
-        {
-
-            ClearPreviewTiles();
-        }
-    }
-
-    private void PlaceFloorAtPosition(int x, int z, List<PlacedObjectData> placedObjectsBatch,List<PlacedObjectData> removedObjectsBatch, bool removeFloors = false)
-    {
-        //Vector2Int floorPosition = new Vector2Int(x, z);
-        Vector2Int floorPosition = GetGridPosition(new Vector3(x, 0,z));
-        //Vector2Int floorPosition = grid.GetXZ(new Vector3(), out int gX, out int gZ);
-        ;
-        //GridObject gridObject = grid.GetGridObject(floorPosition.x, floorPosition.y);
-
-        if (placedTiles.ContainsKey(floorPosition))
-        {
-            removedObjectsBatch.Add(CreatePlacedObjectData(placedTiles[floorPosition], true));
-            placedTiles[floorPosition].DestroySelf();
-            placedTiles.Remove(floorPosition);
-        }
-        if (removeFloors)
-        {
-            return;
-        }
-        
-        // Place new floor tile
-        Vector3 placedFloorWorldPosition = grid.GetWorldPosition(floorPosition.x, floorPosition.y);
-        PlacedObject_Done placedFloor = PlacedObject_Done.Create(placedFloorWorldPosition, floorPosition, PlacedObjectTypeSO.Dir.Down, placedObjectTypeSO);
-        if (!placedTiles.ContainsKey(floorPosition))
-        {
-            placedTiles.Add(floorPosition, placedFloor);
-        }
-
-
-        placedObjectsBatch.Add(placedFloor.GetPlacedObjectData());
-
-
-    }
-
-    #endregion
-
-    public void DeselectObjectType(bool drag = false) {
-        ghostObject.selectedState = false;
-        ghostObject.activeConfirmPanel = null;
-        if (!drag)
-        {
-        isDragging = false;
-        }
-        placedObjectTypeSO = null; RefreshSelectedObjectType();
-
-    }
-
-    private void RefreshSelectedObjectType() {
         OnSelectedChanged?.Invoke(this, EventArgs.Empty);
     }
-
-
-    public Vector2Int GetGridPosition(Vector3 worldPosition) {
-        grid.GetXZ(worldPosition, out int x, out int z);
-        return new Vector2Int(x, z);
+    public Vector2Int GetGridPosition(Vector3 worldPosition) => Placement.Layout.WorldToCell(worldPosition);
+    public Vector3 GetMouseWorldSnappedPosition(Transform snapPos = null)
+    {
+        var world = snapPos != null ? snapPos.position : ReadPointer();
+        if (snapPos != null) recentMousePosition = world;
+        if (placedObjectTypeSO == null || Placement == null) return world;
+        var cell = Placement.Layout.WorldToCell(world);
+        var ignored = placedObjectTypeSO.categoryType == ObjectCategory.Floor ? Placement.GetAt(cell, true) : selectedObject;
+        CanBuild = placedObjectTypeSO.type == ObjectType.RemoveFloor
+            ? Placement.CanRemove(ignored)
+            : Placement.Validate(placedObjectTypeSO, cell, dir, ignored) == PlacementFailure.None;
+        return Placement.Layout.Pivot(placedObjectTypeSO, cell, dir);
     }
-
-    Vector3 recentMousePosition;
-
-    public Vector3 GetMouseWorldSnappedPosition(Transform snapPos = null) {
-        Vector3 mousePosition = Vector3.zero;
-        if (snapPos != null)
-        {
-            mousePosition = snapPos.position;
-        }
-        else
-        {
-            if (UIGame.IsPointerOverUI())
-            {
-                mousePosition = recentMousePosition;
-            }
-            else
-            {
-                mousePosition = Mouse3D.GetMouseWorldPosition();
-                recentMousePosition = mousePosition;
-            }
-        }
-        grid.GetXZ(mousePosition, out int x, out int z);
-        if (placedObjectTypeSO != null) {
-            Vector2Int rotationOffset = placedObjectTypeSO.GetRotationOffset(dir);
-            Vector3 placedObjectWorldPosition = grid.GetWorldPosition(x, z) + new Vector3(rotationOffset.x, 0, rotationOffset.y) * grid.GetCellSize();
-
-            bool canRotate = placedObjectTypeSO.categoryType != ObjectCategory.Floor;
-           
-                UIGame.GetUI().placeObjectPanel.Initialize(this, canRotate, placedObjectTypeSO.Sellable);
-                UIGame.GetUI().confirmationPopup.Initialize(this,canRotate);
-
-
-            return placedObjectWorldPosition;
-        } else {
-            return mousePosition;
-        }
-    }
-
-    public Quaternion GetPlacedObjectRotation() {
-        if (placedObjectTypeSO != null) {
-            return Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0);
-        } else {
-            return Quaternion.identity;
-        }
-    }
-
-    public PlacedObjectTypeSO GetPlacedObjectTypeSO() {
-        return placedObjectTypeSO;
-    }
-    public void SetPlacedObjectTypeSO(PlacedObjectTypeSO POtypeSo) {
-        placedObjectTypeSO = POtypeSo;
-    }
-
+    public Quaternion GetPlacedObjectRotation() => Quaternion.Euler(0, placedObjectTypeSO != null ? placedObjectTypeSO.GetRotationAngle(dir) : 0, 0);
+    public PlacedObjectTypeSO GetPlacedObjectTypeSO() => placedObjectTypeSO;
+    public void SetPlacedObjectTypeSO(PlacedObjectTypeSO type) { placedObjectTypeSO = type; overlay?.SetVisible(type != null); InitializePanels(); }
     public void RotateObject()
     {
+        if (placedObjectTypeSO == null || placedObjectTypeSO.categoryType == ObjectCategory.Floor ||
+            (placedObjectTypeSO.placementProfile != null && !placedObjectTypeSO.placementProfile.allowRotation)) return;
         dir = PlacedObjectTypeSO.GetNextDir(dir);
     }
-
-    public void RotateObjectToAngle(PlacedObjectTypeSO.Dir dir)
+    public void RotateObjectToAngle(PlacedObjectTypeSO.Dir direction) => dir = direction;
+    public void SetPlacingObject(ObjectCategory category, ObjectType itemType)
     {
-        this.dir = dir; 
-    }
-    
-    public void SetPlacingObject(ObjectCategory type, ObjectType itemType)
-    {
-
-        //Debug.Log($"Placing Object Index : {index}");
-        if (GetPlacedObjectTypeSO() != null)
-        {
-            
-            if (GetPlacedObjectTypeSO().categoryType == ObjectCategory.Floor)
-            {
-                ClearPreviewTiles();
-            }
-            //DeselectObjectType(true);
-
-            //gameObject.SetActive(false);
-        }
+        DeselectObjectType();
+        dir = PlacedObjectTypeSO.Dir.Down;
         placedObjectTypeSO = ObjectDatabaseHandler.GetPlacedObject(itemType);
-        currentShopItem = ShopItemDataContainer.GetShopItem(itemType, type);
-
-
-        RefreshSelectedObjectType();
+        CurrentShopItem = ShopItemDataContainer.GetShopItem(itemType, category);
+        overlay?.SetVisible(placedObjectTypeSO != null);
+        InitializePanels();
+        OnSelectedChanged?.Invoke(this, EventArgs.Empty);
     }
-
-    
-    public static GridXZ<GridObject> GetGrid()
+    void InitializePanels()
     {
-        return grid;
+        var ui = UIGame.GetUI();
+        if (ui == null || placedObjectTypeSO == null) return;
+        bool rotate = placedObjectTypeSO.categoryType != ObjectCategory.Floor &&
+            (placedObjectTypeSO.placementProfile == null || placedObjectTypeSO.placementProfile.allowRotation);
+        if (ui.placeObjectPanel != null) ui.placeObjectPanel.Initialize(this, rotate, placedObjectTypeSO.Sellable);
+        if (ui.confirmationPopup != null) ui.confirmationPopup.Initialize(this, rotate);
     }
+    public static GridXZ<GridObject> GetGrid() => grid;
 
-    #region Saving/Loading
-    public bool isLoadingData;
-public void LoadPlacedObjects()
+    void OnDisable() { if (Instance == this) DeselectObjectType(); }
+    void OnDestroy()
     {
-        if (GameHandler.FirstTime)
-        {
-            return;
-        }
-        if (!TutorialController.TutorialCompleted())
-            return;
-        isLoadingData = true;
-        List<PlacedObjectData> placedObjectDataList = SaveController.LoadPlacedObjects();
-
-        foreach (PlacedObjectData data in placedObjectDataList)
-        {
-            PlacedObjectTypeSO objectType = ObjectDatabaseHandler.GetPlacedObject(data.objectType);
-            //SerializableVector3 worldPosition = data.position;
-            BayatGames.SaveGameFree.Types.Vector3Save worldPosition = data.position;
-            //Vector3 vectorPos = worldPosition.ToVector3();
-            Vector3 vectorPos = new Vector3Save(worldPosition);
-            Vector2Int gridPosition = GetGridPosition(vectorPos);
-
-            List<Vector2Int> gridPositionList = objectType.GetGridPositionList(gridPosition, data.direction);
-            bool objectExists = false;
-
-            foreach (Vector2Int gridPos in gridPositionList)
-            {
-                GridObject gridObject = grid.GetGridObject(gridPos.x, gridPos.y);
-                if (gridObject.GetPlacedObject() != null)
-                {
-                    objectExists = true;
-                    
-                    break;
-                }
-            }
-
-            if (!objectExists)
-            {
-
-                
-                PlacedObject_Done placedObject = LevelController.Instance.zone.GetAlreadyPlacedObject(data.Id);
-
-                if(placedObject == null) 
-                    placedObject = PlacedObject_Done.Create(vectorPos, gridPosition, data.direction, objectType);
-                else
-                {
-
-                    foreach (Vector2Int placedGridPos in placedObject.GetGridPositionList())
-                    {
-                        grid.GetGridObject(placedGridPos.x, placedGridPos.y).ClearPlacedObject();
-                    }
-
-                        placedObject.PlaceSelectedObject(vectorPos, gridPosition, data.direction);
-                    LevelController.Instance.zone.RemoveAlreadyPlacedObject(placedObject);
-                }
-                
-                if (placedObject.GetPlacedObjectTypeSO().categoryType != ObjectCategory.Floor)
-                {
-                    foreach (Vector2Int gridPos in gridPositionList)
-                    {
-                        
-                        grid.GetGridObject(gridPos.x, gridPos.y).SetPlacedObject(placedObject);
-                    }
-                }
-
-            }
-            else
-            {
-                PlacedObject_Done placedObject = LevelController.Instance.zone.GetAlreadyPlacedObject(data.Id);
-                if (placedObject != null)
-                    LevelController.Instance.zone.RemoveAlreadyPlacedObject(placedObject);
-                ;
-            }
-        }
-        isLoadingData = false;
+        brush?.Clear();
+        overlay?.Dispose();
+        if (Instance == this) { Instance = null; grid = null; }
     }
-   
-    public PlacedObjectData CreatePlacedObjectData(PlacedObject_Done placedObject, bool removeObject = false)
-    {
-        Vector3 objectPos = placedObject.transform.position;
-        if (removeObject)
-        {
-            objectPos = placedObject.placedPosition;
-        }
-
-        PlacedObjectData data = new PlacedObjectData
-        {
-            Id = placedObject.ID,
-            objectType = placedObject.GetPlacedObjectTypeSO().type,
-            position = new BayatGames.SaveGameFree.Types.Vector3Save(objectPos),
-            direction = placedObject.GetDir(),
-            isRemoved = placedObject.isRemoved
-        };
-
-        return data;
-    }
-
-    public PlacedObjectData SavePlacedObject(PlacedObject_Done placedObject, bool removeObject = false)
-    {
-        Vector3 objectPos = placedObject.transform.position;
-        if (removeObject)
-        {
-            objectPos = placedObject.placedPosition;
-        }
-
-        PlacedObjectData data = new PlacedObjectData
-        {
-            Id = placedObject.ID,
-            objectType = placedObject.GetPlacedObjectTypeSO().type,
-            position = new BayatGames.SaveGameFree.Types.Vector3Save(objectPos),
-            direction = placedObject.GetDir(),
-            isRemoved = placedObject.isRemoved
-        };
-
-        if (!removeObject)
-        {
-            SaveController.SavePlacedObject(data);
-        }
-        else
-        {
-            SaveController.RemoveObject(data);
-        }
-
-        return data;
-    }
-    
-    
-  
-
-
-
-    #endregion
 }

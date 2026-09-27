@@ -116,12 +116,5 @@ namespace LastOrders.Reputation
             int reasons = (wasClosed ? 1 : 0) + (badlyDamaged ? 1 : 0) + (servedPoorly ? 1 : 0);
             Add(-balance.reputationDecayPerDay * reasons);
         }
-
-        public void RestoreFromSave(float value, int highestTier)
-        {
-            HighestTierReached = Mathf.Max(0, highestTier);
-            current = Mathf.Clamp(value, Floor, 100f);
-            OnReputationChanged?.Invoke(current);
-        }
     }
 }

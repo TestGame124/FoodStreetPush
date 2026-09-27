@@ -1,7 +1,6 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class UIGame : MonoBehaviour
@@ -77,30 +76,12 @@ public class UIGame : MonoBehaviour
             LevelUpSystem.AddXP(2);
         }
     }
-    public static bool IsPointerOverUI()
-    {
-        EventSystem eventSystem = EventSystem.current;
-
-        // No EventSystem means no UI to be over. Previously this threw on the RaycastAll
-        // below, every frame, in any scene that did not happen to contain one.
-        if (eventSystem == null)
-            return false;
-
-        PointerEventData eventData = new PointerEventData(eventSystem);
-        eventData.position = Input.mousePosition;
-        List<RaycastResult> results = new List<RaycastResult>();
-        eventSystem.RaycastAll(eventData, results);
-
-        for (int i = 0; i < results.Count; i++)
-        {
-            if (results[i].gameObject.CompareTag("Unmask"))
-            {
-                return false;
-            }
-        }
-        return results.Count > 0;
-
-    }
+    /// <summary>
+    /// Kept as the name the UI code already calls, but the answer now comes from PointerInput so
+    /// there is one graphic raycast per frame for the whole game instead of a fresh
+    /// PointerEventData and result list per caller per call.
+    /// </summary>
+    public static bool IsPointerOverUI() => FoodStreet.Interaction.PointerInput.OverUI;
 
     public static Vector3 GetScreenPostion(Vector3 pos)
     {
@@ -124,31 +105,18 @@ public class UIGame : MonoBehaviour
     public void ShopButton()
     {
         GameHandler.GetHandler().ChangeGameState(GameHandler.GameState.EditState);
-        if (!TutorialController.TutorialCompleted())
-        {
-            TutorialController.ObjectPlacingStageEvent?.Invoke();
-        }
         uiItemsWindow.ActiveState(true);
     }
     public void ExitEditMode()
     {
         GameHandler.GetHandler().ChangeGameState(GameHandler.GameState.PlayState);
         uiItemsWindow.ActiveState(false);
-        if (!TutorialController.TutorialCompleted())
-        {
-            TutorialController.ObjectPlacingStageEvent?.Invoke();
-        }
     }
 
     public void OrderButtonClick()
     {
         ordersUIBehaviour.gameObject.SetActive(true);
         ordersUIBehaviour.CanvasGroupComp.DOFade(1, 0.2f).From(0);
-
-        if (!TutorialController.TutorialCompleted())
-        {
-            TutorialController.OnOrderButtonClick?.Invoke();
-        }
     }
 
    

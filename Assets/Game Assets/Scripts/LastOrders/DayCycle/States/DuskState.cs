@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using LastOrders.Consequence;
-using LastOrders.Customers;
 using LastOrders.Night;
 using LastOrders.Perimeter;
 using UnityEngine;
@@ -15,19 +14,28 @@ namespace LastOrders.DayCycle.States
     /// get wrong, because it is where every in-flight thing has to be resolved at once:
     /// meals half-eaten, doors mid-admission, parties still queuing outside the walls. Those
     /// are exactly the transition bugs an explicit state machine exists to give one home to,
-    /// and they all live in <see cref="OnEnter"/> here rather than scattered across the
-    /// systems that own the objects.
+    /// and they live on this state's own boundaries rather than scattered across the systems
+    /// that own the objects.
     ///
     /// Three things happen and their order matters:
     ///
-    /// Last Call resolves every customer, because a party still eating when the wave spawns
-    /// is a civilian the player has to physically manage (9.8).
+    /// New arrivals stop and anyone not yet seated turns round and heads home. The visitor
+    /// director does this off the phase change; it is a rule about restraint rather than a
+    /// resolution, and nobody pays Reputation for a restaurant that closed on time.
     ///
     /// Heat locks, so the bar the player spent all day watching is the bar the wave is
     /// built from.
     ///
     /// The wave is generated and its lanes telegraphed, so the player gets the whole 45
     /// seconds to reposition against information rather than against a surprise.
+    ///
+    /// Last Call runs at the END of the phase rather than the start of it. Dusk is the
+    /// preparation window, and a party seated at minute 59 finishes their meal and walks out
+    /// inside it - a meal is fifteen seconds against a forty-five second warning. Resolving
+    /// everyone the instant the shutters start closing would mark those customers as having
+    /// fled from a restaurant they were about to leave happy. Only the people still at a
+    /// table when night actually falls are the civilians 9.8 is about, and Heat is locked
+    /// before this runs either way, so nothing downstream sees a different world for it.
     /// </summary>
     public sealed class DuskState : IDayPhaseState
     {
@@ -51,28 +59,21 @@ namespace LastOrders.DayCycle.States
         /// be drawn while the player can still act on them.</summary>
         public event Action<WavePlan> OnWaveTelegraphed;
 
-        /// <summary>Raised per customer resolved at Last Call, so the UI can show where each
-        /// one went rather than having them silently vanish.</summary>
-        public event Action<CustomerIdentity, VisitOutcome> OnCustomerResolved;
-
         public void OnEnter(DayPhase previous)
         {
             remaining = context.Balance.duskWarningSeconds;
 
-            // 1. Last Call. Everything in flight is resolved before anything else reads the
-            //    world, so no later step can see a half-finished meal.
-            ResolveLastCall();
             CloseAllDoors();
 
-            // 2. Any customer still inside is a civilian during the siege. Lights still
-            //    burning are Heat, and they are burning because the player chose to keep
-            //    serving - so this charge lands before the lock, not after.
+            // Any customer still inside is a civilian during the siege. Lights still burning
+            // are Heat, and they are burning because the player chose to keep serving - so
+            // this charge lands before the lock, not after.
             context.Heat.AddPoweredLights(CountPoweredLights());
 
             float locked = context.Heat.LockForNight();
             context.Report.HeatAtDusk = locked;
 
-            // 3. Tonight is now decided and cannot be influenced further.
+            // Tonight is now decided and cannot be influenced further.
             context.TonightsWave = context.Waves.BuildPlan(context.Time.CurrentDay, locked);
             OnWaveTelegraphed?.Invoke(context.TonightsWave);
 
@@ -90,52 +91,16 @@ namespace LastOrders.DayCycle.States
             if (remaining <= 0f) machine.RequestTransition(DayPhase.Night);
         }
 
-        public void OnExit(DayPhase next) { }
+        public void OnExit(DayPhase next)
+        {
+            // Last Call used to sweep every customer in the scene here and pay it
+            // out. Visitors own their own departure now - they drive home when they are fed
+            // and are never written off by the clock - so there is nothing left to resolve.
+        }
 
         /// <summary>Lets the player skip the remaining warning once they are satisfied with
         /// their positioning. Confident players should not be made to wait.</summary>
         public void SkipWarning() => remaining = 0f;
-
-        /// <summary>
-        /// 9.8. Resolves every customer still present.
-        ///
-        /// The cellar is the whole design here: with one, a caught party shelters safely and
-        /// pays in full at dawn. Without one they panic and become an Evacuate problem. This
-        /// is what makes the cellar one of the most valuable buildables in the game, and what
-        /// turns the player's greed at minute 50 into their problem at minute 62.
-        /// </summary>
-        void ResolveLastCall()
-        {
-            bool hasCellar = HasCellar();
-
-            var customers = UnityEngine.Object.FindObjectsByType<CustomerIdentity>(
-                FindObjectsSortMode.None);
-
-            for (int i = 0; i < customers.Length; i++)
-            {
-                CustomerIdentity customer = customers[i];
-                if (customer == null) continue;
-
-                bool finished = customer.HasBeenServed;
-                VisitOutcome outcome = customer.ResolveAtDusk(hasCellar, finished);
-
-                int payment = customer.PaymentFor(outcome);
-                if (payment > 0)
-                {
-                    context.Ledger.Add(Data.ResourceType.Coin, payment);
-                    context.Report.CoinEarned += payment;
-                }
-
-                float reputationDelta = customer.ReputationFor(outcome);
-                if (!Mathf.Approximately(reputationDelta, 0f))
-                {
-                    context.Reputation.Add(reputationDelta);
-                    context.Report.ReputationDelta += reputationDelta;
-                }
-
-                OnCustomerResolved?.Invoke(customer, outcome);
-            }
-        }
 
         void CloseAllDoors()
         {
@@ -152,8 +117,6 @@ namespace LastOrders.DayCycle.States
 
             for (int i = 0; i < structures.Length; i++) structures[i].BeginNight();
         }
-
-        static bool HasCellar() => AnyBuildableWhere(type => type.isCellar);
 
         static int CountPoweredLights()
         {

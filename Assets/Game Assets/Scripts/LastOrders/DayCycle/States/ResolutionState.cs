@@ -139,7 +139,7 @@ namespace LastOrders.DayCycle.States
                                    context.Time.CurrentDay);
 
                 for (int t = 0; t < tiles.Count; t++)
-                    grid.GetGridObject(tiles[t].x, tiles[t].y)?.ClearPlacedObject();
+                    grid.GetGridObject(tiles[t].x, tiles[t].y)?.Remove(placed);
 
                 placed.DestroySelf();
             }

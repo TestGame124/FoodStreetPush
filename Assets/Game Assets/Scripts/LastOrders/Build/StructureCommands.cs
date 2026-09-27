@@ -1,158 +1,78 @@
-using System.Collections.Generic;
-using LastOrders.Data;
 using UnityEngine;
-
 namespace LastOrders.Build
 {
-    /// <summary>
-    /// Removes a buildable. Used by the player selling, and by the consequence model when a
-    /// perimeter object is Destroyed.
-    ///
-    /// Undo re-creates the object rather than resurrecting the original instance, because
-    /// the original went back to its pool on destruction. Everything that identifies it -
-    /// type, origin, facing - is captured up front so the reconstruction is exact.
-    /// </summary>
-    public sealed class DeleteBuildableCommand : IBuildCommand
+    public sealed class DeleteBuildableCommand : IBuildCommand, IBuildUndoValidation
     {
         readonly PlacedObjectTypeSO type;
         readonly Vector2Int origin;
         readonly PlacedObjectTypeSO.Dir dir;
-
+        readonly int identity;
         PlacedObject_Done target;
         bool executed;
-
         public DeleteBuildableCommand(PlacedObject_Done target)
         {
             this.target = target;
-            type = target != null ? target.PlacedObjectTypeSO : null;
-            dir = target != null ? target.Dir : PlacedObjectTypeSO.Dir.Down;
-
-            if (target != null)
-            {
-                List<Vector2Int> tiles = target.GetGridPositionList();
-                origin = tiles.Count > 0 ? tiles[0] : Vector2Int.zero;
-            }
+            if (target == null) return;
+            type = target.PlacedObjectTypeSO; dir = target.Dir; origin = target.Origin; identity = target.ID;
         }
-
-        public string Description => type != null ? $"Remove {type.nameString}" : "Remove";
-
-        /// <summary>The Hearth is indestructible (15.1). It can be Damaged but never disabled,
-        /// and one flag solving the softlock problem is only true if nothing can delete it.</summary>
+        public string Description => type != null ? "Remove " + type.nameString : "Remove";
         public bool IsUndoable => true;
-
-        public bool CanExecute(BuildContext context) =>
-            target != null && type != null && !type.isHearth;
-
+        public bool CanExecute(BuildContext context) => !executed && target != null && target.ID == identity && target.Origin == origin &&
+            target.Dir == dir && context.Grid != null && context.Grid.Placement != null && context.Grid.Placement.CanRemove(target);
         public bool Execute(BuildContext context)
         {
             if (!CanExecute(context)) return false;
-
-            GridXZ<GridBuildingSystem3D.GridObject> grid = GridBuildingSystem3D.GetGrid();
-
-            List<Vector2Int> tiles = target.GetGridPositionList();
-            for (int i = 0; i < tiles.Count; i++)
-                grid.GetGridObject(tiles[i].x, tiles[i].y)?.ClearPlacedObject();
-
-            target.DestroySelf();
-            target = null;
-            executed = true;
-            return true;
+            target.DestroySelf(); target = null; executed = true; return true;
         }
-
         public void Undo(BuildContext context)
         {
-            if (!executed || type == null) return;
-
-            GridXZ<GridBuildingSystem3D.GridObject> grid = GridBuildingSystem3D.GetGrid();
-            Vector3 world = grid.GetWorldPosition(origin.x, origin.y);
-
-            target = PlacedObject_Done.Create(world, origin, dir, type);
-
-            List<Vector2Int> tiles = type.GetGridPositionList(origin, dir);
-            for (int i = 0; i < tiles.Count; i++)
-                grid.GetGridObject(tiles[i].x, tiles[i].y)?.SetPlacedObject(target);
-
+            if (!CanUndo(context) || !context.Grid.Placement.TryPlace(type, origin, dir, out target)) return;
+            target.RestoreIdentity(identity);
             executed = false;
         }
+        public bool CanUndo(BuildContext context) => executed && type != null && type.prefab != null &&
+            PlaceBuildableCommand.AreTilesFree(context, type, origin, dir);
     }
-
-    /// <summary>
-    /// Moves an existing object to a new origin for a small clock cost (6.3).
-    ///
-    /// Implemented as clear-then-place against the same instance rather than as a delete
-    /// plus a place, so the object keeps its identity: its save entry, its ID, and anything
-    /// mid-flight on it (a cooking timer, a seated customer) survive the move.
-    /// </summary>
-    public sealed class MoveBuildableCommand : IBuildCommand
+    public sealed class MoveBuildableCommand : IBuildCommand, IBuildUndoValidation
     {
-        const float MoveClockMinutes = 0.5f;
-
+        const float MoveClockMinutes = .5f;
         readonly PlacedObject_Done target;
-        readonly Vector2Int newOrigin;
-        readonly Vector2Int oldOrigin;
+        readonly Vector2Int newOrigin, oldOrigin;
         readonly PlacedObjectTypeSO.Dir dir;
-
+        bool executed;
+        float paidMinutes;
+        readonly int identity;
         public MoveBuildableCommand(PlacedObject_Done target, Vector2Int newOrigin)
         {
-            this.target = target;
-            this.newOrigin = newOrigin;
-            dir = target != null ? target.Dir : PlacedObjectTypeSO.Dir.Down;
-
-            if (target != null)
-            {
-                List<Vector2Int> tiles = target.GetGridPositionList();
-                oldOrigin = tiles.Count > 0 ? tiles[0] : Vector2Int.zero;
-            }
+            this.target = target; this.newOrigin = newOrigin;
+            if (target == null) return;
+            dir = target.Dir; oldOrigin = target.Origin;
+            identity = target.ID;
         }
-
         public string Description => "Move";
-
         public bool IsUndoable => true;
-
-        public bool CanExecute(BuildContext context)
-        {
-            if (target == null) return false;
-            if (!context.IgnoreClockCost && !context.Time.CanAfford(MoveClockMinutes)) return false;
-
-            // Passing the target as the ignored occupant, so a one-tile nudge that overlaps
-            // the object's own footprint is still legal.
-            return PlaceBuildableCommand.AreTilesFree(
-                context, target.PlacedObjectTypeSO, newOrigin, dir, target);
-        }
-
+        public bool CanExecute(BuildContext context) => !executed && target != null && !target.isRemoved && target.ID == identity && target.Origin == oldOrigin && target.Dir == dir &&
+            (context.IgnoreClockCost || context.Time.CanAfford(MoveClockMinutes)) &&
+            context.Grid != null && context.Grid.Placement != null && context.Grid.Placement.CanMove(target, newOrigin, dir);
         public bool Execute(BuildContext context)
         {
             if (!CanExecute(context)) return false;
-
-            if (!context.IgnoreClockCost && !context.Time.TrySpendClockMinutes(MoveClockMinutes))
-                return false;
-
-            Relocate(oldOrigin, newOrigin);
-            return true;
+            paidMinutes = context.IgnoreClockCost ? 0 : MoveClockMinutes;
+            if (paidMinutes > 0 && !context.Time.TrySpendClockMinutes(paidMinutes)) return false;
+            if (!context.Grid.Placement.TryMove(target, newOrigin, dir))
+            {
+                if (paidMinutes > 0) context.Time.RefundClockMinutes(paidMinutes);
+                paidMinutes = 0; return false;
+            }
+            executed = true; return true;
         }
-
         public void Undo(BuildContext context)
         {
-            Relocate(newOrigin, oldOrigin);
-            if (!context.IgnoreClockCost) context.Time.RefundClockMinutes(MoveClockMinutes);
+            if (!CanUndo(context) || !context.Grid.Placement.TryMove(target, oldOrigin, dir)) return;
+            if (paidMinutes > 0) context.Time.RefundClockMinutes(paidMinutes);
+            paidMinutes = 0; executed = false;
         }
-
-        void Relocate(Vector2Int from, Vector2Int to)
-        {
-            if (target == null) return;
-
-            GridXZ<GridBuildingSystem3D.GridObject> grid = GridBuildingSystem3D.GetGrid();
-            PlacedObjectTypeSO type = target.PlacedObjectTypeSO;
-
-            List<Vector2Int> before = type.GetGridPositionList(from, dir);
-            for (int i = 0; i < before.Count; i++)
-                grid.GetGridObject(before[i].x, before[i].y)?.ClearPlacedObject();
-
-            target.PlaceSelectedObject(grid.GetWorldPosition(to.x, to.y), to, dir);
-
-            List<Vector2Int> after = type.GetGridPositionList(to, dir);
-            for (int i = 0; i < after.Count; i++)
-                grid.GetGridObject(after[i].x, after[i].y)?.SetPlacedObject(target);
-        }
+        public bool CanUndo(BuildContext context) => executed && target != null && !target.isRemoved && target.ID == identity &&
+            target.Origin == newOrigin && target.Dir == dir && context.Grid.Placement.CanMove(target, oldOrigin, dir);
     }
 }

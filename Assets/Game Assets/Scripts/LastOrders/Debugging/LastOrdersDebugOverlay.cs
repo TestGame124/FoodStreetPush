@@ -2,6 +2,7 @@ using System.Text;
 using FoodStreet.Navigation;
 using LastOrders.Core;
 using LastOrders.DayCycle;
+using LastOrders.Defense;
 using LastOrders.Heat;
 using UnityEngine;
 
@@ -37,6 +38,10 @@ namespace LastOrders.Debugging
 
         [Tooltip("Height above ground to draw the grid gizmos.")]
         [SerializeField] float drawHeight = 0.05f;
+
+        [Tooltip("Metres around the scene view's focus to draw grid gizmos for. The whole " +
+                 "grid is drawn when this is zero or less.")]
+        [SerializeField] float gizmoRange = 24f;
 
         [Header("Input")]
         [SerializeField] KeyCode togglePanelKey = KeyCode.F1;
@@ -77,9 +82,10 @@ namespace LastOrders.Debugging
             AppendPerimeter(composition);
             AppendPools(composition);
             AppendNight(composition);
+            AppendDefense(composition);
 
-            GUI.Box(new Rect(10, 10, 340, 330), GUIContent.none);
-            GUI.Label(new Rect(20, 16, 320, 320), builder.ToString(), style);
+            GUI.Box(new Rect(10, 10, 340, 420), GUIContent.none);
+            GUI.Label(new Rect(20, 16, 320, 410), builder.ToString(), style);
         }
 
         void AppendCycle(GameComposition composition)
@@ -146,6 +152,51 @@ namespace LastOrders.Debugging
             builder.Append($"Closest call: <color={colour}>{report.ClosestCall:P0}</color>\n");
         }
 
+        void AppendDefense(GameComposition composition)
+        {
+            if (composition.Defense.All.Count == 0) return;
+
+            builder.Append("\n<b>DEFENSE</b>\n");
+
+            // One line per post. A tower that is built but silent is the thing to spot here -
+            // nobody posted, or the guard fled - because in the scene it just looks quiet.
+            foreach (DefenseUnit unit in composition.Defense.All)
+            {
+                builder.Append($"{unit.Id}: ");
+
+                if (!unit.IsBuilt)
+                {
+                    builder.Append("empty site\n");
+                    continue;
+                }
+
+                builder.Append($"L{unit.LevelNumber} ");
+
+                if (unit.NeedsCrew)
+                {
+                    builder.Append(unit.Crew == null
+                        ? "<color=#ff8080>no guard</color> "
+                        : unit.CrewOnDuty ? $"{unit.Crew.Name} " : $"<color=#ffb060>{unit.Crew.Name} fled</color> ");
+                }
+
+                if (unit.Target != null) builder.Append($"-> {unit.Target.DisplayName} ");
+                builder.Append($"shots {unit.ShotsFired}\n");
+            }
+        }
+
+        /// <summary>
+        /// Where to centre the gizmo window: the scene view's pivot in the editor, the
+        /// component's own position otherwise.
+        /// </summary>
+        Vector3 GizmoFocus()
+        {
+#if UNITY_EDITOR
+            UnityEditor.SceneView view = UnityEditor.SceneView.lastActiveSceneView;
+            if (view != null) return view.pivot;
+#endif
+            return transform.position;
+        }
+
         void OnDrawGizmos()
         {
             if (gridLayer == GridLayer.Off) return;
@@ -162,9 +213,23 @@ namespace LastOrders.Debugging
 
             // Every cell, every frame, is fine for a 3,500-cell grid in the editor and
             // nowhere near acceptable in a build - which is why this is gizmos only.
-            for (int x = 0; x < grid.Width; x++)
+            //
+            // Bounded to a window around the scene view's focus as well, because the blockout
+            // scene's 0.5 m build grid works out to over 120,000 nav cells: drawing all of
+            // them makes the editor unusable the moment this layer is switched on.
+            Vector2Int focus = grid.WorldToCell(GizmoFocus());
+            int span = gizmoRange > 0f
+                ? Mathf.CeilToInt(gizmoRange / Mathf.Max(grid.CellSize, 1e-3f))
+                : Mathf.Max(grid.Width, grid.Height);
+
+            int minX = Mathf.Max(0, focus.x - span);
+            int maxX = Mathf.Min(grid.Width - 1, focus.x + span);
+            int minZ = Mathf.Max(0, focus.y - span);
+            int maxZ = Mathf.Min(grid.Height - 1, focus.y + span);
+
+            for (int x = minX; x <= maxX; x++)
             {
-                for (int z = 0; z < grid.Height; z++)
+                for (int z = minZ; z <= maxZ; z++)
                 {
                     int index = grid.Index(x, z);
                     Vector3 world = grid.CellToWorld(x, z) + Vector3.up * drawHeight;

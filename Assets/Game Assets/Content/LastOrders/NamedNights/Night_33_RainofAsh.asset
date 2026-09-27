@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f595e18e62b8dd44b87b15b4b9e9751a, type: 3}
+  m_Name: Night_33_RainofAsh
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.NamedNightDefinition
+  title: Rain of Ash
+  day: 33
+  broadcast: Ash on the wind all afternoon. Anything dry is going to take.
+  waveOverride: {fileID: 11400000, guid: 5579d86d7d6f5d54d8ad37929a0465eb, type: 2}
+  requiresGenerator: 0
+  disablesPoweredDefenses: 0
+  visibilityMultiplier: 0.5
+  woodFireRisk: 1
+  doubleLength: 0
+  offersBribe: 0
+  bribeCost: []
+  hasProtectTarget: 0
+  completionReward:
+  - type: 2
+    amount: 4
+  reputationReward: 5

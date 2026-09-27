@@ -58,7 +58,9 @@ namespace LastOrders.Build
             get
             {
                 if (undoStack.Count == 0) return false;
-                return Time.unscaledTime - undoStack[undoStack.Count - 1].RealTime <= undoWindowSeconds;
+                var entry = undoStack[undoStack.Count - 1];
+                return Time.unscaledTime - entry.RealTime <= undoWindowSeconds &&
+                    (!(entry.Command is IBuildUndoValidation validation) || validation.CanUndo(context));
             }
         }
 

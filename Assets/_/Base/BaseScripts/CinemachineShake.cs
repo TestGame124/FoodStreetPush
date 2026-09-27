@@ -1,25 +1,29 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Cinemachine;
+using Unity.Cinemachine;
 using CodeMonkey.Utils;
 
 public class CinemachineShake : MonoBehaviour {
 
     public static CinemachineShake Instance { get; private set; }
 
-    private CinemachineVirtualCamera cinemachineVirtualCamera;
+    // Cinemachine 3 puts the noise module on the camera itself rather than on a hidden
+    // pipeline child, so it is a sibling component here.
+    private CinemachineBasicMultiChannelPerlin noise;
 
     private void Awake() {
         Instance = this;
-        cinemachineVirtualCamera = GetComponent<CinemachineVirtualCamera>();
+        noise = GetComponent<CinemachineBasicMultiChannelPerlin>();
     }
 
     public void ScreenShake() {
-        CinemachineBasicMultiChannelPerlin cinemachineBasicMultiChannelPerlin = cinemachineVirtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
-        cinemachineBasicMultiChannelPerlin.m_AmplitudeGain = 1f;
+        if (noise == null)
+            return;
 
-        FunctionTimer.Create(() => { cinemachineBasicMultiChannelPerlin.m_AmplitudeGain = 0f; }, .1f);
+        noise.AmplitudeGain = 1f;
+
+        FunctionTimer.Create(() => { if (noise != null) noise.AmplitudeGain = 0f; }, .1f);
     }
 
 }

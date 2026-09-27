@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using LastOrders.Data;
-using UnityEngine.Pool;
+using FoodStreet.Placement;
 
 [CreateAssetMenu()]
 public class PlacedObjectTypeSO : ScriptableObject {
@@ -12,8 +12,6 @@ public class PlacedObjectTypeSO : ScriptableObject {
 
     public bool isUnlocked;
 
-    private ObjectPool<Transform> objectPool;
-    private ObjectPool<Transform> visualPool;
 
     public ObjectCategory categoryType;
     public ObjectType type;
@@ -27,40 +25,27 @@ public class PlacedObjectTypeSO : ScriptableObject {
     public Transform prefab;
     public Transform visual;
 
-    public int width;
-    public int height;
+    [Min(1)] public int width;
+    [Min(1)] public int height;
+
+    [Header("Placement")]
+    public FoodStreet.Placement.PlacementProfile placementProfile;
+
+    // Original floor assets omitted dimensions; interpret those as unit tiles without modifying assets.
+    public int WidthInCells => categoryType == ObjectCategory.Floor && width == 0 ? 1 : width;
+    public int HeightInCells => categoryType == ObjectCategory.Floor && height == 0 ? 1 : height;
+    public Vector2Int GetFootprintSize(Dir direction) =>
+        GridFootprint.Size(WidthInCells, HeightInCells, (int)direction);
 
     public int maxItems;
     [Header("UI Settings")]
     public Sprite previewImage;
 
-    public void Initialize()
-    {
-        int poolCapacity = maxItems == 0 ?
-            type == ObjectType.Floor1 ? 100 : 20 
-            : maxItems;  
-
-        objectPool = new ObjectPool<Transform>(() => { return Instantiate(prefab); },
-            placedObject => { placedObject.gameObject.SetActive(true); }
-            ,placedObject => { placedObject.gameObject.SetActive(false); }
-            ,placedObject => { Destroy(placedObject.gameObject); },
-            false, poolCapacity);
-        
-        visualPool = new ObjectPool<Transform>(() => { return Instantiate(visual); },
-            placedObject => { placedObject.gameObject.SetActive(true); }
-            ,placedObject => { placedObject.gameObject.SetActive(false); }
-            ,placedObject => { Destroy(placedObject.gameObject); },
-            false, poolCapacity);
-    }
-
-    public Transform GetObject() { 
-        return objectPool.Get();
-    }
-    public Transform GetVisual() { 
-        return visualPool.Get();
-    }
-    public void ReleaseObject(Transform placedObject) { objectPool.Release(placedObject); }
-    public void ReleaseVisual(Transform placedObject) { visualPool.Release(placedObject); }
+    public void Initialize() => PlacementPools.Initialize(this);
+    public Transform GetObject() => PlacementPools.Get(this, false);
+    public Transform GetVisual() => PlacementPools.Get(this, true);
+    public void ReleaseObject(Transform instance) => PlacementPools.Release(this, instance, false);
+    public void ReleaseVisual(Transform instance) => PlacementPools.Release(this, instance, true);
 
     public bool CanPurchase()
     {
@@ -110,37 +95,17 @@ public class PlacedObjectTypeSO : ScriptableObject {
     }
 
     public Vector2Int GetRotationOffset(Dir dir) {
-        switch (dir) {
-            default:
-            case Dir.Down:  return new Vector2Int(0, 0);
-            case Dir.Left:  return new Vector2Int(0, width);
-            case Dir.Up:    return new Vector2Int(width, height);
-            case Dir.Right: return new Vector2Int(height, 0);
-        }
+        return GridFootprint.PivotOffset(WidthInCells, HeightInCells, (int)dir);
     }
 
-    public List<Vector2Int> GetGridPositionList(Vector2Int offset, Dir dir) {
-        List<Vector2Int> gridPositionList = new List<Vector2Int>();
-        switch (dir) {
-            default:
-            case Dir.Down:
-            case Dir.Up:
-                for (int x = 0; x < width; x++) {
-                    for (int y = 0; y < height; y++) {
-                        gridPositionList.Add(offset + new Vector2Int(x, y));
-                    }
-                }
-                break;
-            case Dir.Left:
-            case Dir.Right:
-                for (int x = 0; x < height; x++) {
-                    for (int y = 0; y < width; y++) {
-                        gridPositionList.Add(offset + new Vector2Int(x, y));
-                    }
-                }
-                break;
-        }
-        return gridPositionList;
+    public List<Vector2Int> GetGridPositionList(Vector2Int offset, Dir direction)
+    {
+        var size = GetFootprintSize(direction);
+        var result = new List<Vector2Int>(Mathf.Max(0, size.x * size.y));
+        for (int x = 0; x < size.x; x++)
+            for (int z = 0; z < size.y; z++)
+                result.Add(offset + new Vector2Int(x, z));
+        return result;
     }
 
     // ------------------------------------------------------------------

@@ -12,7 +12,6 @@ public class TableBehaviour : MonoBehaviour
     [Serializable]
     public class Chair
     {
-        public VisitorBehaviour visitor;
         public Transform sitPos;
         public bool isBusy;
         public bool foodServed;
@@ -47,6 +46,19 @@ public class TableBehaviour : MonoBehaviour
     }
 
 
+    /// <summary>
+    /// The chairs, so FoodStreet.Visitors.SeatRegistry can hand each one out.
+    ///
+    /// Exposed rather than duplicated. These chairs are already authored into the level with
+    /// their sit points and plate points, and they are what StaffBehaviour serves - rebuilding
+    /// a parallel set of seats beside them would mean the visitor sits in one chair and the
+    /// waiter delivers to another.
+    /// </summary>
+    public Chair[] Chairs => chairs;
+
+    public Chair ChairAt(int index) =>
+        chairs != null && index >= 0 && index < chairs.Length ? chairs[index] : null;
+
     public Chair GetChair()
     {
         foreach (Chair chair in chairs)
@@ -74,21 +86,23 @@ public class TableBehaviour : MonoBehaviour
     private void OnDisable()
     {
 
-        LevelController.Instance.zone.UnRegisterTable(this);
-        foreach(Chair chair in chairs)
+        // OnDisable also runs while the scene is being torn down, by which point the
+        // singleton may already be destroyed. Unregistering is pointless then anyway.
+        if (LevelController.Instance != null && LevelController.Instance.zone != null)
+            LevelController.Instance.zone.UnRegisterTable(this);
+
+        // A chair no longer holds a reference to whoever is in it. Seat occupancy belongs to
+        // FoodStreet.Visitors.SeatRegistry, which releases its own reservations when a table
+        // goes away - so this only has to clear the chair's own state and return the plate.
+        foreach (Chair chair in chairs)
         {
-            if(chair.isBusy && chair.isSitted)
+            if (chair.isBusy && chair.isSitted && chair.foodPlatePos != null &&
+                chair.foodPlatePos.childCount > 0 && zone != null)
             {
-                chair.visitor.ResetVisitor(true);
-                if(chair.foodPlatePos.childCount > 0)
-                    zone.InventoryPosition.ReturnFoodPlate(chair.foodPlatePos.GetChild(0).gameObject);
+                zone.InventoryPosition.ReturnFoodPlate(chair.foodPlatePos.GetChild(0).gameObject);
             }
-            else if(chair.isBusy && !chair.isSitted)
-            {
-                chair.visitor.ResetVisitor();
-                chair.visitor.ChangeState(VisitorBehaviour.States.GoToTable);
-            }
-                chair.ResetStates();
+
+            chair.ResetStates();
         }
     }
 }

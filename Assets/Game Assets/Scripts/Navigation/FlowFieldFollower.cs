@@ -60,6 +60,22 @@ namespace FoodStreet.Navigation
             Vector3 position = transform.position;
             Vector2Int cell = grid.WorldToCell(position);
 
+            // Clearance treats off-grid as blocked, so the field never covers the outermost
+            // cells: its reach starts this many cells in from every edge.
+            int inset = nav.Grid.ClearanceForRadius(flow.Settings.AgentRadius);
+
+            if (!grid.InBounds(cell) || (IsOnRim(grid, cell, inset) && flow.GetIntegratedCost(cell) == FlowField.Unreachable))
+            {
+                // Off the grid, or on the rim the field does not reach - which is where every
+                // enemy starts, because lanes are placed beyond the plot's edge so that they
+                // walk in. The field knows nothing out here, so head straight in to the nearest
+                // cell it does cover and pick it up from there. Doing nothing instead left every
+                // agent standing where it spawned for the whole night.
+                HasArrived = false;
+                steering.SetDesiredDirection(grid.CellToWorld(Inset(grid, cell, inset)) - position);
+                return;
+            }
+
             int cost = flow.GetIntegratedCost(cell);
             if (cost == FlowField.Unreachable)
             {
@@ -87,6 +103,14 @@ namespace FoodStreet.Navigation
 
             steering.SetDesiredDirection(direction);
         }
+
+        static bool IsOnRim(NavGrid grid, Vector2Int cell, int inset) =>
+            cell.x < inset || cell.y < inset || cell.x >= grid.Width - inset || cell.y >= grid.Height - inset;
+
+        /// <summary>The nearest cell at least <paramref name="inset"/> cells in from every edge.</summary>
+        static Vector2Int Inset(NavGrid grid, Vector2Int cell, int inset) => new Vector2Int(
+            Mathf.Clamp(cell.x, inset, grid.Width - 1 - inset),
+            Mathf.Clamp(cell.y, inset, grid.Height - 1 - inset));
 
         /// <summary>
         /// Mixes in the direction of the cell being approached, weighted by how far across

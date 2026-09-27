@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8124330c4a4303e43901018d06e2148b, type: 3}
+  m_Name: Wave_Tier4_LateCampaign
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.WaveManifest
+  minTier: 4
+  maxTier: 6
+  earliestDay: 25
+  entries:
+  - enemy: {fileID: 11400000, guid: 5f384982dd7bbb248b8f5094ff4d09ac, type: 2}
+    weight: 4
+    guaranteedMinimum: 0
+    maximum: 0
+  - enemy: {fileID: 11400000, guid: ee651dea4aec97147ae3dab0024da484, type: 2}
+    weight: 4
+    guaranteedMinimum: 0
+    maximum: 0
+  - enemy: {fileID: 11400000, guid: b2edab93b0d2fde47b8bed517024a0df, type: 2}
+    weight: 3
+    guaranteedMinimum: 0
+    maximum: 0
+  - enemy: {fileID: 11400000, guid: f27f37aacb49d7643953d3b391b4458c, type: 2}
+    weight: 3
+    guaranteedMinimum: 0
+    maximum: 0
+  - enemy: {fileID: 11400000, guid: 11f2d0770b4de724e8109fe8d17f69ce, type: 2}
+    weight: 3
+    guaranteedMinimum: 0
+    maximum: 0
+  - enemy: {fileID: 11400000, guid: 9b6b921202709394fa284fe2bc85af7d, type: 2}
+    weight: 1
+    guaranteedMinimum: 0
+    maximum: 2
+  nightDurationSeconds: 200
+  spawnRateOverNight:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.7
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.6
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0.85
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  approachLanes: 4
+  budgetPerHeat: 0.35
+  minimumBudget: 3

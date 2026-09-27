@@ -1,252 +1,114 @@
-﻿using DG.Tweening;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlacedObject_Done : MonoBehaviour, IInteractableObjectEditorState {
+/// <summary>Placed instance identity and pose; grid occupancy is owned by PlacementService.</summary>
+public class PlacedObject_Done : MonoBehaviour, IInteractableObjectEditorState
+{
+    [SerializeField] PlacedObjectTypeSO placedObjectTypeSO;
+    [SerializeField] Vector2Int origin;
+    [SerializeField] PlacedObjectTypeSO.Dir dir;
+    int id;
+    static int transientId = -1;
+    Transform objParent;
+    bool countedInShop;
+    public int ID => id;
+    public Vector2Int Origin => origin;
+    public PlacedObjectTypeSO PlacedObjectTypeSO => placedObjectTypeSO;
+    public PlacedObjectTypeSO.Dir Dir => dir;
+    public bool IsPlaced;
+    public ObjectType shopItemType;
+    [HideInInspector] public int sellingPrice;
+    public Vector3 placedPosition;
+    public bool isRemoved;
 
-
-
-    public static PlacedObject_Done Create(Vector3 worldPosition, Vector2Int origin, PlacedObjectTypeSO.Dir dir, PlacedObjectTypeSO placedObjectTypeSO) {
-        //Transform placedObjectTransform = Instantiate(placedObjectTypeSO.prefab, worldPosition, Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0));
-        Transform placedObjectTransform = placedObjectTypeSO.GetObject();
-        placedObjectTransform.position = worldPosition;
-        placedObjectTransform.rotation = Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0);
-        //Transform placedObjectTransform = ObjectPoolingManager.GetFromPool(placedObjectTypeSO.prefab, worldPosition, Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0));
-        
-
-        PlacedObject_Done placedObject = placedObjectTransform.GetComponent<PlacedObject_Done>();
-        placedObject.Setup(placedObjectTypeSO, origin, dir);
-        
-
-        return placedObject; 
+    public static PlacedObject_Done Create(Vector3 worldPosition, Vector2Int origin,
+        PlacedObjectTypeSO.Dir dir, PlacedObjectTypeSO type)
+    {
+        var instance = type.GetObject();
+        var placed = instance.GetComponent<PlacedObject_Done>();
+        placed.objParent = null;
+        instance.SetParent(null);
+        placed.ConfigurePlacement(type, origin, dir);
+        placed.id = transientId--;
+        placed.isRemoved = false;
+        placed.countedInShop = false;
+        placed.RestorePlacementPose(worldPosition);
+        placed.RegisterShopCount();
+        return placed;
     }
 
-    private int id;
-    public int ID => id;
-
-   
-
-
-    public bool IsPlaced;
-
-    private Transform objParent;
-
-    private PlacedObjectTypeSO placedObjectTypeSO;
-    public PlacedObjectTypeSO PlacedObjectTypeSO => placedObjectTypeSO;
-    private Vector2Int origin;
-    [SerializeField]private PlacedObjectTypeSO.Dir dir;
-    public PlacedObjectTypeSO.Dir Dir => dir;
-
-    //[Range(0,270)]
-    int directionVal => PlacedObjectTypeSO.GetRotationAngle(dir);
-
-    public ObjectType shopItemType;
-
-    [HideInInspector]public int sellingPrice;
-
-    public Vector3 placedPosition;
-
-    bool alreadyInitialized;
-
-    public bool isRemoved;
-    public void InitializeObject(int id)
+    public void InitializeObject(int identity)
     {
         objParent = transform.parent;
-        if (IsPlaced)
-            return;
-        IsPlaced = true;
-        this.id = id;
-        alreadyInitialized= true;
-
-        
-        GridXZ<GridBuildingSystem3D.GridObject> grid = GridBuildingSystem3D.GetGrid();
-        placedObjectTypeSO = ObjectDatabaseHandler.GetPlacedObject(shopItemType);
-
-        //GridBuildingSystem3D.Instance.SetPlacedObjectTypeSO(placedObjectTypeSO);
+        id = identity;
+        if (placedObjectTypeSO == null) placedObjectTypeSO = ObjectDatabaseHandler.GetPlacedObject(shopItemType);
+        var service = GridBuildingSystem3D.Instance != null ? GridBuildingSystem3D.Instance.Placement : null;
+        if (placedObjectTypeSO == null || service == null) return;
+        if (!IsPlaced) origin = service.Layout.PivotToCell(placedObjectTypeSO, transform.position, dir);
+        ConfigurePlacement(placedObjectTypeSO, origin, dir);
         placedPosition = transform.position;
-
-        grid.GetXZ(transform.position, out int x, out int z);
-
-        Vector2Int placedObjectOrigin = new Vector2Int(x, z);
-        placedObjectOrigin = grid.ValidateGridPosition(placedObjectOrigin);
-        
-        // Test Can Build
-
-        if (placedObjectTypeSO.Sellable)
-        {
-            sellingPrice = Mathf.RoundToInt(placedObjectTypeSO.PriceAmount * .3f);
-        }
-
-
-        
-
-
-        Vector2Int rotationOffset = placedObjectTypeSO.GetRotationOffset(dir);
-        Vector3 placedObjectWorldPosition = grid.GetWorldPosition(placedObjectOrigin.x, placedObjectOrigin.y) + new Vector3(rotationOffset.x, 0, rotationOffset.y) * grid.GetCellSize();
-
-
-
-        PlaceSelectedObject(placedObjectWorldPosition, placedObjectOrigin,dir);
-
-        List<Vector2Int> gridPositionList = placedObjectTypeSO.GetGridPositionList(placedObjectOrigin, dir);
-
-        if (/*GameHandler.FirstTime &&*/ placedObjectTypeSO.categoryType != ObjectCategory.Floor)
-        {
-            foreach (Vector2Int gridPosition in gridPositionList)
-            {
-                grid.GetGridObject(gridPosition.x, gridPosition.y).SetPlacedObject(this);
-
-            }
-           
-        }
-
-        if (GameHandler.FirstTime)
-        {
-            GridBuildingSystem3D.Instance.SavePlacedObject(this);
-
-        }
-       
+        service.Register(this);
+        RegisterShopCount();
     }
 
-    private void Setup(PlacedObjectTypeSO placedObjectTypeSO, Vector2Int origin, PlacedObjectTypeSO.Dir dir) {
-        this.placedObjectTypeSO = placedObjectTypeSO;
-        this.origin = origin;
-        this.dir = dir;
-
-        if (!alreadyInitialized)
-        {
-
-            alreadyInitialized= true;
-            id = SaveController.GiveUniqueID();
-        }
-        if (placedObjectTypeSO.categoryType != ObjectCategory.Floor)
-        {
-            ShopItem shopItem = ShopItemDataContainer.GetShopItem(placedObjectTypeSO.type, placedObjectTypeSO.categoryType);
-            shopItem.IncreaseItemCount();
-        }
-        if (placedObjectTypeSO.Sellable)
-        {
-            sellingPrice = Mathf.RoundToInt(placedObjectTypeSO.PriceAmount * .3f);
-        }
-
-
-        shopItemType = placedObjectTypeSO.type;
-       
-        placedPosition = transform.position;
-
-        if (placedObjectTypeSO.categoryType != ObjectCategory.Floor)
-            transform.DOScale(1, 0.3f).From(1.2f).SetEase(Ease.OutBack);
-        else
-            GridBuildingSystem3D.AddPlacedTiles(origin, this);
-
-
-        IsPlaced = true;
+    public void ConfigurePlacement(PlacedObjectTypeSO type, Vector2Int cell, PlacedObjectTypeSO.Dir direction)
+    {
+        placedObjectTypeSO = type; origin = cell; dir = direction;
+        shopItemType = type.type;
+        sellingPrice = type.Sellable ? Mathf.RoundToInt(type.PriceAmount * .3f) : 0;
+        IsPlaced = true; isRemoved = false;
     }
-
-    /// <summary>
-    /// Assigns placement data only, with none of the side effects of the runtime Setup path.
-    ///
-    /// Setup allocates a save ID and increments a ShopItem count, both of which need the
-    /// full game bootstrap. Authoring a scene - placing the Last Orders starting area from
-    /// an editor script - has no bootstrap and wants neither: the objects are saved with the
-    /// scene, and counting them as purchases would be wrong.
-    ///
-    /// Without this an authored object has a null type internally, so every system that asks
-    /// the grid what is on a tile silently skips it.
-    /// </summary>
-    public void ConfigurePlacement(PlacedObjectTypeSO type, Vector2Int origin, PlacedObjectTypeSO.Dir dir) {
-        this.placedObjectTypeSO = type;
-        this.origin = origin;
-        this.dir = dir;
-        IsPlaced = true;
+    public void RestoreIdentity(int identity) => id = identity;
+    void RegisterShopCount()
+    {
+        if (countedInShop || IsFloor()) return;
+        var shop = ShopItemDataContainer.GetShopItem(placedObjectTypeSO.type, placedObjectTypeSO.categoryType);
+        if (shop == null) return;
+        // Count existing instances even if their asset is currently locked or at its purchase limit.
+        shop.itemsAmount++; shop.RedrawUI(); countedInShop = true;
     }
-
-    public List<Vector2Int> GetGridPositionList() {
-        return placedObjectTypeSO.GetGridPositionList(origin, dir);
+    public void RestorePlacementPose(Vector3 position)
+    {
+        transform.SetParent(objParent, true);
+        transform.SetPositionAndRotation(position, Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0));
+        placedPosition = position;
     }
+    public void PlaceSelectedObject(Vector3 worldPosition, Vector2Int cell, PlacedObjectTypeSO.Dir direction)
+    {
+        origin = cell; dir = direction;
+        RestorePlacementPose(worldPosition);
+    }
+    public List<Vector2Int> GetGridPositionList() => placedObjectTypeSO.GetGridPositionList(origin, dir);
+    public bool IsFloor() => placedObjectTypeSO != null && placedObjectTypeSO.categoryType == ObjectCategory.Floor;
 
-    public void DestroySelf() {
-        //Destroy(gameObject);
-        isRemoved = true;
-
-        if (placedObjectTypeSO.type == ObjectType.Floor1)
+    public void DestroySelf()
+    {
+        if (isRemoved) return;
+        GridBuildingSystem3D.Instance?.Placement?.Unregister(this);
+        isRemoved = true; IsPlaced = false;
+        if (countedInShop)
         {
-            GridBuildingSystem3D.RemovePlacedTiles(origin);
+            ShopItemDataContainer.GetShopItem(placedObjectTypeSO.type, placedObjectTypeSO.categoryType)?.DecreaseItemCount();
+            countedInShop = false;
         }
-        else
-        {
-            ShopItem shopItem = ShopItemDataContainer.GetShopItem(placedObjectTypeSO.type, placedObjectTypeSO.categoryType);
-            shopItem.DecreaseItemCount();
-            
-        }
-       
+        transform.SetParent(null, true);
         placedObjectTypeSO.ReleaseObject(transform);
-        if (placedObjectTypeSO.categoryType != ObjectCategory.Floor)
-        {
-            GridBuildingSystem3D.Instance.SavePlacedObject(this, true);
-        }
-        transform.SetParent(null);
-
-        // This instance goes back to the pool. Clear the initialised flag so the
-        // next Setup() allocates a fresh ID instead of inheriting the dead
-        // object's identity, which would alias its save entry.
-        alreadyInitialized = false;
     }
-
-    
-
-    public bool IsFloor()
+    public bool OnTouch()
     {
-        return placedObjectTypeSO.categoryType == ObjectCategory.Floor;
-    }
+        var system = GridBuildingSystem3D.Instance;
 
-    
-    public void PlaceSelectedObject(Vector3 worldPosition, Vector2Int origin, PlacedObjectTypeSO.Dir dir)
-    {
-        transform.SetParent(objParent);
-        transform.position = worldPosition;
-        transform.rotation = Quaternion.Euler(0, placedObjectTypeSO.GetRotationAngle(dir), 0);
-        Setup(placedObjectTypeSO, origin, dir);
-    }
-    public void OnTouch()
-    {
-        if (UIGame.IsPointerOverUI())
-            return;
-        if (GridBuildingSystem3D.Instance.GhostObject.selectedState)
-            return;
-        Debug.Log($"Item Name : {name}");
-        foreach (Vector2Int gridPosition in GetGridPositionList())
-        {
-            GridBuildingSystem3D.GetGrid().GetGridObject(gridPosition.x, gridPosition.y).ClearPlacedObject();
-        }
-        
-        GridBuildingSystem3D.Instance.GhostObject.SelectObject(this);
-        UIGame.GetUI().placeObjectPanel.SetPlacedObjectData(this);
-    }
+        // Declining rather than swallowing the tap is what keeps placement working: a floor tile,
+        // or anything tapped while a building is already following the pointer, has to let the
+        // same release reach BuildingGhost so it can drop that building.
+        if (system == null || system.GhostObject == null || system.GhostObject.selectedState || IsFloor()) return false;
 
-    public PlacedObjectData GetPlacedObjectData()
-    {
-        PlacedObjectData data = new PlacedObjectData
-        {
-            Id = ID,
-            objectType = GetPlacedObjectTypeSO().type,
-            position = new BayatGames.SaveGameFree.Types.Vector3Save(transform.position),
-            direction = GetDir(),
-            isRemoved = isRemoved
-
-        };
-       
-        return data;
+        objParent = transform.parent;
+        system.GhostObject.SelectObject(this);
+        var ui = UIGame.GetUI();
+        if (ui != null) ui.placeObjectPanel.SetPlacedObjectData(this);
+        return true;
     }
-    internal PlacedObjectTypeSO GetPlacedObjectTypeSO()
-    {
-        return placedObjectTypeSO;
-    }
-
-    internal PlacedObjectTypeSO.Dir GetDir()
-    {
-        return dir;
-    }
+    internal PlacedObjectTypeSO GetPlacedObjectTypeSO() => placedObjectTypeSO;
+    internal PlacedObjectTypeSO.Dir GetDir() => dir;
 }

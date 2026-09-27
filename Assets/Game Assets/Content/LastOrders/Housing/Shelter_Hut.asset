@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eda59c77872b8c045bfe3471f45f0a2e, type: 3}
+  m_Name: Shelter_Hut
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.ShelterDefinition
+  id: shelter
+  displayName: Shelter
+  description: A little hut with two beds. Everyone you hire needs a bed, so each
+    shelter you build lets you take on two more survivors.
+  beds: 2
+  buildPrice:
+    coins: 50
+    resources:
+    - type: 5
+      amount: 12
+  hires:
+  - role: {fileID: 11400000, guid: 968ab2b48358c5b43922fa5373fec20f, type: 2}
+    pitch: stands watch in a guard tower, and takes over when a guard is hurt
+    price:
+      coins: 40
+      resources: []
+  - role: {fileID: 11400000, guid: 2efc5e7af3a286347a076e59c8f78ef3, type: 2}
+    pitch: looks after the hospital tent, so patients recover faster
+    price:
+      coins: 50
+      resources: []

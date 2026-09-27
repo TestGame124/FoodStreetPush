@@ -7,11 +7,11 @@ public class ShopItemConfirm : ConfirmationUiPanel
 
     public override void Initialize(GridBuildingSystem3D gridBuildingSystem, bool canRotate = false, bool canSell = false)
     {
-        base.Initialize(gridBuildingSystem);
+        base.Initialize(gridBuildingSystem, canRotate, canSell);
     }
     public override void Cancel()
     {
-        if(gridBuildingSystem.GetPlacedObjectTypeSO().categoryType == ObjectCategory.Floor)
+        if(gridBuildingSystem.GetPlacedObjectTypeSO() != null && gridBuildingSystem.GetPlacedObjectTypeSO().categoryType == ObjectCategory.Floor)
         {
             gridBuildingSystem.ClearPreviewTiles();
         }
@@ -22,19 +22,16 @@ public class ShopItemConfirm : ConfirmationUiPanel
 
     public override void Confirm()
     {
+        if (gridBuildingSystem.GetPlacedObjectTypeSO() == null) return;
         if (gridBuildingSystem.GetPlacedObjectTypeSO().categoryType != ObjectCategory.Floor)
         {
+            if (!gridBuildingSystem.GetPlacedObjectTypeSO().CanPurchase() ||
+                (gridBuildingSystem.CurrentShopItem != null && !gridBuildingSystem.CurrentShopItem.CanPurchase())) return;
             if (!gridBuildingSystem.PlaceObject())
                 return;
             if(gridBuildingSystem.GetPlacedObjectTypeSO().PriceAmount > 0)
             {
                 CurrenciesController.SubtractCurrency(CurrencyType.Coins, gridBuildingSystem.GetPlacedObjectTypeSO().PriceAmount);
-            }
-        gridBuildingSystem.CurrentShopItem.IncreaseItemCount();
-
-            if (!TutorialController.TutorialCompleted() && gridBuildingSystem.GetPlacedObjectTypeSO().type == ObjectType.SoupStove)
-            {
-                TutorialController.ObjectPlacingStageEvent?.Invoke();
             }
         }
         else

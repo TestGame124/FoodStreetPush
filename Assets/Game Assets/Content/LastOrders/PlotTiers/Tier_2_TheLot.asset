@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c03c627ce41c949ba8ddb8cdd56659, type: 3}
+  m_Name: Tier_2_TheLot
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.PlotTierDefinition
+  tier: 2
+  displayName: The Lot
+  unlockNarrative: Clear the rubble east
+  gridWidth: 10
+  gridHeight: 10
+  requiredReputation: 20
+  unlockCost: []
+  expansionOffset: {x: 0, y: 0}

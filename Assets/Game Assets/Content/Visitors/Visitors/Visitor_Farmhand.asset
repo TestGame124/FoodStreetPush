@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca8968133e95c146922c955886d4448, type: 3}
+  m_Name: Visitor_Farmhand
+  m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VisitorDefinition
+  displayName: Farmhand
+  characterModel: 4
+  headwear: SM_Chr_Attach_Cap_02
+  vehicle: {fileID: 11400000, guid: 1f526ce785fa32f46b3bbfaf54905292, type: 2}
+  spawnWeight: 2.5
+  orders:
+  - item: 11
+    amountRange: {x: 1, y: 2}
+    weight: 3
+  - item: 10
+    amountRange: {x: 1, y: 2}
+    weight: 2
+  eatSeconds: {x: 3, y: 5}
+  payment: 30
+  walkSpeed: 1.6
+  turnSpeed: 540
+  arriveRadius: 0.25
+  prefab: {fileID: 1764046521062780872, guid: 6d8dcd1268659f04db7ea5959ea99da4, type: 3}

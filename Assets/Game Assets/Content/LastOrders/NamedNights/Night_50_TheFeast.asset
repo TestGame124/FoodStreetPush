@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f595e18e62b8dd44b87b15b4b9e9751a, type: 3}
+  m_Name: Night_50_TheFeast
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.NamedNightDefinition
+  title: The Feast
+  day: 50
+  broadcast: Word got out. Everyone still alive on this road is coming tonight.
+  waveOverride: {fileID: 11400000, guid: a65e35279c36a3b4bb5e61a2214681c0, type: 2}
+  requiresGenerator: 0
+  disablesPoweredDefenses: 0
+  visibilityMultiplier: 1
+  woodFireRisk: 0
+  doubleLength: 0
+  offersBribe: 0
+  bribeCost: []
+  hasProtectTarget: 0
+  completionReward:
+  - type: 2
+    amount: 4
+  reputationReward: 5

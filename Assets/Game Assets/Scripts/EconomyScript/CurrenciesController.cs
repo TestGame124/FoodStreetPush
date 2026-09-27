@@ -1,13 +1,12 @@
 using System;
-using FoodStreet.Saving;
 using UnityEngine;
 
 /// <summary>
 /// Coins and gems.
 ///
-/// Balances live inside the encrypted save payload rather than in a plaintext
-/// json file next to the game, and every change goes through here so nothing
-/// can move a balance without the save being marked dirty.
+/// Balances live in memory for the length of the session and are not persisted -
+/// every launch starts from zero. Every change still goes through here so the UI
+/// is told about it exactly once.
 /// </summary>
 public class CurrenciesController : MonoBehaviour
 {
@@ -17,25 +16,14 @@ public class CurrenciesController : MonoBehaviour
 
     public static Action<CurrencyType, int> OnCurrencyAmountChanged;
 
-    private static EconomySaveData Economy
-    {
-        get
-        {
-            if (!SaveSystem.IsReady)
-            {
-                Debug.LogError("[Currencies] Balance read before SaveSystem.Initialize.");
-                return null;
-            }
-            return SaveSystem.Data.economy;
-        }
-    }
+    private static int coins;
+    private static int gems;
 
     public void Initialise()
     {
         Instance = this;
         currencyDatabase.Initialize();
 
-        // Balances were restored with the save file; just let the UI catch up.
         Broadcast(CurrencyType.Coins);
         Broadcast(CurrencyType.Gems);
     }
@@ -55,7 +43,6 @@ public class CurrenciesController : MonoBehaviour
         long total = (long)GetCurrencyAmount(type) + amount;
         SetCurrencyAmount(type, (int)Math.Min(total, int.MaxValue));
 
-        SaveSystem.MarkDirty();
         Broadcast(type);
     }
 
@@ -68,40 +55,31 @@ public class CurrenciesController : MonoBehaviour
 
         SetCurrencyAmount(type, GetCurrencyAmount(type) - amount);
 
-        SaveSystem.MarkDirty();
         Broadcast(type);
         return true;
     }
 
     public static int GetCurrencyAmount(CurrencyType type)
     {
-        EconomySaveData economy = Economy;
-        if (economy == null)
-            return 0;
-
         switch (type)
         {
-            case CurrencyType.Coins: return economy.coins;
-            case CurrencyType.Gems: return economy.gems;
+            case CurrencyType.Coins: return coins;
+            case CurrencyType.Gems: return gems;
             default: return 0;
         }
     }
 
     private static void SetCurrencyAmount(CurrencyType type, int amount)
     {
-        EconomySaveData economy = Economy;
-        if (economy == null)
-            return;
-
         amount = Mathf.Max(0, amount);
 
         switch (type)
         {
             case CurrencyType.Coins:
-                economy.coins = amount;
+                coins = amount;
                 break;
             case CurrencyType.Gems:
-                economy.gems = amount;
+                gems = amount;
                 break;
         }
     }
@@ -113,14 +91,9 @@ public class CurrenciesController : MonoBehaviour
 
     public static void ResetCurrencies()
     {
-        EconomySaveData economy = Economy;
-        if (economy == null)
-            return;
+        coins = 0;
+        gems = 0;
 
-        economy.coins = 0;
-        economy.gems = 0;
-
-        SaveSystem.MarkDirty();
         Broadcast(CurrencyType.Coins);
         Broadcast(CurrencyType.Gems);
     }

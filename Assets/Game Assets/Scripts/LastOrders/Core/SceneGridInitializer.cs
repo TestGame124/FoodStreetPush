@@ -32,6 +32,14 @@ namespace LastOrders.Core
 
         [SerializeField] float cellSize = 1f;
 
+        [Tooltip("Overrides the plot tier's grid dimensions when non-zero. The blockout " +
+                 "scene is a measured 48x40 m world on a 0.5 m grid - 96x80 cells - which " +
+                 "is a scene property rather than a campaign progression tier, so it is set " +
+                 "here instead of by inventing a plot tier the player can never reach.")]
+        [SerializeField] int gridWidthOverride;
+
+        [SerializeField] int gridHeightOverride;
+
         /// <summary>How many authored objects were restored. Read by the debug overlay; a
         /// zero here with a visibly built restaurant is the signature of this having failed.</summary>
         public int RestoredCount { get; private set; }
@@ -45,12 +53,67 @@ namespace LastOrders.Core
                 return;
             }
 
-            int width = plotTier != null ? plotTier.gridWidth : 8;
-            int height = plotTier != null ? plotTier.gridHeight : 8;
+            // GameHandler owns the boot order when it is present: it initialises the grid,
+            // loads the placed objects and bootstraps navigation, all in a specific sequence.
+            // Re-initialising underneath it would throw away everything it had just loaded,
+            // so in that scene this component only re-registers and leaves the grid alone.
+            bool ownsGrid = FindFirstObjectByType<GameHandler>() == null;
 
-            buildGrid.Initialize(width, height, cellSize, Vector3.zero);
+            if (ownsGrid)
+            {
+                int width = gridWidthOverride > 0
+                    ? gridWidthOverride
+                    : plotTier != null ? plotTier.gridWidth : 8;
 
-            RestoredCount = ReregisterAuthoredObjects();
+                int height = gridHeightOverride > 0
+                    ? gridHeightOverride
+                    : plotTier != null ? plotTier.gridHeight : 8;
+
+                buildGrid.Initialize(width, height, cellSize, Vector3.zero);
+                RestoredCount = ReregisterAuthoredObjects();
+                return;
+            }
+
+            // Deferred: GameHandler runs its sequence in Start, so anything done here in
+            // Awake would be overwritten by the grid it builds a moment later.
+            StartCoroutine(ReregisterAfterGameHandler());
+        }
+
+        /// <summary>
+        /// Waits for GameHandler to finish booting, then adds the Last Orders components to
+        /// whatever ended up on the grid - both the objects authored into the scene and the
+        /// ones GameHandler loaded from the save file.
+        ///
+        /// A frame's wait rather than an execution-order attribute because GameHandler's
+        /// sequence spans its whole Start method and includes a save load; ordering only
+        /// guarantees which Start runs first, not that the work inside it has finished.
+        /// </summary>
+        System.Collections.IEnumerator ReregisterAfterGameHandler()
+        {
+            yield return null;
+            yield return null;
+
+            RestoredCount = AttachRuntimeComponents();
+        }
+
+        /// <summary>
+        /// Adds the consequence and perimeter components to every placed object in the scene,
+        /// without touching the grid.
+        /// </summary>
+        int AttachRuntimeComponents()
+        {
+            PlacedObject_Done[] all = FindObjectsByType<PlacedObject_Done>(FindObjectsSortMode.None);
+
+            int touched = 0;
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] == null || all[i].PlacedObjectTypeSO == null) continue;
+
+                EnsureRuntimeComponents(all[i]);
+                touched++;
+            }
+
+            return touched;
         }
 
         int ReregisterAuthoredObjects()
@@ -69,9 +132,7 @@ namespace LastOrders.Core
                 PlacedObject_Done placed = authored[i];
                 if (placed == null || placed.PlacedObjectTypeSO == null) continue;
 
-                var tiles = placed.GetGridPositionList();
-                for (int t = 0; t < tiles.Count; t++)
-                    grid.GetGridObject(tiles[t].x, tiles[t].y)?.SetPlacedObject(placed);
+                buildGrid.Placement.Register(placed);
 
                 EnsureRuntimeComponents(placed);
                 restored++;

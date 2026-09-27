@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 646cd38e62acf0d429bf7d5c5ece8c17, type: 3}
+  m_Name: Recipe_FeastPlatter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.RecipeDefinition
+  displayName: FeastPlatter
+  icon: {fileID: 0}
+  ingredients:
+  - type: 10
+    amount: 3
+  - type: 14
+    amount: 2
+  - type: 13
+    amount: 1
+  cookSeconds: 26
+  coinValue: 80
+  reputationWeight: 4
+  heatMultiplier: 2
+  allowsSignature: 1
+  signatureMultiplier: 2
+  unlockedFromStart: 0
+  requiredReputation: 70
+  stationTags: []

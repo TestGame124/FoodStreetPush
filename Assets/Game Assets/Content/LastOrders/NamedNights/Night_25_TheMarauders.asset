@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f595e18e62b8dd44b87b15b4b9e9751a, type: 3}
+  m_Name: Night_25_TheMarauders
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.NamedNightDefinition
+  title: The Marauders
+  day: 25
+  broadcast: They sent word ahead. That is either a courtesy or a price.
+  waveOverride: {fileID: 11400000, guid: 5579d86d7d6f5d54d8ad37929a0465eb, type: 2}
+  requiresGenerator: 0
+  disablesPoweredDefenses: 0
+  visibilityMultiplier: 1
+  woodFireRisk: 0
+  doubleLength: 0
+  offersBribe: 1
+  bribeCost:
+  - type: 0
+    amount: 250
+  hasProtectTarget: 0
+  completionReward:
+  - type: 2
+    amount: 4
+  reputationReward: 5

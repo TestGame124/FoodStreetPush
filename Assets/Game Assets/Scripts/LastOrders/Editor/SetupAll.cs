@@ -46,5 +46,51 @@ namespace LastOrders.EditorTools
 
             Debug.Log("[Last Orders] Setup complete.");
         }
+
+        /// <summary>
+        /// The same content and buildable passes, but building the measured blockout scene of
+        /// The Last Restaurant v0.2 sections 15-18 instead of deriving one from Main Level.
+        ///
+        /// A separate command rather than a flag on Run, because the two produce different
+        /// scenes for different purposes and neither replaces the other: Run gives the project
+        /// its art, terrain and shop UI, this gives an exact site plan with nothing in it that
+        /// did not come from the document.
+        /// </summary>
+        [MenuItem("Last Orders/Set Up Everything (Blockout)", priority = -9)]
+        public static void RunBlockout()
+        {
+            bool proceed = EditorUtility.DisplayDialog(
+                "Last Orders",
+                "This will:\n\n" +
+                "1. Generate the starting content assets\n" +
+                "2. Fill in Last Orders data on the project's buildables\n" +
+                "3. Build the measured blockout scene from BlockoutSchedule\n" +
+                "4. Validate it against that schedule\n\n" +
+                "The blockout is a standalone scene and does not touch LastOrders_Start. " +
+                "Any unsaved changes in the current scene will be lost.",
+                "Run setup", "Cancel");
+
+            if (!proceed) return;
+
+            try
+            {
+                EditorUtility.DisplayProgressBar("Last Orders", "Generating content...", 0.1f);
+                ContentGenerator.Generate();
+
+                EditorUtility.DisplayProgressBar("Last Orders", "Configuring buildables...", 0.4f);
+                BuildableConfigurator.Configure();
+
+                EditorUtility.DisplayProgressBar("Last Orders", "Building blockout scene...", 0.7f);
+                BlockoutSceneBuilder.Build();
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+
+            // Run last and unconditionally, so a scene that came out wrong says so immediately
+            // rather than at whatever point someone happens to look.
+            BlockoutValidator.Validate();
+        }
     }
 }

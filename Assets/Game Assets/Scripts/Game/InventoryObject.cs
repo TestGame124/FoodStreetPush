@@ -27,9 +27,13 @@ public class InventoryObject : MonoBehaviour, IInteractableObject
        
 
     }
-    public void OnTouch()
+    public bool OnTouch()
     {
-        UIGame.GetUI().inventoryUIBehaviour.gameObject.SetActive(true);
+        UIGame ui = UIGame.GetUI();
+        if (ui == null || ui.inventoryUIBehaviour == null) return false;
+
+        ui.inventoryUIBehaviour.gameObject.SetActive(true);
+        return true;
     }
     private GameObject CreateFoodPlate(Vector3 pos)
     {

@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Build_Barricade
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Barricade
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 2
+  type: 5
+  PriceAmount: 0
+  Sellable: 1
+  prefab: {fileID: 4782235985580720507, guid: b46679608b3df184495e4824023ad83e, type: 3}
+  visual: {fileID: 2499414142690952232, guid: 3bb772293c0127a4b9f7ffb8e1798a1a, type: 3}
+  width: 1
+  height: 1
+  maxItems: 0
+  previewImage: {fileID: 0}
+  buildCategory: 3
+  buildCost:
+  - type: 1
+    amount: 3
+  buildClockMinutes: 1
+  maxHealth: 80
+  damagedEfficiency: 0.75
+  isPerimeter: 1
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

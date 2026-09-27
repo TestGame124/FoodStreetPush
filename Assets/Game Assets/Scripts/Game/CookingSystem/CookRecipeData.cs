@@ -1,4 +1,4 @@
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -55,6 +55,8 @@ public class CookRecipeData
         }
         UpdateTimer?.Invoke(timer, this);
 
+        int servings = 0;
+
         for (int i = 0; i <= results.Amount; i++)
         {
             Vector3 offset = new Vector3(UnityEngine.Random.Range(-1, 1), 2, UnityEngine.Random.Range(-1, 1));
@@ -62,7 +64,18 @@ public class CookRecipeData
             Item newItem = new(ItemController.GetItem(results.item.type), results.item.itemsAmount);
 
             results.item.itemDataSO.GenerateItem(ItemController.instance.itemReceiver, newItem, manager.transform.position + offset, InventorySystem.instance);
+
+            servings++;
         }
+
+        // GDD 11.1: every dish cooked adds Heat, and grilled or smoked dishes add double.
+        // Until the recipe assets carry that multiplier through this path, everything is
+        // charged the base rate.
+        //
+        // The serving count is what reaches the customer system: each plate produced here is a
+        // meal on the pass, and the pass is what travellers on the road are deciding about.
+        LastOrders.Core.LastOrdersBridge.NotifyDishCooked(servings: servings);
+
         manager.RemoveCookRecipeData(this);
     }
 

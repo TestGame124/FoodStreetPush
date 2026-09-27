@@ -117,9 +117,6 @@ public class OrdersBoardUI : MonoBehaviour
         LevelUpSystem.AddXP(order.StarsReward);
         OnOrderClaimed?.Invoke();
 
-        if(TutorialController.currentStage != TutorialStage.Done)
-            TutorialController.OnOrderButtonClick?.Invoke();
-
         transform.DOScale(0, .5f).SetEase(Ease.InBack).OnComplete(() =>
         {
             cantPressBtn= false;

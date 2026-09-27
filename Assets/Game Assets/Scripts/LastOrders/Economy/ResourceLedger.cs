@@ -118,17 +118,5 @@ namespace LastOrders.Economy
         }
 
         public IReadOnlyDictionary<ResourceType, int> All => balances;
-
-        public void RestoreFromSave(IEnumerable<ResourceAmount> saved)
-        {
-            balances.Clear();
-            if (saved == null) return;
-
-            foreach (ResourceAmount entry in saved)
-            {
-                balances[entry.type] = Mathf.Max(0, entry.amount);
-                OnBalanceChanged?.Invoke(entry.type, balances[entry.type]);
-            }
-        }
     }
 }

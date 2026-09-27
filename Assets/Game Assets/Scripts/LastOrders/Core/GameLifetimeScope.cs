@@ -1,5 +1,4 @@
 using LastOrders.Build;
-using LastOrders.Customers;
 using LastOrders.Data;
 using LastOrders.DayCycle;
 using LastOrders.DayCycle.States;
@@ -29,7 +28,14 @@ namespace LastOrders.Core
     ///
     /// And it keeps the framework at the edge. Every system in this game is a plain class
     /// that could be newed up in a test with no container present.
+    ///
+    /// Runs late on purpose. In a scene that still has GameHandler, that component's Start
+    /// initialises the build grid, loads the placed objects and bootstraps navigation, and
+    /// the Last Orders layer reads all three. Default order would leave which Start runs
+    /// first up to Unity, and the symptom of losing that race is silent: a perimeter with no
+    /// walls in it and a Heat footprint of zero.
     /// </summary>
+    [DefaultExecutionOrder(1000)]
     public sealed class GameLifetimeScope : LifetimeScope
     {
         [Header("Content")]
@@ -42,6 +48,15 @@ namespace LastOrders.Core
 
         [Tooltip("Parent for pooled instances. Created automatically when left empty.")]
         [SerializeField] Transform poolRoot;
+
+        [Tooltip("Parent for pooled world-space UI. Created automatically when left empty.")]
+        [SerializeField] Transform worldUiRoot;
+
+        [Tooltip("Parent for pooled particle effects. Created automatically when left empty.")]
+        [SerializeField] Transform effectsRoot;
+
+        [Tooltip("Parent for the popup canvas. Created automatically when left empty.")]
+        [SerializeField] Transform popupRoot;
 
         GameComposition composition;
 
@@ -61,7 +76,20 @@ namespace LastOrders.Core
                 poolRoot = host.transform;
             }
 
-            composition = new GameComposition(balance, poolRoot, buildGrid);
+            // Separate from Pools on purpose: dawn recalls everything under Pools, and the world
+            // UI and the effects each have their own pool that must survive it.
+            worldUiRoot = EnsureRoot(worldUiRoot, "WorldUI");
+            effectsRoot = EnsureRoot(effectsRoot, "Effects");
+            popupRoot = EnsureRoot(popupRoot, "Popups");
+
+            if (balance.worldUi == null)
+            {
+                Debug.LogWarning("[GameLifetimeScope] GameBalance has no World UI catalog, so debris " +
+                                 "prompts and work timers cannot be shown. Run 'Last Orders / " +
+                                 "Generate Starting Content'.", this);
+            }
+
+            composition = new GameComposition(balance, poolRoot, worldUiRoot, effectsRoot, popupRoot, buildGrid);
 
             builder.RegisterInstance(composition);
             builder.RegisterInstance(balance);
@@ -71,14 +99,30 @@ namespace LastOrders.Core
             builder.RegisterInstance(composition.Reputation);
             builder.RegisterInstance(composition.Ledger);
             builder.RegisterInstance(composition.Perimeter);
-            builder.RegisterInstance(composition.Customers);
             builder.RegisterInstance(composition.Waves);
             builder.RegisterInstance(composition.ThreatProfile);
             builder.RegisterInstance(composition.CrisisBar);
             builder.RegisterInstance(composition.Survivors);
             builder.RegisterInstance(composition.Dispatch);
+            builder.RegisterInstance(composition.Meals);
+            builder.RegisterInstance(composition.Incidents);
             builder.RegisterInstance(composition.Pools);
             builder.RegisterInstance(composition.Commands);
+            builder.RegisterInstance(composition.Jobs);
+            builder.RegisterInstance(composition.Progression);
+            builder.RegisterInstance(composition.Rewards);
+            builder.RegisterInstance(composition.Expansion);
+            builder.RegisterInstance(composition.Clearing);
+            builder.RegisterInstance(composition.WorldUi);
+            builder.RegisterInstance(composition.Effects);
+            builder.RegisterInstance(composition.Popups);
+            builder.RegisterInstance(composition.Defense);
+            builder.RegisterInstance(composition.Hospital);
+            builder.RegisterInstance(composition.Danger);
+            builder.RegisterInstance(composition.Field);
+            builder.RegisterInstance(composition.Compound);
+            builder.RegisterInstance(composition.Repairs);
+            builder.RegisterInstance(composition.Restaurant);
             builder.RegisterInstance(composition.Machine);
             builder.RegisterInstance(composition.Context);
 
@@ -95,6 +139,15 @@ namespace LastOrders.Core
         }
 
         public GameComposition Composition => composition;
+
+        Transform EnsureRoot(Transform existing, string name)
+        {
+            if (existing != null) return existing;
+
+            var host = new GameObject(name);
+            host.transform.SetParent(transform, false);
+            return host.transform;
+        }
     }
 
     /// <summary>
@@ -116,32 +169,16 @@ namespace LastOrders.Core
 
         public void Start()
         {
-            // The navigation layer mirrors the build grid's dimensions and must exist before
-            // anything is placed, or the first placements go unheard.
-            FoodStreet.Navigation.NavigationSystem.Bootstrap();
+            // Idempotent, and in a scene that still has GameHandler it will already have been
+            // done. Calling it anyway means the Last Orders layer works in a scene with the
+            // old bootstrap and in one without it, rather than silently depending on which
+            // scene it was dropped into.
+            if (GridBuildingSystem3D.GetGrid() != null)
+                FoodStreet.Navigation.NavigationSystem.Bootstrap();
 
-            // Load before seeding, so a returning player is never handed a second starting
-            // kit on top of what they already earned.
-            FoodStreet.Saving.SaveSystem.Initialize();
-
-            var participant = new Save.LastOrdersSaveParticipant(composition);
-            FoodStreet.Saving.SaveSystem.Register(participant);
-
-            bool isNewCampaign = FoodStreet.Saving.SaveSystem.StartedFresh;
-
-            if (isNewCampaign)
-            {
-                composition.SeedNewGame();
-                composition.Start();
-                return;
-            }
-
-            // RestoreState drops the machine straight into the saved phase, including mid
-            // night, so Start would be a second entry into a phase already entered.
-            participant.RestoreState(FoodStreet.Saving.SaveSystem.Data);
-
-            if (!composition.Machine.IsRunning)
-                composition.Start();
+            // Nothing is persisted, so every launch is a new campaign.
+            composition.SeedNewGame();
+            composition.Start();
         }
 
         public void Tick() => composition.Tick(Time.deltaTime);

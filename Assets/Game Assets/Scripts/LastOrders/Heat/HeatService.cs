@@ -206,14 +206,5 @@ namespace LastOrders.Heat
 
             OnHeatChanged?.Invoke(CurrentHeat);
         }
-
-        public void RestoreFromSave(float current, float locked, bool isLocked)
-        {
-            CurrentHeat = current;
-            LockedHeat = locked;
-            IsLocked = isLocked;
-            lastForecastTier = ForecastTier;
-            OnHeatChanged?.Invoke(CurrentHeat);
-        }
     }
 }
