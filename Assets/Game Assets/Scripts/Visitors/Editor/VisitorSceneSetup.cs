@@ -314,31 +314,22 @@ namespace FoodStreet.Visitors.EditorTools
         // --- The road --------------------------------------------------------------------------
 
         /// <summary>
-        /// One tarmac slab and a dashed line, running off both edges of the map.
+        /// The road as one textured mesh, running off both edges of the map: asphalt with its edge
+        /// lines and centre dashes painted in, and kerbs both sides across the open ground, so the
+        /// road has an edge rather than fading into the terrain. Past them the suburbs' pavements
+        /// take over.
         ///
         /// Off BOTH edges, because a road that stops at the world rectangle is a corridor, and
         /// the whole point of arriving by car is that these people are coming from somewhere.
         /// </summary>
-        static void BuildRoad(Transform parent)
+        internal static void BuildRoad(Transform parent)
         {
             float west = ZoneLayout.RoadWestEnd;
             float east = ZoneLayout.RoadEastEnd;
-            float z = ZoneLayout.RoadCentreZ;
 
-            K.Cube("Surface", parent, new Vector3((west + east) * 0.5f, 0.02f, z),
-                   new Vector3(east - west, 0.04f, ZoneLayout.RoadWidth), K.Asphalt);
-
-            for (float x = west + 2f; x < east; x += ZoneLayout.LaneMarkSpacing)
-            {
-                K.Cube("Line", parent, new Vector3(x, 0.05f, z),
-                       new Vector3(1.4f, 0.02f, 0.16f), K.RoadLine);
-            }
-
-            // A strip of kerb on the compound side, so the road has an edge rather than fading
-            // into the terrain.
-            K.Cube("Kerb", parent,
-                   new Vector3((west + east) * 0.5f, 0.06f, z + ZoneLayout.RoadWidth * 0.5f + 0.2f),
-                   new Vector3(east - west, 0.12f, 0.4f), K.Stone);
+            LastOrders.EditorTools.SurfaceKit.Road(parent, west, east, ZoneLayout.RoadCentreZ, ZoneLayout.RoadWidth, 0.04f,
+                                                   Mathf.Max(west, ZoneLayout.KerbWestEnd), Mathf.Min(east, ZoneLayout.KerbEastEnd),
+                                                   kerbWidth: 0.4f, kerbHeight: 0.12f);
         }
 
         /// <summary>
@@ -353,11 +344,12 @@ namespace FoodStreet.Visitors.EditorTools
         /// </summary>
         static void BuildDrive(Transform parent, Vector3 doorOutside)
         {
-            Slab(parent, "Drive", ZoneLayout.Drive, K.Asphalt, 0.025f);
-            Slab(parent, "DriveToApron", ZoneLayout.DriveToApron, K.Asphalt, 0.025f);
+            Material asphalt = LastOrders.EditorTools.SurfaceKit.Asphalt();
+            LastOrders.EditorTools.SurfaceKit.Slab(parent, "Drive", ZoneLayout.Drive, 0.045f, 0.04f, asphalt);
+            LastOrders.EditorTools.SurfaceKit.Slab(parent, "DriveToApron", ZoneLayout.DriveToApron, 0.045f, 0.04f, asphalt);
 
-            Slab(parent, "PathToDoor", ZoneLayout.PathToDoor(doorOutside.x, doorOutside.z),
-                 K.Soil, 0.03f);
+            LastOrders.EditorTools.SurfaceKit.Slab(parent, "PathToDoor", ZoneLayout.PathToDoor(doorOutside.x, doorOutside.z),
+                                                   0.05f, 0.04f, LastOrders.EditorTools.SurfaceKit.DirtPath());
         }
 
         /// <summary>
@@ -655,10 +647,6 @@ namespace FoodStreet.Visitors.EditorTools
                 bay = new Vector2(Mathf.Min(bay.x, maxWidth), Mathf.Min(bay.y, rowDepth));
             }
 
-            K.Cube("Apron", parent,
-                   new Vector3(apron.center.x, 0.02f, apron.center.y),
-                   new Vector3(apron.width, 0.04f, apron.height), K.Asphalt);
-
             float laneZ = ZoneLayout.LaneCentreZ;
             float laneHalf = ZoneLayout.LaneWidth * 0.5f;
 
@@ -671,17 +659,21 @@ namespace FoodStreet.Visitors.EditorTools
             float step = apron.width / ZoneLayout.BaysPerRow;
 
             var slots = new List<ParkingSlot>();
+            var markings = new List<Rect>();
 
             for (int i = 0; i < ZoneLayout.BaysPerRow; i++)
             {
                 float x = apron.xMin + step * (i + 0.5f);
 
                 slots.Add(Bay(parent, lot, $"Bay_S{i}", new Vector3(x, 0f, southCentre),
-                              facing: Vector3.forward, bay));
+                              facing: Vector3.forward, bay, markings));
 
                 slots.Add(Bay(parent, lot, $"Bay_N{i}", new Vector3(x, 0f, northCentre),
-                              facing: Vector3.back, bay));
+                              facing: Vector3.back, bay, markings));
             }
+
+            // The apron, with every bay's markings painted into its texture.
+            LastOrders.EditorTools.SurfaceKit.Parking(parent, apron, markings, 0.04f, 0.04f).transform.SetSiblingIndex(0);
 
             Transform entry = Marker(parent, "LaneEntry", ZoneLayout.LaneEntry);
             Transform exit = Marker(parent, "LaneExit", ZoneLayout.LaneExit);
@@ -696,22 +688,24 @@ namespace FoodStreet.Visitors.EditorTools
         }
 
         static ParkingSlot Bay(Transform parent, ParkingLot lot, string name, Vector3 at,
-                               Vector3 facing, Vector2 size)
+                               Vector3 facing, Vector2 size, List<Rect> markings)
         {
             Transform root = K.Group(name, parent);
             root.position = at;
             root.rotation = Quaternion.LookRotation(facing, Vector3.up);
 
             // Painted markings rather than kerbs: a bay a car can drive over is a bay a slightly
-            // wrong waypoint does not park on top of.
+            // wrong waypoint does not park on top of. Painted into the apron's texture, as world
+            // rectangles: the two side lines and the stop line at the back of the bay.
+            const float line = 0.12f;
             foreach (float dx in new[] { -size.x * 0.5f, size.x * 0.5f })
             {
-                K.Cube("Line", root, new Vector3(dx, 0.045f, 0f),
-                       new Vector3(0.12f, 0.02f, size.y), K.RoadLine);
+                Vector3 c = root.TransformPoint(new Vector3(dx, 0f, 0f));
+                markings.Add(new Rect(c.x - line * 0.5f, c.z - size.y * 0.5f, line, size.y));
             }
 
-            K.Cube("Stop", root, new Vector3(0f, 0.045f, -size.y * 0.5f),
-                   new Vector3(size.x, 0.02f, 0.12f), K.RoadLine);
+            Vector3 stop = root.TransformPoint(new Vector3(0f, 0f, -size.y * 0.5f));
+            markings.Add(new Rect(stop.x - size.x * 0.5f, stop.z - line * 0.5f, size.x, line));
 
             var slot = root.gameObject.AddComponent<ParkingSlot>();
             slot.Configure(lot, new Vector3(size.x * 0.52f, 0f, 0f));

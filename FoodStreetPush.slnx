@@ -7,6 +7,7 @@
   <Project Path="Unity.Mathematics.csproj" />
   <Project Path="Unity.Cinemachine.Editor.csproj" />
   <Project Path="Unity.Addressables.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.Purchasing.PaymentProviderService.csproj" />
   <Project Path="Unity.VisualScripting.Core.Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Runtime.csproj" />
@@ -28,13 +29,13 @@
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="Unity.ProBuilder.Editor.csproj" />
   <Project Path="Unity.ResourceManager.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.VisualScripting.Core.csproj" />
   <Project Path="Unity.AI.Assistant.Editor.csproj" />
   <Project Path="Unity.Services.Core.Environments.Editor.csproj" />
   <Project Path="Unity.AI.Pbr.csproj" />
   <Project Path="Unity.Cinemachine.csproj" />
   <Project Path="Unity.Burst.CodeGen.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Addressables.DocExampleCode.Editor.Tests.csproj" />
   <Project Path="Unity.VisualScripting.Flow.csproj" />
   <Project Path="Unity.Splines.Editor.csproj" />
@@ -43,7 +44,6 @@
   <Project Path="Unity.AI.Animate.csproj" />
   <Project Path="Unity.AI.Assistant.Tools.Editor.csproj" />
   <Project Path="UnityEditor.Purchasing.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.AI.Image.csproj" />
   <Project Path="Unity.Rider.Editor.csproj" />
   <Project Path="Unity.AI.Generators.IO.csproj" />

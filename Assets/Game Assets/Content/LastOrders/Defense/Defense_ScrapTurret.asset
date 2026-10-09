@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
+  m_Name: Defense_ScrapTurret
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  id: scrap_turret
+  displayName: Scrap Turret
+  description: A gun on a turntable behind sandbags, bolted together from scrap.
+    It watches the diner door on its own and shoots whatever comes close.
+  requiresCrew: 0
+  crewRole: 3
+  buildPrice:
+    resources:
+    - type: 6
+      amount: 45
+    premium: 15
+  prefab: {fileID: 3467195630413478892, guid: 55cde12cbe7b55149a2b0a551c1a11a5, type: 3}
+  levels:
+  - weapon: {fileID: 11400000, guid: c9e0d56b6ecca7e4d969c58b4fe84f4b, type: 2}
+    spotRangeMetres: 11
+    upgradePrice:
+      resources: []
+      premium: 0
+  - weapon: {fileID: 11400000, guid: efa62efa0c8aee4489d102be5404d6c6, type: 2}
+    spotRangeMetres: 13
+    upgradePrice:
+      resources:
+      - type: 6
+        amount: 70
+      premium: 25

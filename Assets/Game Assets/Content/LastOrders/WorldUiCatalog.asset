@@ -24,6 +24,7 @@ MonoBehaviour:
   shelterPopup: {fileID: 5435377906654482448, guid: 7012b92a2f23f1a4eb3a3e052d31ecd7, type: 3}
   workerPanel: {fileID: 7526627918924389885, guid: 96795f3b565c43945b27c384875a4958, type: 3}
   restaurantExpansionPopup: {fileID: 5384621540198965367, guid: 92928d424b6bda0409cf01133e8bff23, type: 3}
+  feedPopup: {fileID: 1907954994503634265, guid: b5b9308a409e6524183eb31009590c4d, type: 3}
   promptOffset: {x: 0, y: 0.9, z: 0}
   progressOffset: {x: 0, y: 0.4, z: 0}
   floatingTextOffset: {x: 0, y: 0.8, z: 0}

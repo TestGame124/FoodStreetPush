@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Name: Tomato
   Type: 2
+  coinsReward: 0
+  starsReward: 0
   canBePlanted: 1
   totalTimeInSeconds: 90
-  itemImage: {fileID: 21300000, guid: ce6e296038a021d439d14bead1b7bcc0, type: 3}
-  plantGrowMeshes:
-  - {fileID: 4300000, guid: 7f90442c42c67c9459b16d5aeadbcba5, type: 3}
-  - {fileID: 4300000, guid: 039c2a17c79559c479b4acc4478f97e6, type: 3}
-  - {fileID: 4300000, guid: ae3a938f70d254f4bb6768e9c7a6f8a1, type: 3}
-  - {fileID: 4300000, guid: 7306b7ab02e6c8440b5030dd1d3fed62, type: 3}
-  plantMat:
-  - {fileID: 2100000, guid: da5a311d3775332478c396918dda3aaa, type: 2}
-  - {fileID: 2100000, guid: fdf18c58b725a2f469593ece1786d307, type: 2}
+  itemImage: {fileID: 21300000, guid: 176c60c6dd2358b4a83978e411d2cd79, type: 3}
+  growStages:
+  - {fileID: 21300000, guid: 041b00f01fca894489711856df52b9a3, type: 3}
+  - {fileID: 21300000, guid: 9db522100c559bd44a136c6ca9b4a837, type: 3}
+  - {fileID: 21300000, guid: b0a2066311928e6408656fed147c5d91, type: 3}
+  - {fileID: 21300000, guid: 4136e1d874b99e945bd1e6500fa07a34, type: 3}
+  cropLook: {fileID: 11400000, guid: 0014a23145450dc43b63b42845d99630, type: 2}

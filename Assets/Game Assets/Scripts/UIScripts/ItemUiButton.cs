@@ -41,6 +41,13 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
         // Enable It If you want To Add Image Through Scriptable Object 
         //image.sprite = data.previewImage;
 
+        // An item with an icon of its own for the shop - the defenses - shows it.
+        if (data.shopIcon != null && image != null)
+        {
+            image.sprite = data.shopIcon;
+            image.preserveAspect = true;
+        }
+
         if(data.maxItems> 0)
             limitationText.text = $"{itemPlacedCount}/{data.maxItems}";
         else

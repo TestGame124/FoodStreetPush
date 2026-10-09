@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VehicleDefinition
   displayName: Delivery van
   bodySize: {x: 2.05, y: 1.15, z: 4.6}
-  bodyColour: {r: 0.84705883, g: 0.79607844, b: 0.6509804, a: 1}
-  cabinColour: {r: 0.6039216, g: 0.6392157, b: 0.6627451, a: 1}
-  wheelRadius: 0.45
+  bodyColour: {r: 0.7137255, g: 0.6784314, b: 0.5921569, a: 1}
+  cabinColour: {r: 0.30588236, g: 0.49019608, b: 0.4745098, a: 1}
+  wheelRadius: 0.42
   driveSpeed: 5.2
   manoeuvreSpeed: 2.2
   turnSpeed: 150
   arriveRadius: 0.6
   bayFootprint: {x: 2.75, y: 5.2}
-  prefab: {fileID: 5702096108212720540, guid: b7346e2b9472e0042ac8fed0609ce599, type: 3}
+  prefab: {fileID: 9074628625437545018, guid: 4f046ec9e2358e44f8d3467f8949998e, type: 3}

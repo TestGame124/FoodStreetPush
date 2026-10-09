@@ -95,6 +95,10 @@ namespace LastOrders.Expansion
                 return;
             }
 
+            // Its sections facing a plot next door stand only while that plot is not claimed too.
+            ExpansionService expansion = composition.Expansion;
+            if (buildPlan != null) buildPlan.SetClaimedTest(id => expansion.StateOf(id) == AreaState.Claimed);
+
             composition.Expansion.OnAreaStateChanged += HandleStateChanged;
             composition.Expansion.OnAreaClaimed += HandleClaimed;
             composition.Expansion.RegisterArea(definition, debrisIds);
@@ -125,7 +129,13 @@ namespace LastOrders.Expansion
 
         void HandleStateChanged(string areaId, AreaState state)
         {
-            if (areaId == AreaId && registered) Show(state, restoring: false);
+            if (!registered) return;
+
+            if (areaId == AreaId) Show(state, restoring: false);
+
+            // The plot next door claimed - or restored as claimed after this one: the wall
+            // between them is no longer anybody's boundary.
+            else if (state == AreaState.Claimed && buildPlan != null) buildPlan.Refresh();
         }
 
         void HandleClaimed(string areaId)

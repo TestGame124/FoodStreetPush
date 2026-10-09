@@ -19,6 +19,10 @@ namespace LastOrders.Data
 
         public string displayName = "Area";
 
+        [Tooltip("What its walls and gate are called: \"Yard\" makes the \"Yard wall\" and the \"Yard gate\". " +
+                 "Empty: \"Yard\".")]
+        public string shortName;
+
         [Tooltip("What the land becomes once claimed. Shown to the player.")]
         [TextArea] public string benefit;
 
@@ -40,5 +44,8 @@ namespace LastOrders.Data
         public RewardBundle claimReward = new RewardBundle(5);
 
         public bool BordersStartingLand => unlockedBy == null || unlockedBy.Length == 0;
+
+        /// <summary>The name its walls and gate go by: <see cref="shortName"/>, or "Yard".</summary>
+        public string WallLabel => string.IsNullOrEmpty(shortName) ? "Yard" : shortName;
     }
 }

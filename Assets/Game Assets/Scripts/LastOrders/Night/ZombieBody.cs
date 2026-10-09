@@ -18,7 +18,7 @@ namespace LastOrders.Night
     /// pool of one prefab still turns out a crowd of different people.
     /// </summary>
     [DefaultExecutionOrder(1300)]
-    public sealed class ZombieBody : MonoBehaviour
+    public sealed class ZombieBody : MonoBehaviour, IEnemyBody
     {
         static readonly int MoveHash = Animator.StringToHash("Move");
 
@@ -69,6 +69,9 @@ namespace LastOrders.Night
 
         /// <summary>One blow on whatever is in front of it: both arms raised and brought down.</summary>
         public void Pound() => poundLeft = poundSeconds;
+
+        /// <summary>A shamble does not flinch.</summary>
+        public void Hurt(float amount) { }
 
         void OnEnable()
         {

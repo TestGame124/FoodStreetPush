@@ -51,40 +51,31 @@ namespace FoodStreet.Visitors.EditorTools
 
         // --- Vehicles ---------------------------------------------------------------------
         //
-        // Four cars, differing in size and colour rather than in shape. The silhouette is what
-        // reads at this camera distance, and four lengths of the same greybox car is already
-        // more difference than a player will consciously notice.
+        // Four cars, each with its own toon silhouette (see VehicleModels): the size here is what
+        // the parking bays are cut to, and the model is built to fit inside it.
 
         static VehicleDefinition[] GenerateVehicles()
         {
             return new[]
             {
-                Vehicle("Hatchback", "Hatchback", new Vector3(1.75f, 0.8f, 3.7f),
-                        body: "C4694B", cabin: "3B4A63", drive: 6.5f),
-
-                Vehicle("Pickup", "Pickup", new Vector3(1.95f, 0.9f, 4.6f),
-                        body: "8B5B3E", cabin: "46587A", drive: 6f),
-
-                Vehicle("Van", "Delivery van", new Vector3(2.05f, 1.15f, 4.6f),
-                        body: "D8CBA6", cabin: "9AA3A9", drive: 5.2f),
-
-                Vehicle("Saloon", "Saloon", new Vector3(1.85f, 0.82f, 4.3f),
-                        body: "4E86B0", cabin: "34302B", drive: 6.2f),
+                Vehicle("Hatchback", "Hatchback", new Vector3(1.75f, 0.8f, 3.7f), drive: 6.5f),
+                Vehicle("Pickup", "Pickup", new Vector3(1.95f, 0.9f, 4.6f), drive: 6f),
+                Vehicle("Van", "Delivery van", new Vector3(2.05f, 1.15f, 4.6f), drive: 5.2f),
+                Vehicle("Saloon", "Saloon", new Vector3(1.85f, 0.82f, 4.3f), drive: 6.2f),
             };
         }
 
-        /// <summary>A vehicle asset and its greybox prefab. Also builds the hospital's shuttle,
-        /// which is not in the traffic profile - nobody arrives by it - but is driven the same way.</summary>
-        internal static VehicleDefinition Vehicle(string id, string label, Vector3 size, string body,
-                                                  string cabin, float drive)
+        /// <summary>A vehicle asset and its prefab. Also builds the hospital's shuttle, which is not
+        /// in the traffic profile - nobody arrives by it - but is driven the same way. Paint and
+        /// wheel size come from the vehicle's model design.</summary>
+        internal static VehicleDefinition Vehicle(string id, string label, Vector3 size, float drive)
         {
             var asset = CreateOrLoad<VehicleDefinition>($"{Root}/Vehicles/Vehicle_{id}.asset");
 
             asset.displayName = label;
             asset.bodySize = size;
-            asset.bodyColour = K.Hex(body);
-            asset.cabinColour = K.Hex(cabin);
             asset.wheelRadius = Mathf.Clamp(size.y * 0.45f, 0.28f, 0.45f);
+            VehicleModels.ApplyLook(asset, id);
             asset.driveSpeed = drive;
             asset.manoeuvreSpeed = 2.2f;
             asset.turnSpeed = 150f;
@@ -95,62 +86,16 @@ namespace FoodStreet.Visitors.EditorTools
             // has a fixed footprint, and generous bays there means fewer of them.
             asset.bayFootprint = new Vector2(size.x + 0.7f, size.z + 0.6f);
 
-            if (asset.prefab == null)
-                asset.prefab = BuildVehiclePrefab(asset, $"{Root}/Prefabs/Vehicle_{id}.prefab");
+            // The toon model (VehicleModels), written beside the old greybox prefabs rather than
+            // over them; 'Restore Greybox Vehicles' points the definitions back at those.
+            if (asset.prefab == null && VehicleModels.HasDesign(id))
+            {
+                EditorUtility.SetDirty(asset);
+                VehicleModels.Build(asset);
+            }
 
             EditorUtility.SetDirty(asset);
             return asset;
-        }
-
-        /// <summary>
-        /// A greybox car: body, cabin, glass and four wheels.
-        ///
-        /// The same assembly the compound builder used for its scenery car, saved as a prefab
-        /// with a behaviour on it. Local +Z is the front, which is what the parking bays and
-        /// the waypoint follower both assume.
-        /// </summary>
-        static GameObject BuildVehiclePrefab(VehicleDefinition definition, string path)
-        {
-            var root = new GameObject(Path.GetFileNameWithoutExtension(path));
-
-            Vector3 size = definition.bodySize;
-            float wheel = definition.wheelRadius;
-            float floor = wheel * 1.2f;
-
-            K.Box("Body", root.transform, Vector3.up * floor,
-                  new Vector3(size.x, size.y, size.z), definition.bodyColour);
-
-            K.Box("Cabin", root.transform, new Vector3(0f, floor + size.y, -size.z * 0.08f),
-                  new Vector3(size.x * 0.88f, size.y * 0.85f, size.z * 0.46f), definition.cabinColour);
-
-            K.Cube("Glass", root.transform,
-                   new Vector3(0f, floor + size.y + size.y * 0.55f, -size.z * 0.08f),
-                   new Vector3(size.x * 0.9f, size.y * 0.34f, size.z * 0.47f), K.Glass);
-
-            // A darker strip at the front, so which way the car is pointing is readable from
-            // above - which is the only angle this game is played from.
-            K.Cube("Grille", root.transform, new Vector3(0f, floor + size.y * 0.4f, size.z * 0.5f),
-                   new Vector3(size.x * 0.8f, size.y * 0.4f, 0.12f), K.Dark);
-
-            foreach (float dz in new[] { size.z * 0.32f, -size.z * 0.32f })
-            {
-                foreach (float dx in new[] { -size.x * 0.5f, size.x * 0.5f })
-                {
-                    K.Log("Wheel", root.transform, new Vector3(dx, wheel, dz),
-                          wheel * 2f, 0.3f, K.Dark, yaw: 90f);
-                }
-            }
-
-            var hit = root.AddComponent<BoxCollider>();
-            hit.center = new Vector3(0f, floor + size.y * 0.6f, 0f);
-            hit.size = new Vector3(size.x, size.y * 2f, size.z);
-
-            root.AddComponent<VisitorVehicle>().Configure(definition);
-
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
-            Object.DestroyImmediate(root);
-
-            return prefab;
         }
 
         // --- Visitors ---------------------------------------------------------------------

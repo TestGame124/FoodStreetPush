@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
+  m_Name: Defense_TomatoShooter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  id: tomato_shooter
+  displayName: Tomato Shooter
+  description: A pressure cooker turned blunderbuss. Steam builds in the pot and
+    spits tomatoes out of the bell by the dozen; whatever they burst on is left wading
+    through the pulp.
+  requiresCrew: 0
+  crewRole: 3
+  buildPrice:
+    resources:
+    - type: 6
+      amount: 35
+    premium: 15
+  prefab: {fileID: 29815991265797213, guid: adbb1ba661127af4684d11f22b4ac44d, type: 3}
+  levels:
+  - weapon: {fileID: 11400000, guid: fba506eb5bb168a44974500998d0b49f, type: 2}
+    spotRangeMetres: 11
+    upgradePrice:
+      resources: []
+      premium: 0
+  - weapon: {fileID: 11400000, guid: 040dd9e9b54d95743a7a71582d8104b6, type: 2}
+    spotRangeMetres: 12.5
+    upgradePrice:
+      resources:
+      - type: 6
+        amount: 55
+      premium: 25

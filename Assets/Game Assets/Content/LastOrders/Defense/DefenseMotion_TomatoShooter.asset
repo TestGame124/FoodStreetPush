@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e714102fc22f26641ad30b6f15c659f5, type: 3}
+  m_Name: DefenseMotion_TomatoShooter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseMotionProfile
+  turnSpeed: 280
+  targetHeight: 0.8
+  idleScanDegrees: 35
+  idleScanSeconds: 6
+  flashSeconds: 0.05
+  recoilDistance: 0.06
+  recoilReturnSeconds: 0.1
+  casingsPerShot: 0
+  lobHeight: 0.9
+  projectileSpin: 720
+  projectileSpinAxis: {x: 1, y: 0, z: 0}
+  projectileFacesFlight: 0
+  breatheAmount: 0.03
+  breatheSeconds: 1.1
+  shotSquash: 0.16
+  shotSettleSeconds: 0.32
+  blinkSeconds: 0
+  swayDegrees: 0
+  reloadShowsAt: 0.5

@@ -39,17 +39,12 @@ namespace LastOrders.Data
     }
 
     /// <summary>
-    /// The restaurant building itself: how close a zombie can come to its walls, and what
-    /// growing it costs.
+    /// The restaurant building itself: what growing it costs. Its walls stop every zombie and
+    /// never fall, so there is nothing to tune about them.
     /// </summary>
     [Serializable]
     public sealed class RestaurantTuning
     {
-        [Header("The inner wall")]
-        [Tooltip("A zombie that comes this close to the restaurant's walls, in metres, dies there. " +
-                 "The compound wall is the one they batter; this one they never get through.")]
-        [Min(0f)] public float killDistance = 1f;
-
         [Header("Expanding")]
         [Tooltip("Out through the front wall. Short by default: the car park's north bays start " +
                  "a little under two metres in front of it.")]

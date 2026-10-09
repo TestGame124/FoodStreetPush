@@ -52,6 +52,9 @@ namespace LastOrders.UI.World
         [Tooltip("\"Expand the restaurant?\" - what the next expansion costs, and yes or no.")]
         public Popups.RestaurantExpansionPopupView restaurantExpansionPopup;
 
+        [Tooltip("Feeding a chicken coop or cow shelter: how many eggs or churns to make, and the feed it costs.")]
+        public Popups.FeedPopupView feedPopup;
+
         [Header("Placement (metres above the anchor)")]
         public Vector3 promptOffset = new Vector3(0f, 0.9f, 0f);
         public Vector3 progressOffset = new Vector3(0f, 0.4f, 0f);

@@ -123,6 +123,23 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
+        /// Lays an area's zombie patch over its debris again, keeping their number and tuning: for
+        /// once the debris has been put out afresh. False when the area has no zombies.
+        /// </summary>
+        public static bool FitPatch(ExpansionArea area)
+        {
+            AreaZombies zombies = area.GetComponentInChildren<AreaZombies>(true);
+            if (zombies == null) return false;
+
+            Rect patch = PatchFor(area);
+            var so = new SerializedObject(zombies);
+            so.FindProperty("patchCentre").vector3Value = new Vector3(patch.center.x, area.transform.position.y, patch.center.y);
+            so.FindProperty("patchSize").vector2Value = patch.size;
+            so.ApplyModifiedProperties();
+            return true;
+        }
+
+        /// <summary>
         /// Where the zombies amble: over the area's debris, pulled back from the end of the way
         /// out so none of them stands in the gap, and never smaller than a patch worth walking.
         /// </summary>

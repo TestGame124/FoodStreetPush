@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Cow Shelter
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Cow Shelter
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 1
+  type: 302
+  PriceAmount: 200
+  Sellable: 1
+  prefab: {fileID: 6688702586161947374, guid: 577262c5dd7ab9f44906d16fd8f2c582, type: 3}
+  visual: {fileID: 6546893563886115942, guid: 2a03a746c0d953840accd8e5b09d88a0, type: 3}
+  width: 5
+  height: 4
+  placementProfile: {fileID: 11400000, guid: e05237bd08e038842b9d47166f2fdcb8, type: 2}
+  maxItems: 2
+  previewImage: {fileID: 21300000, guid: ba73a5963de326845b37e137f71780d2, type: 3}
+  shopIcon: {fileID: 21300000, guid: ba73a5963de326845b37e137f71780d2, type: 3}
+  buildCategory: 1
+  buildCost: []
+  buildClockMinutes: 1
+  maxHealth: 100
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

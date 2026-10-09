@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ab58a892bce82e47a7664ee5e3bac4b, type: 3}
+  m_Name: Enemy_HotDog
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.EnemyDefinition
+  displayName: Hot Dog Zombie
+  description: The mascot from the burger place up the road. Still in the costume.
+    Still waving people in.
+  silhouetteColour: {r: 0.85, g: 0.42, b: 0.55, a: 1}
+  tintBody: 0
+  navigation: 0
+  isNonCombatant: 0
+  heatPerSecond: 0
+  ignitesStructures: 0
+  stealsResources: 0
+  immuneToSlow: 0
+  structureDps: 5
+  maxHealth: 45
+  moveSpeed: 0.8
+  agentRadius: 0.4
+  attackRange: 0.65
+  prefab: {fileID: 4539864697106822478, guid: cef444316da4bb147ba78479f9d3d803, type: 3}
+  poolPrewarm: 4
+  threatCost: 1.5
+  earliestDay: 1
+  drops:
+  - type: 10
+    amount: 1

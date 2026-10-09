@@ -75,6 +75,10 @@ public class UIGame : MonoBehaviour
         {
             LevelUpSystem.AddXP(2);
         }
+        if (Input.GetKeyDown(KeyCode.C)){
+        CurrenciesController.AddCurrency(CurrencyType.Coins, 1000);
+        CurrenciesController.AddCurrency(CurrencyType.Gems, 2);
+        }
     }
     /// <summary>
     /// Kept as the name the UI code already calls, but the answer now comes from PointerInput so

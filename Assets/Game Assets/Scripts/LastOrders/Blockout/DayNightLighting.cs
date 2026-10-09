@@ -34,9 +34,21 @@ namespace LastOrders.Blockout
         [SerializeField] Vector3 nightAngles = new Vector3(14f, 200f, 0f);
         [SerializeField] Color nightAmbient = new Color(0.12f, 0.14f, 0.22f);
 
+        [Header("Edge fog")]
+        [Tooltip("Multiplies the world-edge fog by day. White leaves it as its materials have it.")]
+        [SerializeField] Color dayFogTint = Color.white;
+
+        [Tooltip("Multiplies the world-edge fog at night: the mist goes dark and blue with the light.")]
+        [SerializeField] Color nightFogTint = new Color(0.3f, 0.35f, 0.48f);
+
         [Tooltip("Seconds to cross between the two. Long enough to read as dusk falling, " +
                  "short enough that a test toggle is not a wait.")]
         [SerializeField] float blendSeconds = 1.5f;
+
+        // Globals rather than per-material values: every fog layer, mist puff and light pool reads
+        // the same two, and none of them needs a reference to this.
+        static readonly int FogTintId = Shader.PropertyToID("_EdgeFogTint");
+        static readonly int NightGlowId = Shader.PropertyToID("_EnvNightGlow");
 
         [SerializeField] GameLifetimeScope scope;
 
@@ -70,6 +82,11 @@ namespace LastOrders.Blockout
         void OnDestroy()
         {
             if (composition != null) composition.Machine.OnPhaseChanged -= HandlePhaseChanged;
+
+            // Globals outlive play mode in the editor: without this, a session that ended at night
+            // leaves the scene view's fog dark.
+            Shader.SetGlobalColor(FogTintId, Color.clear);
+            Shader.SetGlobalFloat(NightGlowId, 0f);
         }
 
         void Update()
@@ -105,6 +122,12 @@ namespace LastOrders.Blockout
         void Apply(float t)
         {
             RenderSettings.ambientLight = Color.Lerp(dayAmbient, nightAmbient, t);
+
+            // Alpha 1: the shaders read it as "a tint is set", so an unset global stays untinted.
+            Color fog = Color.Lerp(dayFogTint, nightFogTint, t);
+            fog.a = 1f;
+            Shader.SetGlobalColor(FogTintId, fog);
+            Shader.SetGlobalFloat(NightGlowId, t);
 
             if (sun == null) return;
 

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlantPot : MonoBehaviour, IInteractableObject
+public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestPlot
 {
     public enum PotState
     {
@@ -24,8 +24,22 @@ public class PlantPot : MonoBehaviour, IInteractableObject
 
     public SeedsInventoryUI seedinventoryUI;
 
-    [SerializeField] MeshFilter plantMesh;
-    [SerializeField] MeshRenderer plantMat;
+    [Tooltip("The growing crop: a plant on each of the seed's spots, each showing the stage reached.")]
+    [SerializeField] CropPatch patch;
+
+    [Tooltip("Used only when there is no patch: one sprite showing each of the seed's grow stages in turn.")]
+    [SerializeField] CropSprite crop;
+
+    /// <summary>A seed has just gone in: for the planting effects and anything else that wants to know.</summary>
+    public event Action<PlantPot> Planted;
+
+    /// <summary>The ripe crop has just been picked.</summary>
+    public event Action<PlantPot> Harvested;
+
+    public bool CanHarvest => currentState == PotState.Done;
+
+    /// <summary>Where a tool offered over this pot waits: above the middle of the crop.</summary>
+    public Vector3 CropTop => (centerPoint != null ? centerPoint.position : transform.position) + Vector3.up * 0.35f;
 
     [Header("VFX")]
     [SerializeField] GameObject finishedEffect;
@@ -54,25 +68,35 @@ public class PlantPot : MonoBehaviour, IInteractableObject
             seedinventoryUI.AddEmptyPots(this);
     }
 
+    public bool CanPlant(ItemDataSO seed) => currentState == PotState.Empty && seed != null && seed.canBePlanted;
+
+    public bool TryPlant(ItemDataSO seed)
+    {
+        InventorySystem inventory = InventorySystem.instance;
+        if (!CanPlant(seed) || inventory == null || inventory.ItemCount(seed.Type) < 1)
+            return false;
+
+        // A fresh item rather than the inventory's own: the pot keeps it until the harvest, and the
+        // inventory's entry is changed in place or dropped as seeds are spent.
+        Plant(new Item(seed, 1));
+        return currentState != PotState.Empty;
+    }
+
     public void Plant(Item item, bool growInstantly = false)
     {
-        if (currentState != PotState.Empty)
+        if (currentState != PotState.Empty || item == null || item.itemsAmount < 1)
             return;
-        activeItem = item;
-        if(item.itemsAmount < 1)
-        {
-            return;
-        }
+
         if (!InventorySystem.instance.RemoveItem(item))
             return;
 
-        
+        activeItem = item;
+
         if(!growInstantly)
             timer = activeItem.itemDataSO.totalTimeInSeconds;
 
-        seedinventoryUI?.ActivatePanel();
-
         StartCoroutine(Growing());
+        Planted?.Invoke(this);
     }
 
     IEnumerator Growing()
@@ -82,37 +106,54 @@ public class PlantPot : MonoBehaviour, IInteractableObject
 
         plantPreview.SetActive(true);
 
-        int meshIndex = 0;
-        int totalMeshes = activeItem.itemDataSO.plantGrowMeshes.Length;
-
-        plantMesh.mesh = activeItem.itemDataSO.plantGrowMeshes[meshIndex];
-        plantMat.materials = activeItem.itemDataSO.plantMat;
-        float meshChangeInterval = Mathf.RoundToInt(timer / totalMeshes);
-        float nextMeshChangeTime = timer - meshChangeInterval;
+        ItemDataSO seed = activeItem.itemDataSO;
+        int stageCount = seed.GrowStageCount;
+        float growTime = Mathf.Max(1, seed.totalTimeInSeconds);
 
         while (timer > 0)
         {
+            ShowStage(seed, GrowingStage(1f - timer / growTime, stageCount));
             yield return new WaitForSeconds(1);
             timer--;
-
-            // Check if it's time to change the mesh
-            if (timer <= nextMeshChangeTime && meshIndex < totalMeshes - 1)
-            {
-                meshIndex++;
-                if(meshIndex < totalMeshes - 1)
-                {
-
-                }
-                plantMesh.mesh = activeItem.itemDataSO.plantGrowMeshes[meshIndex];
-                nextMeshChangeTime = timer - meshChangeInterval;
-            }
         }
-        plantMesh.mesh = activeItem.itemDataSO.plantGrowMeshes[totalMeshes - 1];
+
+        // The ripe crop appears only once it can be picked.
+        ShowStage(seed, stageCount - 1);
 
         finishedEffect.SetActive(true);
 
         currentState = PotState.Done;
-     
+
+    }
+
+    /// <summary>
+    /// The stage to show at <paramref name="progress"/> (0 just planted, 1 grown): the growing time is
+    /// shared evenly between every stage but the last, the ripe crop, which waits for the harvest.
+    /// </summary>
+    static int GrowingStage(float progress, int stageCount)
+    {
+        if (stageCount <= 1)
+            return 0;
+
+        return Mathf.Clamp(Mathf.FloorToInt(progress * (stageCount - 1)), 0, stageCount - 2);
+    }
+
+    void ShowStage(ItemDataSO seed, int index)
+    {
+        Sprite[] stages = seed.growStages ?? Array.Empty<Sprite>();
+        Sprite single = stages.Length > 0 ? stages[Mathf.Clamp(index, 0, stages.Length - 1)] : null;
+
+        if (patch != null)
+        {
+            if (seed.cropLook != null)
+                patch.Show(seed.cropLook, index);
+            else
+                patch.ShowSingle(single);
+        }
+        else if (crop != null && single != null)
+        {
+            crop.Show(single);
+        }
     }
 
     
@@ -131,8 +172,12 @@ public class PlantPot : MonoBehaviour, IInteractableObject
                 CameraController.Focus(CameraController.CameraType.Focus ,transform, null,0.7f);
                 return true;
 
+            // Ripe: the sickle comes up over the pot, to be swept across every ripe pot. With no
+            // sickle in the scene, the tap picks the crop straight away as it always did.
             case PotState.Done:
-                Harvest();
+                HarvestTool tool = HarvestTool.Instance;
+                if (tool == null || !tool.Offer(this, CropTop))
+                    Harvest();
                 return true;
 
             // Still growing: nothing to open and nothing to pick, so the tap is not this pot's.
@@ -141,22 +186,30 @@ public class PlantPot : MonoBehaviour, IInteractableObject
         }
     }
 
+    public bool TryHarvest()
+    {
+        if (!CanHarvest)
+            return false;
+
+        Harvest();
+        return true;
+    }
+
     private void Harvest() { 
         
 
         finishedEffect.SetActive(false);
         plantPreview.SetActive(false);
+        if (patch != null)
+            patch.Clear();
         InventorySystem inventory = InventorySystem.instance;
         int generateItems = 2;
-        for (int i = 0; i < generateItems; i++)
-        {
 
+        // Thrown out of the crop together, so they fan out rather than land on each other.
+        activeItem.itemDataSO.GenerateItem(ItemController.instance.itemReceiver, activeItem, CropTop, inventory, generateItems);
 
-        Vector3 offset = new Vector3(UnityEngine.Random.Range(-1, 1), 1, UnityEngine.Random.Range(-1, 1));
-            activeItem.itemDataSO.GenerateItem(ItemController.instance.itemReceiver,activeItem, plantPreview.transform.position + offset, inventory);
-
-        }
         currentState= PotState.Empty;
+        Harvested?.Invoke(this);
     }
 
 }

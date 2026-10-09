@@ -195,12 +195,16 @@ namespace LastOrders.EditorTools
 
         // --- The shot ---------------------------------------------------------------------------
 
-        static LineRenderer BuildTracer(Transform parent)
+        /// <summary>The shot's line under <paramref name="parent"/>: the one already there when there is one, set up again.</summary>
+        internal static LineRenderer BuildTracer(Transform parent)
         {
-            var go = new GameObject("Tracer");
+            Transform existing = parent.Find("Tracer");
+            GameObject go = existing != null ? existing.gameObject : new GameObject("Tracer");
             go.transform.SetParent(parent, false);
 
-            var line = go.AddComponent<LineRenderer>();
+            // Not ??: a missing component comes back as Unity's fake null, which ?? takes for an object.
+            var line = go.GetComponent<LineRenderer>();
+            if (line == null) line = go.AddComponent<LineRenderer>();
             line.useWorldSpace = true;
             line.positionCount = 2;
             line.widthMultiplier = 0.06f;

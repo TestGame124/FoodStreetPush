@@ -50,6 +50,19 @@ namespace FoodStreet.Navigation
         public float Radius => radius;
 
         /// <summary>
+        /// A share of its own speed it is held to, on top of whatever the follower asks for: wire a
+        /// zombie is wading through, a trap that has it pinned. One is its full pace. Separate from
+        /// <see cref="ConfigureBody"/>, so letting go never needs to know what its pace was.
+        /// </summary>
+        public float SpeedScale
+        {
+            get => speedScale;
+            set => speedScale = Mathf.Clamp01(value);
+        }
+
+        float speedScale = 1f;
+
+        /// <summary>
         /// Overrides the authored movement profile at runtime.
         ///
         /// Needed because pooled agents are shared across archetypes: one enemy prefab's
@@ -119,12 +132,13 @@ namespace FoodStreet.Navigation
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
 
-            Vector3 target = desiredDirection * (speed * desiredSpeedScale);
+            float pace = speed * speedScale;
+            Vector3 target = desiredDirection * (pace * desiredSpeedScale);
 
             if (avoidsOthers && separationWeight > 0f)
             {
-                target += Separation() * (speed * separationWeight);
-                target = Vector3.ClampMagnitude(target, speed);
+                target += Separation() * (pace * separationWeight);
+                target = Vector3.ClampMagnitude(target, pace);
             }
 
             velocity = Vector3.MoveTowards(velocity, target, acceleration * dt);

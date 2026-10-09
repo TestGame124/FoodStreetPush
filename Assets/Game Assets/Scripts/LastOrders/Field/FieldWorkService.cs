@@ -282,6 +282,9 @@ namespace LastOrders.Field
                 if (assignment.Zombie == zombie) assignment.Zombie = null;
         }
 
+        /// <summary>Every zombie lurking on land still to be cleared, alive or not.</summary>
+        public IReadOnlyList<IAreaZombie> Zombies => zombies;
+
         /// <summary>Killed at some point, so it stays dead.</summary>
         public bool IsKilled(string zombieId) => progression.Has(FieldIds.ZombieKilled(zombieId));
 
@@ -520,11 +523,35 @@ namespace LastOrders.Field
             zombie.ApplyDamage(damage);
             if (zombie.IsAlive) return false;
 
+            RecordKill(zombie);
+            return true;
+        }
+
+        /// <summary>
+        /// A shot from a tower or turret landed on a zombie - one standing close enough to a
+        /// defense to be in its sights. True when it was the one that killed it. Kept on record
+        /// like a worker's kill, so it stays dead.
+        /// </summary>
+        public bool ShootZombie(IAreaZombie zombie, float damage)
+        {
+            if (zombie == null || !zombie.IsAlive || damage <= 0f) return false;
+
+            zombie.ApplyDamage(damage);
+            if (zombie.IsAlive) return false;
+
+            RecordKill(zombie);
+            return true;
+        }
+
+        void RecordKill(IAreaZombie zombie)
+        {
             progression.Set(FieldIds.ZombieKilled(zombie.ZombieId));
-            if (assignment != null && assignment.Zombie == zombie) assignment.Zombie = null;
+
+            // Whoever was going for it has nothing left to fight.
+            foreach (Assignment assignment in assignments.Values)
+                if (assignment.Zombie == zombie) assignment.Zombie = null;
 
             OnZombieKilled?.Invoke(zombie);
-            return true;
         }
 
         /// <summary>

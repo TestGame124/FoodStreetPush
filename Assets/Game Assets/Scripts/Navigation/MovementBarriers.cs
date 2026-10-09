@@ -51,6 +51,9 @@ namespace FoodStreet.Navigation
 
         public static int Count => barriers.Count;
 
+        /// <summary>Every barrier standing right now - for something that has to know what it is being put on top of.</summary>
+        public static IReadOnlyList<IMovementBarrier> Standing => barriers;
+
         public static void Register(IMovementBarrier barrier)
         {
             if (barrier == null || barriers.Contains(barrier)) return;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Expansion;
+using LastOrders.Field;
 using LastOrders.Jobs;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,18 +13,20 @@ using K = LastOrders.EditorTools.PrimitiveKit;
 namespace LastOrders.EditorTools
 {
     /// <summary>
-    /// Puts the first expansion area into the open scene: the overgrown courtyard beyond the
-    /// compound's north wall, the main character who clears it, and the way out to it.
+    /// Puts the first expansion area into the open scene: the overgrown courtyard out past the
+    /// defense ring north of the compound, the main character who clears it, and the way out to it
+    /// - through the yard gate in the compound's north wall and across the ring.
     ///
     /// Works on the level's own art rather than dropping in new props. The junk, rubble and
     /// sandbags already lying out there become the debris, grouped where pieces overlap so one
-    /// heap is one job rather than five. The low concrete row across the yard and the stretch
-    /// of wall in front of it become what disappears when the land is claimed. The compound
-    /// wall carried round the yard's outer edge, in sections, is what the expansion builds -
-    /// so the boundary visibly moves out.
+    /// heap is one job rather than five. The low concrete row across the yard becomes what
+    /// disappears when the land is claimed. A wall all round the yard, in sections, with a gate
+    /// facing the compound's, is what the expansion builds; the compound's own wall, the ring and
+    /// whatever was built in it stay as they are.
     ///
     /// Safe to re-run. Debris already adopted is left as it is; everything else is found by
-    /// name and brought back into line.
+    /// name and brought back into line. A yard laid out before the ring - against the north wall -
+    /// is carried out across it, with its debris, its zombies and its barrier row.
     ///
     /// Re-running 'Food Street / Visitors / Set Up Visitor System' stretches the north wall
     /// back across the gap, because that tool re-lays every boundary run. Run this again
@@ -33,25 +36,39 @@ namespace LastOrders.EditorTools
     {
         const string AreaName = "Area_Courtyard";
 
-        // The yard, as a world rectangle, and the gap in the wall that leads to it. The east edge
-        // continues the compound's east wall line so the new wall meets it - measured from that
-        // wall on every run, because the compound can be widened after the yard is laid out.
+        // The yard, as a world rectangle, and the gaps that lead to it. It starts across the defense
+        // ring from the north wall, and its east edge runs out over the ring's corner to meet the
+        // plots beyond the east wall - both measured from the walls on every run, because the
+        // compound can be widened after the yard is laid out.
         const float YardWestX = 21.5f;
-        const float YardSouthZ = 35.7f;
-        const float YardNorthZ = 48f;
+        const float YardDepth = 12.3f;
 
-        /// <summary>Where the east edge goes when the scene has no east wall to continue.</summary>
+        /// <summary>Where the walls are taken to stand when the scene has none to measure.</summary>
+        const float NorthWallFallbackZ = 35.2f;
         const float YardEastFallbackX = 37.95f;
 
-        static Rect Yard = Rect.MinMaxRect(YardWestX, YardSouthZ, YardEastFallbackX, YardNorthZ);
+        static Rect Yard = Rect.MinMaxRect(YardWestX, NorthWallFallbackZ + PerimeterStripLayout.Ring, YardEastFallbackX,
+                                           NorthWallFallbackZ + PerimeterStripLayout.Ring + YardDepth);
 
+        /// <summary>The gate in the compound's north wall and, straight across the ring, the yard's own.</summary>
         const float GapFromX = 29f;
         const float GapToX = 32f;
-        const float GapCentreX = (GapFromX + GapToX) * 0.5f;
+        public const float GapCentreX = (GapFromX + GapToX) * 0.5f;
+
+        /// <summary>How far either side of a gate the way through it is walked from and to.</summary>
+        const float GateStep = 1.6f;
+
+        /// <summary>The compound's north wall line, measured on every run.</summary>
+        static float NorthWall = NorthWallFallbackZ;
+
+        // The way out: just inside the compound's yard gate and just outside it, then either side of
+        // the yard's own gate across the ring.
+        static Vector3 GapInside => new Vector3(GapCentreX, 0f, NorthWall - GateStep);
+        static Vector3 GapOutside => new Vector3(GapCentreX, 0f, NorthWall + GateStep);
+        static Vector3 YardGateOutside => new Vector3(GapCentreX, 0f, Yard.yMin - GateStep);
+        static Vector3 YardGateInside => new Vector3(GapCentreX, 0f, Yard.yMin + GateStep);
 
         static readonly Vector3 MainCharacterHome = new Vector3(GapCentreX, 0f, 31f);
-        static readonly Vector3 GapInside = new Vector3(GapCentreX, 0f, 33.6f);
-        static readonly Vector3 GapOutside = new Vector3(GapCentreX, 0f, 36.8f);
 
         /// <summary>Art within this distance of each other, centre to centre, is one heap.</summary>
         const float ClusterDistance = 2.6f;
@@ -113,10 +130,13 @@ namespace LastOrders.EditorTools
 
             WorkerAgent main = EnsureMainCharacter(scope);
 
-            Yard = Rect.MinMaxRect(YardWestX, YardSouthZ, MeasureEastWall(), YardNorthZ);
+            NorthWall = MeasureNorthWall();
+            float south = NorthWall + PerimeterStripLayout.Ring;
+            Yard = Rect.MinMaxRect(YardWestX, south, MeasureEastWall() + PerimeterStripLayout.Ring, south + YardDepth);
 
             Transform areasRoot = FindOrCreateRoot(scene, "ExpansionAreas");
             Transform areaRoot = FindOrCreateChild(areasRoot, AreaName);
+            float carried = CarryOut(areaRoot);
             MoveKeepingChildren(areaRoot, new Vector3(Yard.center.x, 0f, Yard.center.y));
 
             var area = areaRoot.GetComponent<ExpansionArea>() ?? areaRoot.gameObject.AddComponent<ExpansionArea>();
@@ -128,9 +148,16 @@ namespace LastOrders.EditorTools
 
             Transform[] route = BuildRoute(areaRoot);
 
+            // The compound's wall either side of the yard gate stands for good; what goes on claim is
+            // the barrier row across the yard - the old art's, or the low-poly row made for it.
+            List<GameObject> front = SplitNorthWall(areaRoot);
+
             var locked = new List<GameObject>();
-            locked.AddRange(SplitNorthWall(areaRoot));
             locked.AddRange(BarrierRowInYard());
+
+            Transform lockedRoot = FindOrCreateChild(areaRoot, "LockedUntilClaimed");
+            Transform row = lockedRoot.Find("BarrierRow");
+            if (row != null) locked.Add(row.gameObject);
 
             Transform centre = FindOrCreateChild(areaRoot, "Centre");
             centre.position = new Vector3(Yard.center.x, 1f, Yard.center.y);
@@ -142,6 +169,10 @@ namespace LastOrders.EditorTools
                            boundary, EffectPrefabGenerator.EnsureBuildDust(), unlocked);
             EditorUtility.SetDirty(area);
 
+            // The new wall was rebuilt, so it no longer knows which of its sections face the plots
+            // laid out beside the yard.
+            ExpansionNeighbours.Assign(scene);
+
             // The zombies a worker sent out here has to deal with before the debris.
             if (ZombieContentGenerator.LoadWanderer() == null) ZombieContentGenerator.Generate(rebuild: false);
             FieldWorkSceneSetup.EnsureZombies(scope, area, ZombieContentGenerator.LoadWanderer());
@@ -152,7 +183,9 @@ namespace LastOrders.EditorTools
             string summary =
                 $"[Last Orders] Courtyard set up in '{scene.name}'. MainCharacter: {(main != null ? main.name : "missing")}, " +
                 $"{adopted} debris, {locked.Count} objects removed on claim, {sections} boundary sections to build, " +
-                $"wall gap at X {GapFromX}-{GapToX}.\n" +
+                $"yard X {Yard.xMin:0.0}-{Yard.xMax:0.0}, Z {Yard.yMin:0.0}-{Yard.yMax:0.0}" +
+                $"{(Mathf.Abs(carried) > 0.01f ? $" (carried {carried:0.0} m out across the ring)" : "")}, " +
+                $"gates at X {GapFromX}-{GapToX} in the north wall ({front.Count} pieces either side) and the yard's.\n" +
                 "If 'Set Up Visitor System' is run again it will close the gap; re-run this afterwards.";
 
             Debug.Log(summary);
@@ -375,7 +408,7 @@ namespace LastOrders.EditorTools
         static Vector3 WorkPointFor(Bounds bounds)
         {
             Vector3 centre = new Vector3(bounds.center.x, 0f, bounds.center.z);
-            Vector3 toGap = GapOutside - centre;
+            Vector3 toGap = YardGateInside - centre;
             toGap.y = 0f;
             if (toGap.sqrMagnitude < 1e-4f) toGap = Vector3.back;
             toGap.Normalize();
@@ -403,8 +436,10 @@ namespace LastOrders.EditorTools
         // --- The boundary ---------------------------------------------------------------------
 
         /// <summary>
-        /// Cuts the north wall back to the start of the yard and puts the yard's stretch of it -
-        /// with the gap - into two pieces that are removed on claim.
+        /// Cuts the north wall back to the start of the yard and puts the stretch of it across from
+        /// the yard - with the gate gap - into two pieces under the area's
+        /// <see cref="LandPlotSetup.CompoundFrontName"/> group. They stand for good: the wall setup
+        /// lays the compound's wall along them, and the gate out to the yard stays once it is claimed.
         ///
         /// The new pieces live under the area, not under OuterBoundries: the visitor setup
         /// sorts every run under that parent into north, south, east and west, and would treat
@@ -424,13 +459,20 @@ namespace LastOrders.EditorTools
 
             float wallEast = WallExtent(wall.transform, out float wallWest);
 
-            Transform lockedRoot = FindOrCreateChild(areaRoot, "LockedUntilClaimed");
+            Transform frontRoot = FindOrCreateChild(areaRoot, LandPlotSetup.CompoundFrontName);
 
-            GameObject west = FindOrCreateWallPiece(lockedRoot, "NorthWall_YardWest", wall);
-            GameObject east = FindOrCreateWallPiece(lockedRoot, "NorthWall_YardEast", wall);
+            GameObject west = FindOrCreateWallPiece(frontRoot, "NorthWall_YardWest", wall);
+            GameObject east = FindOrCreateWallPiece(frontRoot, "NorthWall_YardEast", wall);
 
             SetRun(west.transform, Yard.xMin, GapFromX);
             SetRun(east.transform, GapToX, Mathf.Max(GapToX + 0.5f, wallEast));
+
+            // On the wall's own line, wherever an earlier layout left them.
+            foreach (GameObject piece in new[] { west, east })
+            {
+                Vector3 p = piece.transform.position;
+                piece.transform.position = new Vector3(p.x, wall.transform.position.y, wall.transform.position.z);
+            }
 
             Undo.RecordObject(wall.transform, "Shorten north wall");
             SetRun(wall.transform, wallWest, Yard.xMin);
@@ -454,8 +496,14 @@ namespace LastOrders.EditorTools
             // Already shortened by an earlier run: the east end is where the yard's east piece ends.
             if (east <= Yard.xMin + 0.01f)
             {
-                GameObject yardEast = GameObject.Find($"ExpansionAreas/{AreaName}/LockedUntilClaimed/NorthWall_YardEast");
-                if (yardEast != null) east = yardEast.transform.position.x + yardEast.transform.localScale.z * 0.5f;
+                foreach (string group in new[] { LandPlotSetup.CompoundFrontName, "LockedUntilClaimed" })
+                {
+                    GameObject yardEast = GameObject.Find($"ExpansionAreas/{AreaName}/{group}/NorthWall_YardEast");
+                    if (yardEast == null) continue;
+
+                    east = yardEast.transform.position.x + yardEast.transform.localScale.z * 0.5f;
+                    break;
+                }
             }
 
             return east;
@@ -464,6 +512,15 @@ namespace LastOrders.EditorTools
         static GameObject FindOrCreateWallPiece(Transform parent, string name, GameObject template)
         {
             Transform found = parent.Find(name);
+
+            // Laid out before the ring, the piece was among what went when the yard was claimed.
+            Transform older = parent.parent.Find($"LockedUntilClaimed/{name}");
+            if (found == null && older != null)
+            {
+                Undo.SetTransformParent(older, parent, "Wall piece stands for good");
+                found = older;
+            }
+
             if (found != null) return found.gameObject;
 
             GameObject piece = Object.Instantiate(template, parent);
@@ -511,17 +568,26 @@ namespace LastOrders.EditorTools
             }
         }
 
+        /// <summary>Out through the compound's yard gate, across the ring, in through the yard's own.</summary>
         static Transform[] BuildRoute(Transform areaRoot)
         {
             Transform routeRoot = FindOrCreateChild(areaRoot, "Route");
 
-            Transform inside = FindOrCreateChild(routeRoot, "GapInside");
-            inside.position = GapInside;
+            var steps = new[]
+            {
+                ("GapInside", GapInside), ("GapOutside", GapOutside),
+                ("YardGateOutside", YardGateOutside), ("YardGateInside", YardGateInside),
+            };
 
-            Transform outside = FindOrCreateChild(routeRoot, "GapOutside");
-            outside.position = GapOutside;
+            var route = new Transform[steps.Length];
+            for (int i = 0; i < steps.Length; i++)
+            {
+                route[i] = FindOrCreateChild(routeRoot, steps[i].Item1);
+                route[i].position = steps[i].Item2;
+                route[i].SetSiblingIndex(i);
+            }
 
-            return new[] { inside, outside };
+            return route;
         }
 
         /// <summary>Target length of one boundary section. Short enough that the wall visibly
@@ -529,10 +595,10 @@ namespace LastOrders.EditorTools
         const float SectionLength = 2.5f;
 
         /// <summary>
-        /// The yard's new boundary: the compound wall carried round its west, north and east
-        /// sides, cut into sections in the order they go up - out along the west side, across
-        /// the north, back down the east. Built in the compound wall's own look and switched
-        /// off; the expansion raises them.
+        /// The yard's new boundary: a wall all the way round it, cut into sections in the order they
+        /// go up - out along the west side, across the north, back down the east, then along the
+        /// side facing the compound either side of the yard's gate. Built in the compound wall's own
+        /// look and switched off; the expansion raises them.
         /// </summary>
         static ExpansionBuildPlan BuildNewBoundary(Transform areaRoot, out int sections)
         {
@@ -547,12 +613,11 @@ namespace LastOrders.EditorTools
 
             var pieces = new List<Transform>();
 
-            // The side walls start at the old wall's outer face, so the new line meets it.
-            float south = Yard.yMin;
-
-            AddRun(pieces, root, template, alongX: false, line: Yard.xMin, from: south, to: Yard.yMax);
+            AddRun(pieces, root, template, alongX: false, line: Yard.xMin, from: Yard.yMin, to: Yard.yMax);
             AddRun(pieces, root, template, alongX: true, line: Yard.yMax, from: Yard.xMin, to: Yard.xMax);
-            AddRun(pieces, root, template, alongX: false, line: Yard.xMax, from: Yard.yMax, to: south);
+            AddRun(pieces, root, template, alongX: false, line: Yard.xMax, from: Yard.yMax, to: Yard.yMin);
+            AddRun(pieces, root, template, alongX: true, line: Yard.yMin, from: Yard.xMax, to: GapToX);
+            AddRun(pieces, root, template, alongX: true, line: Yard.yMin, from: GapFromX, to: Yard.xMin);
 
             foreach (Transform piece in pieces) piece.gameObject.SetActive(false);
 
@@ -618,7 +683,7 @@ namespace LastOrders.EditorTools
             Transform garden = K.Group("GardenPlaceholder", root);
             for (int i = 0; i < 2; i++)
             {
-                Vector3 bed = new Vector3(26f + i * 6f, 0f, 44.5f);
+                Vector3 bed = new Vector3(26f + i * 6f, 0f, Yard.yMin + CourtyardModels.BedsFromFront);
                 K.Box($"Bed_{i}", garden, bed, new Vector3(3.6f, 0.3f, 1.6f), K.Soil);
 
                 for (int p = 0; p < 4; p++)
@@ -633,6 +698,63 @@ namespace LastOrders.EditorTools
         }
 
         // --- Plumbing ---------------------------------------------------------------------------
+
+        /// <summary>
+        /// Carries what stands on a yard laid out before - its debris, its zombies and their patch,
+        /// its barrier row - out by however far the yard's near edge has moved: across the ring, for
+        /// one laid out against the north wall. Returns the metres moved: none on a re-run, or for a
+        /// yard laid out for the first time.
+        /// </summary>
+        static float CarryOut(Transform areaRoot)
+        {
+            var area = areaRoot.GetComponent<ExpansionArea>();
+            var plan = area != null ? new SerializedObject(area).FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan : null;
+            if (plan == null || !ExpansionNeighbours.TryLand(plan, out Rect before)) return 0f;
+
+            var shift = new Vector3(0f, 0f, Yard.yMin - before.yMin);
+            if (Mathf.Abs(shift.z) < 0.01f) return 0f;
+
+            foreach (string part in new[] { "Debris", "Zombies", "LockedUntilClaimed/BarrierRow" })
+            {
+                Transform t = areaRoot.Find(part);
+                if (t == null) continue;
+
+                Undo.RecordObject(t, "Carry the yard out");
+                t.position += shift;
+            }
+
+            // The patch they amble over is in world metres.
+            foreach (AreaZombies zombies in areaRoot.GetComponentsInChildren<AreaZombies>(true))
+            {
+                var so = new SerializedObject(zombies);
+                SerializedProperty centre = so.FindProperty("patchCentre");
+                centre.vector3Value += shift;
+                so.ApplyModifiedProperties();
+            }
+
+            return shift.z;
+        }
+
+        /// <summary>
+        /// The compound's north wall line: the boundary run that travels along X furthest north.
+        /// Falls back to where it stood when the yard was first laid out.
+        /// </summary>
+        static float MeasureNorthWall()
+        {
+            GameObject boundary = GameObject.Find("Restaurant/Zone/OuterBoundries");
+            if (boundary == null) return NorthWallFallbackZ;
+
+            float north = float.NegativeInfinity;
+            foreach (Transform wall in boundary.transform)
+            {
+                if (!wall.gameObject.activeSelf) continue;
+                if (Mathf.Abs(wall.forward.x) < Mathf.Abs(wall.forward.z)) continue;
+
+                north = Mathf.Max(north, wall.position.z);
+            }
+
+            return float.IsInfinity(north) ? NorthWallFallbackZ : north;
+        }
 
         /// <summary>
         /// The compound's east wall line: the boundary run that travels along Z furthest east.

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1705fefc013bd624ca2f4b15c62ee6ba, type: 3}
+  m_Name: CropLook_Corn
+  m_EditorClassIdentifier: Assembly-CSharp::CropLook
+  stages:
+  - variants:
+    - {fileID: 21300000, guid: 31494b746d986d8449c0734ce7dafde4, type: 3}
+    - {fileID: 21300000, guid: 088a14b106be1064ea79188868c1759e, type: 3}
+    - {fileID: 21300000, guid: 35213e322e8a96749b6fc72e0d4844ec, type: 3}
+  - variants:
+    - {fileID: 21300000, guid: 1076343073617a74895b8d6770ab2168, type: 3}
+    - {fileID: 21300000, guid: 5ce2e529cc839194cbfe47da64a3033a, type: 3}
+    - {fileID: 21300000, guid: 0a33280737513314bb481275810380d8, type: 3}
+  - variants:
+    - {fileID: 21300000, guid: b65678736fec0594d945957e193515a3, type: 3}
+    - {fileID: 21300000, guid: b50029f94c2d85a41be288ed5de5c618, type: 3}
+    - {fileID: 21300000, guid: 4cd145f86b1f0c94a9fb55aae2159888, type: 3}
+  - variants:
+    - {fileID: 21300000, guid: f398ea4a229707249bed1c479c9bf264, type: 3}
+    - {fileID: 21300000, guid: a6b563d79d46b0846a8d0bb78aa46d9d, type: 3}
+    - {fileID: 21300000, guid: e07fbdaf3594eaf42b2ca05c4e77aa7d, type: 3}
+  spots:
+  - {x: -0.24, y: 0.33333334}
+  - {x: 0.24, y: 0.33333334}
+  - {x: 0, y: 0}
+  - {x: -0.24, y: -0.33333334}
+  - {x: 0.24, y: -0.33333334}
+  sizeJitter: 0.09
+  spotJitter: 0.02

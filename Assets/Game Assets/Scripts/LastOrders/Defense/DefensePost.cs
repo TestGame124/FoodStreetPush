@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using LastOrders.Core;
 using LastOrders.Data;
@@ -21,7 +23,9 @@ namespace LastOrders.Defense
     ///
     /// Adding a defense to a level is placing one of these. A new kind of defense is a new
     /// definition asset and a new model under the same component - the parts below are all
-    /// optional, so a turret with no crew and a gun head for an aim pivot needs no code.
+    /// optional, so a turret with no crew and a gun head for an aim pivot needs no code. How it
+    /// moves can come from a <see cref="DefenseMotionProfile"/>, and anything else that reacts
+    /// to a shot - barrels kicking back, spent cases - listens to <see cref="Fired"/>.
     /// </summary>
     public sealed class DefensePost : MonoBehaviour, ITappable, IInteractableObject
     {
@@ -35,6 +39,11 @@ namespace LastOrders.Defense
         [Tooltip("Stands built from the start - the tower the restaurant opens with, never charged " +
                  "for. Otherwise this is an empty site the player can buy one for.")]
         [SerializeField] bool startsBuilt;
+
+        [Tooltip("Bought from the shop and set down on the build grid. Its id is made from where it " +
+                 "stands, so every copy is its own defense, and it stands down while the shop has it " +
+                 "put away - sold, or waiting to be bought again.")]
+        [SerializeField] bool placedFromShop;
 
         [Header("Parts")]
         [Tooltip("The defense itself. Hidden while the site is empty.")]
@@ -66,6 +75,11 @@ namespace LastOrders.Defense
         [Tooltip("Optional. Played at the muzzle on every shot.")]
         [SerializeField] PooledEffect muzzleEffect;
 
+        [Tooltip("Optional. How the aim turns, sweeps while nothing is in sight, and kicks on a shot. " +
+                 "When set, its turn speed, target height and flash time are used instead of the " +
+                 "three below.")]
+        [SerializeField] DefenseMotionProfile motion;
+
         [Tooltip("Degrees per second the aim turns.")]
         [SerializeField] float turnSpeed = 360f;
 
@@ -94,20 +108,93 @@ namespace LastOrders.Defense
         Quaternion restRotation;
         float tracerRemaining;
 
-        public string PostId => postId;
+        /// <summary>Where this post is in its idle sweep, as a fraction of one, so posts side by
+        /// side do not sweep in step.</summary>
+        float scanOffset;
+
+        /// <summary>The id it is registered under while the game runs - see <see cref="FreeId"/> -
+        /// and the one set on it otherwise.</summary>
+        public string PostId => unit != null ? unit.Id : postId;
         public DefenseDefinition Definition => definition;
         public DefenseUnit Unit => unit;
+        public DefenseMotionProfile Motion => motion;
+
+        /// <summary>Bought from the shop and set down on the build grid, rather than standing in the level.</summary>
+        public bool PlacedFromShop => placedFromShop;
+
+        static readonly List<DefensePost> standing = new List<DefensePost>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStanding() => standing.Clear();
+
+        /// <summary>Every defense in the level right now.</summary>
+        public static IReadOnlyList<DefensePost> Standing => standing;
 
         public string DisplayName => definition != null ? definition.displayName : name;
+
+        /// <summary>
+        /// A shot was drawn: from the muzzle, to where it is aimed, and the shot itself - which
+        /// says what it was fired at and, for a thrown one, how long it takes to land. Raised
+        /// after the tracer and the flash are up and the aim has snapped round, so a part
+        /// reacting to it sees the gun pointing at what it hit.
+        /// </summary>
+        public event Action<Vector3, Vector3, DefenseShot> Fired;
+
+        /// <summary>
+        /// Plays a pooled one-shot effect at <paramref name="at"/> through the game's effects pool:
+        /// for the parts on a post that have something to show - where a thrown shot lands. Nothing
+        /// happens while the post is not connected to the game.
+        /// </summary>
+        public void PlayEffect(PooledEffect effect, Vector3 at) => composition?.Effects.Play(effect, at);
+
+        float TurnSpeed => motion != null ? motion.turnSpeed : turnSpeed;
+        float TargetHeight => motion != null ? motion.targetHeight : targetHeight;
+        float FlashSeconds => motion != null ? motion.flashSeconds : tracerSeconds;
 
         void Awake()
         {
             if (aimPivot != null) restRotation = aimPivot.localRotation;
             if (tracer != null) tracer.enabled = false;
             if (muzzleFlash != null) muzzleFlash.SetActive(false);
+
+            // From the post's place rather than at random, so the same post sweeps the same way
+            // every time the level loads.
+            Vector3 p = transform.position;
+            scanOffset = Mathf.Repeat(p.x * 0.137f + p.z * 0.071f, 1f);
         }
 
+        bool started;
+
+        /// <summary>Taken out of the shop's pool again: back on duty on its first frame, once the shop has put it where it now stands.</summary>
+        bool reconnect;
+
         void Start()
+        {
+            started = true;
+            Connect();
+        }
+
+        /// <summary>
+        /// A shop's copy taken out of its pool again - bought and set down - goes back on duty. Not at
+        /// once: the pool hands it over before the shop moves it, and its id comes from where it stands.
+        /// </summary>
+        void OnEnable()
+        {
+            if (!standing.Contains(this)) standing.Add(this);
+            if (started && placedFromShop && unit == null) reconnect = true;
+        }
+
+        /// <summary>A shop's copy put back in its pool - sold - stands down, so nothing invisible keeps shooting.</summary>
+        void OnDisable()
+        {
+            standing.Remove(this);
+            reconnect = false;
+            if (placedFromShop) Disconnect();
+        }
+
+        void OnDestroy() => Disconnect();
+
+        void Connect()
         {
             if (scope == null) scope = FindFirstObjectByType<GameLifetimeScope>();
             composition = scope != null ? scope.Composition : null;
@@ -124,7 +211,7 @@ namespace LastOrders.Defense
                 return;
             }
 
-            unit = composition.Defense.Register(definition, postId, transform.position, startsBuilt);
+            unit = composition.Defense.Register(definition, FreeId(), transform.position, startsBuilt);
             if (unit == null) return;
 
             unit.OnFired += HandleFired;
@@ -135,7 +222,7 @@ namespace LastOrders.Defense
             Show(animate: false);
         }
 
-        void OnDestroy()
+        void Disconnect()
         {
             if (unit == null) return;
 
@@ -144,13 +231,46 @@ namespace LastOrders.Defense
             unit.OnChanged -= HandleChanged;
 
             HideBuildButton();
-            composition.Defense.Unregister(postId);
+            composition?.Defense.Unregister(unit.Id);
             unit = null;
+        }
+
+        /// <summary>
+        /// The id this post registers under: its own, unless another post already has it - a
+        /// copy placed by duplicating one. Then one made from where it stands, so the copy still
+        /// works, and keeps what was bought for it while it stays put. Its own id is still the
+        /// right fix, and the warning says so. A copy bought from the shop always stands under
+        /// where it was set down, with no warning: there are meant to be several.
+        /// </summary>
+        string FreeId()
+        {
+            if (!placedFromShop && composition.Defense.Find(postId) == null) return postId;
+
+            Vector3 p = transform.position;
+            string at = $"{postId}@{Mathf.RoundToInt(p.x)},{Mathf.RoundToInt(p.z)}";
+
+            string id = at;
+            for (int n = 2; composition.Defense.Find(id) != null; n++) id = $"{at}#{n}";
+
+            if (!placedFromShop)
+                Debug.LogWarning($"[DefensePost] {name} has the same post id as another defense ('{postId}'), so it " +
+                                 $"stands as '{id}'. Give it an id of its own in the Inspector.", this);
+            return id;
         }
 
         void Update()
         {
+            if (reconnect)
+            {
+                reconnect = false;
+                Connect();
+            }
+
             if (unit == null) return;
+
+            // Ranges are measured from where the post stands now, so one that has been moved
+            // shoots from its new place, not from where the level started it.
+            unit.Position = transform.position;
 
             SyncCrew();
             Aim();
@@ -201,7 +321,13 @@ namespace LastOrders.Defense
         {
             if (aimPivot == null) return;
 
-            Quaternion goal = aimPivot.parent != null ? aimPivot.parent.rotation * restRotation : restRotation;
+            Quaternion rest = restRotation;
+
+            // Watching the approach: a defense that can fire and has nothing in sight sweeps
+            // either side of its resting direction. One that cannot fire stands at rest.
+            if (motion != null && unit.CanFire) rest *= Quaternion.Euler(0f, motion.ScanYaw(Time.time, scanOffset), 0f);
+
+            Quaternion goal = aimPivot.parent != null ? aimPivot.parent.rotation * rest : rest;
 
             IDefenseTarget target = unit.Target;
             if (target != null && target.IsAlive)
@@ -211,12 +337,12 @@ namespace LastOrders.Defense
                 if (direction.sqrMagnitude > 1e-4f) goal = Quaternion.LookRotation(direction);
             }
 
-            aimPivot.rotation = Quaternion.RotateTowards(aimPivot.rotation, goal, turnSpeed * Time.deltaTime);
+            aimPivot.rotation = Quaternion.RotateTowards(aimPivot.rotation, goal, TurnSpeed * Time.deltaTime);
         }
 
-        void HandleFired(IDefenseTarget target, Vector3 hitPoint)
+        void HandleFired(DefenseShot shot)
         {
-            Vector3 to = hitPoint + Vector3.up * targetHeight;
+            Vector3 to = shot.HitPoint + Vector3.up * TargetHeight;
 
             // Snapped round on the shot: the tracer has to leave the barrel pointing at what it
             // hits, even if the turn to face it had not quite finished.
@@ -229,7 +355,8 @@ namespace LastOrders.Defense
 
             Vector3 from = muzzle != null ? muzzle.position : transform.position + Vector3.up * 3f;
 
-            if (tracer != null)
+            // A tracer is a hitscan shot's: something thrown is drawn flying by whatever throws it.
+            if (tracer != null && !shot.InFlight)
             {
                 tracer.useWorldSpace = true;
                 tracer.positionCount = 2;
@@ -239,9 +366,10 @@ namespace LastOrders.Defense
             }
 
             if (muzzleFlash != null) muzzleFlash.SetActive(true);
-            tracerRemaining = tracerSeconds;
+            tracerRemaining = FlashSeconds;
 
             composition.Effects.Play(muzzleEffect, from);
+            Fired?.Invoke(from, to, shot);
         }
 
         void FadeTracer()
@@ -274,9 +402,9 @@ namespace LastOrders.Defense
 
             // Built and at its last level there is nothing to buy, so a line on the HUD says
             // everything the popup would.
-            if (unit.IsBuilt && !unit.HasNextLevel) return composition.Defense.Describe(postId);
+            if (unit.IsBuilt && !unit.HasNextLevel) return composition.Defense.Describe(unit.Id);
 
-            return OpenPopup() ? null : composition.Defense.Describe(postId);
+            return OpenPopup() ? null : composition.Defense.Describe(unit.Id);
         }
 
         void ShowBuildButton()
@@ -310,13 +438,13 @@ namespace LastOrders.Defense
         }
 
         DefenseOffer Offer() =>
-            unit.IsBuilt ? composition.Defense.GetUpgradeOffer(postId) : composition.Defense.GetBuildOffer(postId);
+            unit.IsBuilt ? composition.Defense.GetUpgradeOffer(unit.Id) : composition.Defense.GetBuildOffer(unit.Id);
 
         void Buy(DefensePayment payment)
         {
             bool done = unit.IsBuilt
-                ? composition.Defense.TryUpgrade(postId, payment, out string message)
-                : composition.Defense.TryBuild(postId, payment, out message);
+                ? composition.Defense.TryUpgrade(unit.Id, payment, out string message)
+                : composition.Defense.TryBuild(unit.Id, payment, out message);
 
             TapFeedback.Report(message);
 
@@ -337,6 +465,17 @@ namespace LastOrders.Defense
             definition = defense;
             postId = id;
             startsBuilt = built;
+            placedFromShop = false;
+        }
+
+        /// <summary>Editor wiring for a copy the shop sells and the player sets down on the build grid: built as it is bought.</summary>
+        public void ConfigureForShop(DefenseDefinition defense, string id)
+        {
+            scope = null;
+            definition = defense;
+            postId = id;
+            startsBuilt = true;
+            placedFromShop = true;
         }
 
         /// <summary>Editor wiring for the parts, for the prefab generator.</summary>
@@ -351,6 +490,20 @@ namespace LastOrders.Defense
             tracer = shot;
             muzzleFlash = flash;
             tapCollider = tap;
+        }
+
+        /// <summary>Editor wiring for what plays at the muzzle on every shot, for the prefab generator.</summary>
+        public void ConfigureMuzzleEffect(PooledEffect effect) => muzzleEffect = effect;
+
+        /// <summary>Editor wiring for how it moves and how big its tap target is, for the prefab generator.</summary>
+        public void ConfigureMotion(DefenseMotionProfile profile, Vector3 builtSize, Vector3 siteSize, Vector3 calloutAt,
+                                    Vector3 buildButtonAt)
+        {
+            motion = profile;
+            builtColliderSize = builtSize;
+            siteColliderSize = siteSize;
+            calloutOffset = calloutAt;
+            buildButtonOffset = buildButtonAt;
         }
 
         void OnDrawGizmosSelected()

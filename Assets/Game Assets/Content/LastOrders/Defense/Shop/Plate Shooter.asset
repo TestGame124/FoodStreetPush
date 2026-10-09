@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Plate Shooter
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Plate Shooter
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 5
+  type: 204
+  PriceAmount: 100
+  Sellable: 1
+  prefab: {fileID: 3708258064410157233, guid: b17ea52b0c0c18446aadfa9987125804, type: 3}
+  visual: {fileID: 7257506393567018981, guid: 069e50f41c6a86545a94faed0b3aa5fa, type: 3}
+  width: 2
+  height: 2
+  placementProfile: {fileID: 11400000, guid: e613555fd883ee7448799ad5d0e86104, type: 2}
+  maxItems: 4
+  previewImage: {fileID: 0}
+  shopIcon: {fileID: 21300000, guid: 8c115c75b6928bb4f99249d27e46c33c, type: 3}
+  buildCategory: 3
+  buildCost: []
+  buildClockMinutes: 1
+  maxHealth: 100
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

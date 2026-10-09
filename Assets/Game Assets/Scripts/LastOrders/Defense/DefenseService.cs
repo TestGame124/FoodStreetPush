@@ -410,6 +410,131 @@ namespace LastOrders.Defense
             return null;
         }
 
+        // --- Sites that take a choice ----------------------------------------------------------
+        //
+        // A wall site, or a pad out in the defense ring, takes any defense the player picks. Buying
+        // one there is paying its own build price; the choice is recorded under the site's id, which
+        // is also the id the defense then registers under - as already built - so its upgrades are
+        // kept with it.
+
+        /// <summary>What was bought for the site out of <paramref name="options"/>, or null.</summary>
+        public DefenseDefinition BuiltAt(string siteId, IReadOnlyList<DefenseDefinition> options)
+        {
+            if (options == null || string.IsNullOrEmpty(siteId)) return null;
+
+            for (int i = 0; i < options.Count; i++)
+                if (options[i] != null && progression.Has(DefenseIds.Site(siteId, options[i].id))) return options[i];
+
+            return null;
+        }
+
+        /// <summary>
+        /// The popup over an empty site: what each defense fires, and a button each with its price.
+        /// <paramref name="onGround"/> for a pad out in the defense ring rather than a site on the wall.
+        /// </summary>
+        public BuildChoiceOffer GetSiteOffer(string siteId, IReadOnlyList<DefenseDefinition> options, bool onGround = false)
+        {
+            var offer = new BuildChoiceOffer
+            {
+                Title = onGround ? "Build on the pad" : "Build on the wall",
+                Description = onGround
+                    ? "The defense is set on this pad out past the wall, where it reaches further into the land beyond."
+                    : "The wall here is thickened into a bastion, and the defense is mounted on top of it.",
+                Status = string.Empty,
+            };
+
+            if (options != null)
+            {
+                foreach (DefenseDefinition option in options)
+                {
+                    if (option == null) continue;
+
+                    WeaponDefinition weapon = option.Level(0)?.weapon;
+                    string arms = weapon != null ? $"{weapon.displayName}, {weapon.Describe()}" : "no weapon yet";
+                    string crew = option.requiresCrew ? $" - needs a {option.crewRole} posted" : string.Empty;
+                    offer.Details.Add($"{option.displayName}: {arms}{crew}");
+
+                    PriceChoice(option.buildPrice, out string label, out bool affordable, out string shortBy);
+                    offer.Options.Add(new BuildChoice($"{option.displayName}\n{label}", affordable, shortBy));
+                }
+            }
+
+            offer.Details.Add("No worker needed - ready once it is paid for");
+            offer.Blocked = WhyCannotBuildAt(siteId, options);
+            return offer;
+        }
+
+        /// <summary>
+        /// Buys option <paramref name="index"/> of the site's offer: from the stores when its price
+        /// has a materials option, in premium currency otherwise.
+        /// </summary>
+        public bool TryBuildAt(string siteId, IReadOnlyList<DefenseDefinition> options, int index, out string message,
+                               out DefenseDefinition built, bool onGround = false)
+        {
+            built = null;
+            message = WhyCannotBuildAt(siteId, options);
+            if (message != null) return false;
+
+            DefenseDefinition chosen = BuildChoices.Pick(options, index);
+            if (chosen == null)
+            {
+                message = "That cannot be built here.";
+                return false;
+            }
+
+            DefensePayment method = chosen.buildPrice.HasResourceOption ? DefensePayment.Resources : DefensePayment.Premium;
+            if (!TryPay(chosen.buildPrice, method, out message)) return false;
+
+            progression.Set(DefenseIds.Site(siteId, chosen.id));
+            progression.Set(DefenseIds.Built(siteId));
+            built = chosen;
+
+            string mounted = $"{chosen.displayName} {(onGround ? "set up on the pad" : "mounted on the wall")}.";
+            message = chosen.requiresCrew ? $"{mounted} Hire a {chosen.crewRole} at a shelter to stand watch in it." : mounted;
+            return true;
+        }
+
+        /// <summary>Puts a defense out of action, or back in it: what it stands on has fallen, or been rebuilt.</summary>
+        public void SetOutOfAction(string id, bool value)
+        {
+            if (TryGet(id, out DefenseUnit unit)) unit.IsOutOfAction = value;
+        }
+
+        string WhyCannotBuildAt(string siteId, IReadOnlyList<DefenseDefinition> options)
+        {
+            DefenseDefinition standing = BuiltAt(siteId, options);
+            if (standing != null) return $"There is already a {standing.displayName} here.";
+            if (BuildChoices.Pick(options, 0) == null) return "Nothing can be built here yet.";
+            if (!AllowsBuilding()) return "Too dangerous to build after dark. Wait for dawn.";
+
+            return null;
+        }
+
+        void PriceChoice(DefensePrice price, out string label, out bool affordable, out string shortBy)
+        {
+            if (price.IsFree)
+            {
+                label = "Free";
+                affordable = true;
+                shortBy = null;
+                return;
+            }
+
+            if (price.HasResourceOption)
+            {
+                label = Label(price.resources);
+                shortBy = ShortfallIn(price.resources);
+                affordable = shortBy == null;
+                return;
+            }
+
+            string name = premium != null ? premium.DisplayName : "premium currency";
+            int have = premium != null ? premium.Balance : 0;
+            label = $"{price.premium} {name}";
+            shortBy = have >= price.premium ? null : $"Need {price.premium - have} more {name}.";
+            affordable = shortBy == null;
+        }
+
         // --- Upgrading ------------------------------------------------------------------------
 
         public DefenseOffer GetUpgradeOffer(string id)
@@ -578,6 +703,7 @@ namespace LastOrders.Defense
             DefenseDefinition definition = unit.Definition;
 
             if (!unit.IsBuilt) return $"An empty site for a {definition.displayName}.";
+            if (unit.IsOutOfAction) return $"The {definition.displayName} has been knocked over. Repair what it stood on to set it up again.";
 
             WeaponDefinition weapon = unit.Weapon;
             string arms = weapon != null ? $"{weapon.displayName}, {weapon.Describe()}" : "no weapon";
@@ -644,6 +770,9 @@ namespace LastOrders.Defense
     public static class DefenseIds
     {
         public static string Built(string postId) => $"defense_built:{postId}";
+
+        /// <summary>A site that takes a choice had <paramref name="defenseId"/> bought for it.</summary>
+        public static string Site(string siteId, string defenseId) => $"defense_site:{siteId}:{defenseId}";
 
         /// <summary>Reached level <paramref name="levelIndex"/> (zero-based; Level 1 needs no flag).</summary>
         public static string Level(string postId, int levelIndex) => $"defense_level:{postId}:{levelIndex}";

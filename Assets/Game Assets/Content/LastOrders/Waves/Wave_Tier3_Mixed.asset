@@ -36,6 +36,10 @@ MonoBehaviour:
     weight: 2
     guaranteedMinimum: 0
     maximum: 0
+  - enemy: {fileID: 11400000, guid: be0043d0f95d5d64eb6590485dc2f7d4, type: 2}
+    weight: 2
+    guaranteedMinimum: 0
+    maximum: 0
   nightDurationSeconds: 180
   spawnRateOverNight:
     serializedVersion: 2
@@ -71,5 +75,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   approachLanes: 4
+  groupSize: {x: 2, y: 4}
+  groupStaggerSeconds: 1.2
   budgetPerHeat: 0.35
   minimumBudget: 3

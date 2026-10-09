@@ -22,7 +22,8 @@ namespace LastOrders.EditorTools
     /// broken. The restaurant needs its five walls told apart - the kitchen wall, the two sides,
     /// and the two pieces of the front either side of the door - and the things on the front
     /// wall's line that have to move out with it: the door, and the door nodes of the visitor
-    /// route and of the night shelter.
+    /// route and of the night shelter. And a floor, which the shell lays again between the walls
+    /// whenever they move.
     ///
     /// The walls are read the way the starting-area layout lays them: plain cubes under
     /// "RestaurantWalls", the kitchen wall the run furthest north, the front the runs south of
@@ -37,6 +38,26 @@ namespace LastOrders.EditorTools
         const string WallsName = "RestaurantWalls";
         const string OverlayName = "Repairs";
         const string MaterialPath = "Assets/Game Assets/Content/LastOrders/Materials/RestaurantExpansionHighlight.mat";
+
+        const string FloorName = "RestaurantFloor";
+
+        /// <summary>The floor's materials, in the current art style's folder: the previous style's
+        /// stay one folder up (see <see cref="EnvKit.Style"/>).</summary>
+        public const string DiningMaterialPath = "Assets/Game Assets/Content/LastOrders/Materials/" + EnvKit.Style + "/RestaurantFloor_Dining.mat";
+
+        public const string KitchenMaterialPath = "Assets/Game Assets/Content/LastOrders/Materials/" + EnvKit.Style + "/RestaurantFloor_Kitchen.mat";
+
+        /// <summary>Metres one copy of each floor texture covers: 0.6 m checks, 0.4 m kitchen tiles.</summary>
+        const float DiningTile = 2.4f;
+        const float KitchenTile = 1.2f;
+
+        /// <summary>A soft sheen, as on the reference's polished diner floor.</summary>
+        const float DiningSmoothness = 0.3f;
+        const float KitchenSmoothness = 0.24f;
+
+        /// <summary>The kitchen strip along the back wall: the line the stove, sink and fridge stand on.
+        /// The same depth the starting-area layout keeps the kitchen line at.</summary>
+        const float KitchenDepth = 3f;
 
         [MenuItem("Last Orders/Restaurant/Set Up Repairs & Expansion (Current Scene)", priority = 75)]
         public static void Run()
@@ -57,6 +78,7 @@ namespace LastOrders.EditorTools
                 $"This edits '{scene.name}' in place:\n\n" +
                 "- Adds the repair overlay: a wrench over anything broken, fixed by a worker\n" +
                 "- Makes the restaurant's walls expandable forward, left and right\n" +
+                "- Lays the restaurant's floor, which grows with it\n" +
                 "- Creates the repair button, the expansion popup and the highlight material if missing\n\n" +
                 "The scene is left unsaved.",
                 "Set up", "Cancel");
@@ -161,7 +183,11 @@ namespace LastOrders.EditorTools
             Undo.RecordObject(shell, "Restaurant shell");
             PooledEffect dust = EffectPrefabGenerator.EnsureBuildDust();
             shell.Configure(scope, back, left, right, frontLeft, frontRight, fixtures, shelter, HighlightMaterial(), dust, dust);
+            shell.ConfigureFloor(EnsureFloor(walls));
+            shell.FitFloor();
             EditorUtility.SetDirty(shell);
+
+            DressWalls(back, left, right, frontLeft, frontRight);
 
             report.Append($"  Restaurant walls: back '{back.name}', left '{left.name}', right '{right.name}', " +
                           $"front '{(frontLeft != null ? frontLeft.name : "-")}' + '{(frontRight != null ? frontRight.name : "-")}'. " +
@@ -170,6 +196,114 @@ namespace LastOrders.EditorTools
 
             if (Object.FindObjectsByType<ParkingSlot>(FindObjectsSortMode.None).Length > 0)
                 report.Append("  The car park's bays count as in the way, so the front can only grow up to them.\n");
+
+            report.Append($"  Floor: diner checkerboard in the dining room, plain tiles {KitchenDepth:0} m deep along the " +
+                          "kitchen wall; laid again whenever a wall moves.\n");
+            report.Append("  Walls: terracotta skirting, cream, a wooden rail; banded only in height, so they stretch as the " +
+                          "building grows without the texture stretching.\n");
+        }
+
+        /// <summary>
+        /// Gives the walls the diner's paint: a cube mesh with the same bounds as Unity's, UV'd so
+        /// the texture's bands run level round every side, and the wall material. The wall's own
+        /// transform, collider and everything that measures it are untouched.
+        /// </summary>
+        static void DressWalls(params Transform[] walls)
+        {
+            Mesh box = LastOrders.EditorTools.SurfaceKit.DinerWallMesh();
+            Material paint = LastOrders.EditorTools.SurfaceKit.DinerWall();
+
+            foreach (Transform wall in walls)
+            {
+                if (wall == null) continue;
+
+                var filter = wall.GetComponent<MeshFilter>();
+                var renderer = wall.GetComponent<MeshRenderer>();
+                if (filter == null || renderer == null) continue;
+
+                Undo.RecordObject(filter, "Diner walls");
+                Undo.RecordObject(renderer, "Diner walls");
+                filter.sharedMesh = box;
+                renderer.sharedMaterial = paint;
+            }
+        }
+
+        // --- The floor ----------------------------------------------------------------------------
+
+        /// <summary>
+        /// The restaurant's floor object, made once. It lives on the restaurant's root, not among
+        /// the walls - the wall readers take every child with a renderer there for a wall - and
+        /// stands at the root's own origin, outside the room, so the starting-area layout does not
+        /// take it for furniture and shift it as the room stretches.
+        /// </summary>
+        static RestaurantFloor EnsureFloor(Transform walls)
+        {
+            Transform restaurant = walls.root;
+            Transform existing = restaurant.Find(FloorName);
+
+            GameObject go;
+            if (existing != null)
+            {
+                go = existing.gameObject;
+            }
+            else
+            {
+                go = new GameObject(FloorName, typeof(MeshFilter), typeof(MeshRenderer));
+                Undo.RegisterCreatedObjectUndo(go, "Restaurant floor");
+                go.transform.SetParent(restaurant, false);
+            }
+
+            Undo.RecordObject(go.transform, "Restaurant floor");
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+
+            RestaurantFloor floor = go.GetComponent<RestaurantFloor>();
+            if (floor == null) floor = Undo.AddComponent<RestaurantFloor>(go);
+
+            Undo.RecordObject(floor, "Restaurant floor");
+            floor.Configure(FloorMaterial(DiningMaterialPath, TextureGenerator.EnsureDinerFloor(), DiningSmoothness),
+                            FloorMaterial(KitchenMaterialPath, TextureGenerator.EnsureKitchenFloor(), KitchenSmoothness),
+                            DiningTile, KitchenTile, KitchenDepth);
+            EditorUtility.SetDirty(floor);
+
+            return floor;
+        }
+
+        /// <summary>
+        /// Paints the floor's tiles again if their version has changed and sets both materials up
+        /// afresh. The floor already uses the materials, so the scene is not touched.
+        /// </summary>
+        public static string RestyleFloor()
+        {
+            FloorMaterial(DiningMaterialPath, TextureGenerator.EnsureDinerFloor(), DiningSmoothness);
+            FloorMaterial(KitchenMaterialPath, TextureGenerator.EnsureKitchenFloor(), KitchenSmoothness);
+            return "Restaurant floor: dining and kitchen tiles up to date.";
+        }
+
+        /// <summary>URP Lit with the generated tiles and their normal map: matte but with a little sheen, as a mopped floor has.</summary>
+        static Material FloorMaterial(string path, Texture2D tiles, float smoothness)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                ContentGenerator.EnsureFolder(System.IO.Path.GetDirectoryName(path).Replace('\\', '/'));
+                material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = System.IO.Path.GetFileNameWithoutExtension(path) };
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // The mesh is UV'd in texture tiles already, so the material does not scale it again.
+            material.SetTexture("_BaseMap", tiles);
+            material.SetTextureScale("_BaseMap", Vector2.one);
+            material.SetColor("_BaseColor", Color.white);
+            TextureGenerator.BindNormal(material, tiles);
+            material.SetFloat("_Smoothness", smoothness);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_EnvironmentReflections", 0f);
+            material.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+            EditorUtility.SetDirty(material);
+
+            return material;
         }
 
         /// <summary>

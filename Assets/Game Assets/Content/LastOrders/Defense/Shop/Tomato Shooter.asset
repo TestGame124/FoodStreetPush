@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Tomato Shooter
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Tomato Shooter
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 5
+  type: 202
+  PriceAmount: 60
+  Sellable: 1
+  prefab: {fileID: 5308659418858801624, guid: 5ef78667325f0dd43837be5198fe1479, type: 3}
+  visual: {fileID: 7886696922733631089, guid: a1e6fc1754dc313408488fb07f2e2a94, type: 3}
+  width: 2
+  height: 2
+  placementProfile: {fileID: 11400000, guid: e613555fd883ee7448799ad5d0e86104, type: 2}
+  maxItems: 4
+  previewImage: {fileID: 0}
+  shopIcon: {fileID: 21300000, guid: 58c649e772c698946826f7aadfd91282, type: 3}
+  buildCategory: 3
+  buildCost: []
+  buildClockMinutes: 1
+  maxHealth: 100
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

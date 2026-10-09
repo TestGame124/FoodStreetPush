@@ -1,8 +1,8 @@
 #if UNITY_INCLUDE_TESTS
 using System.Collections.Generic;
+using FoodStreet.Navigation;
 using LastOrders.Data;
 using LastOrders.DayCycle;
-using LastOrders.Defense;
 using LastOrders.Economy;
 using LastOrders.Restaurant;
 using NUnit.Framework;
@@ -12,7 +12,7 @@ using UnityEngine;
 /// The restaurant building, without a scene: each side grows into the strip in front of its own
 /// wall, left and right are the player's looking at the front, every expansion costs more than
 /// the last and is refused whole when it cannot be paid, nothing grows after dark - and a zombie
-/// that comes within reach of the walls dies there.
+/// is stopped at the walls, which take its blows and never fall.
 /// </summary>
 public class RestaurantTests
 {
@@ -26,24 +26,6 @@ public class RestaurantTests
             if (amount > Balance) return false;
             Balance -= amount;
             return true;
-        }
-    }
-
-    sealed class FakeZombie : IDefenseTarget
-    {
-        public Vector3 Position { get; set; }
-        public bool IsAlive { get; private set; } = true;
-        public string DisplayName => "Zombie";
-        public List<IDefenseTarget> List;
-
-        public void ApplyDamage(float amount)
-        {
-            if (amount <= 0f) return;
-
-            IsAlive = false;
-
-            // The night takes the dead off its list there and then.
-            List?.Remove(this);
         }
     }
 
@@ -61,7 +43,6 @@ public class RestaurantTests
     ResourceLedger ledger;
     FakeWallet coins;
     DayCycleMachine machine;
-    List<IDefenseTarget> zombies;
     bool breached;
 
     [SetUp]
@@ -69,7 +50,6 @@ public class RestaurantTests
     {
         ledger = new ResourceLedger();
         coins = new FakeWallet();
-        zombies = new List<IDefenseTarget>();
         breached = false;
 
         machine = new DayCycleMachine(new TimeService(6f));
@@ -80,7 +60,7 @@ public class RestaurantTests
 
     RestaurantService Service(RestaurantTuning tuning = null)
     {
-        var restaurant = new RestaurantService(tuning ?? Tuning(), ledger, coins, machine, () => breached, () => zombies);
+        var restaurant = new RestaurantService(tuning ?? Tuning(), ledger, coins, machine, () => breached);
         restaurant.SetFootprint(Diner, Vector2.down);
         return restaurant;
     }
@@ -267,68 +247,65 @@ public class RestaurantTests
 
     // --- The line no zombie crosses -----------------------------------------------------------
 
+    const float Body = 0.3f;
+
     [Test]
-    public void AZombieAtTheWallsDiesThere()
+    public void AZombieIsStoppedAtTheWallsAndNobodyElseIs()
     {
         RestaurantService restaurant = Service();
 
-        var atTheDoor = new FakeZombie { Position = new Vector3(20f, 0f, 14.4f), List = zombies };
-        var inTheYard = new FakeZombie { Position = new Vector3(20f, 0f, 8f), List = zombies };
-        zombies.Add(atTheDoor);
-        zombies.Add(inTheYard);
+        var outside = new Vector3(20f, 0f, 14.5f);
+        var against = new Vector3(20f, 0f, 14.8f);
 
-        var killed = new List<IDefenseTarget>();
-        restaurant.OnHostileKilled += (target, at) => killed.Add(target);
+        Assert.IsTrue(restaurant.Blocks(outside, against, Body, MoverKind.Hostile), "Up against the front wall.");
+        Assert.IsFalse(restaurant.Blocks(outside, against, Body, MoverKind.Friendly), "Staff and visitors use the door.");
 
-        restaurant.Tick(0.1f);
-
-        Assert.IsFalse(atTheDoor.IsAlive);
-        Assert.IsTrue(inTheYard.IsAlive);
-        CollectionAssert.AreEqual(new[] { atTheDoor }, killed);
-        Assert.AreEqual(1, restaurant.KilledAtWalls);
+        Assert.IsFalse(restaurant.Blocks(against, new Vector3(20.2f, 0f, 14.8f), Body, MoverKind.Hostile),
+                       "Along the wall is allowed.");
+        Assert.IsFalse(restaurant.Blocks(against, outside, Body, MoverKind.Hostile), "So is backing off.");
+        Assert.IsFalse(restaurant.Blocks(new Vector3(20f, 0f, 8f), new Vector3(20f, 0f, 8.2f), Body, MoverKind.Hostile),
+                       "Nothing stops it out in the yard.");
     }
 
     [Test]
-    public void SeveralAtTheWallsAllDieInTheSameFrame()
+    public void TheWallsTakeEveryBlowAndNeverFall()
     {
         RestaurantService restaurant = Service();
 
-        for (int i = 0; i < 4; i++)
-            zombies.Add(new FakeZombie { Position = new Vector3(9.5f, 0f, 16f + i), List = zombies });
+        var struck = new List<Vector3>();
+        restaurant.OnHit += at => struck.Add(at);
 
-        restaurant.Tick(0.1f);
+        for (int i = 0; i < 3; i++)
+            Assert.IsFalse(restaurant.TakeHit(1000f, new Vector3(20f, 0f, 14.5f)), "No blow brings them down.");
 
-        Assert.AreEqual(0, zombies.Count, "Each death takes one off the list; none is skipped.");
-        Assert.AreEqual(4, restaurant.KilledAtWalls);
+        Assert.IsTrue(restaurant.IsInTheWay);
+        Assert.AreEqual(3, restaurant.BlowsTaken);
+        Assert.AreEqual(new Vector3(20f, 0f, 15f), struck[0], "Struck where the zombie stands against them.");
     }
 
     [Test]
-    public void TheWallsGrowAndSoDoesTheirReach()
+    public void TheWallsGrowAndSoDoesWhatTheyStop()
     {
         RestaurantService restaurant = Service();
         Fund(100, 100);
 
-        var zombie = new FakeZombie { Position = new Vector3(6.5f, 0f, 20f), List = zombies };
-        zombies.Add(zombie);
-
-        restaurant.Tick(0.1f);
-        Assert.IsTrue(zombie.IsAlive);
+        var from = new Vector3(6.4f, 0f, 20f);
+        var to = new Vector3(6.8f, 0f, 20f);
+        Assert.IsFalse(restaurant.Blocks(from, to, Body, MoverKind.Hostile));
 
         restaurant.TryExpand(RestaurantSide.Left, out _);
-        restaurant.Tick(0.1f);
-        Assert.IsFalse(zombie.IsAlive);
+        Assert.IsTrue(restaurant.Blocks(from, to, Body, MoverKind.Hostile));
     }
 
     [Test]
     public void WithoutWallsNothingIsStopped()
     {
-        var restaurant = new RestaurantService(Tuning(), ledger, coins, machine, () => false, () => zombies);
-        var zombie = new FakeZombie { Position = new Vector3(20f, 0f, 20f) };
-        zombies.Add(zombie);
+        var restaurant = new RestaurantService(Tuning(), ledger, coins, machine, () => false);
 
-        restaurant.Tick(0.1f);
-
-        Assert.IsTrue(zombie.IsAlive);
+        Assert.IsFalse(restaurant.Blocks(new Vector3(20f, 0f, 14.5f), new Vector3(20f, 0f, 20f), Body, MoverKind.Hostile));
+        Assert.IsFalse(restaurant.IsInTheWay);
+        Assert.IsFalse(restaurant.TakeHit(10f, Vector3.zero));
+        Assert.AreEqual(0, restaurant.BlowsTaken);
     }
 
     // --- Geometry -----------------------------------------------------------------------------

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
+  m_Name: Defense_CornShooter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  id: corn_shooter
+  displayName: Corn Shooter
+  description: An old pitching machine re-geared for corn. Its engine spins two tyres,
+    and a cob dropped between them leaves the tube like a fastball.
+  requiresCrew: 0
+  crewRole: 3
+  buildPrice:
+    resources:
+    - type: 6
+      amount: 40
+    premium: 15
+  prefab: {fileID: 6227909708042131297, guid: 900c87045524dbc40a09c59f1d7197f6, type: 3}
+  levels:
+  - weapon: {fileID: 11400000, guid: 9d27b9dcb40e9a7488484a5156d674d1, type: 2}
+    spotRangeMetres: 12
+    upgradePrice:
+      resources: []
+      premium: 0
+  - weapon: {fileID: 11400000, guid: 7c4bfca2d37b1494584bad82037c8dff, type: 2}
+    spotRangeMetres: 13.5
+    upgradePrice:
+      resources:
+      - type: 6
+        amount: 60
+      premium: 25

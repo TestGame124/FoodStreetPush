@@ -63,19 +63,35 @@ namespace LastOrders.EditorTools
         };
 
         /// <summary>
-        /// Where this level's night comes from: the road, in front of the gate.
+        /// The scrap turret the restaurant starts with: on the grass just west of the drive, in
+        /// front of the diner, resting toward the gate.
         ///
-        /// The towers are sited to watch the road, but the spawner's own placement assumes the
-        /// road is to the north. Here it is to the south, so left to itself the night arrives
-        /// from the far side of the compound, out of every tower's sight. Both points are
-        /// inside the width of the gate, because an enemy off the nav grid walks straight in
-        /// to its nearest edge - and from here, that line runs through the gate.
+        /// Every zombie that gets inside makes for the diner door, whichever wall it came over,
+        /// so a gun here covers the one place they all end up - 5.6 m from the door, inside the
+        /// Level 1 gun's 7 m - and sees up the drive toward the gate. It stands clear of the
+        /// drive (x 17-23) and the visitors' line to the door (x 20), and its pad stops short of
+        /// z 11.5, so the diner can still grow its full 3 m forward (to z 12).
         /// </summary>
-        static readonly Vector3[] RoadLanes =
-        {
-            new Vector3(17.5f, 0f, -9f),
-            new Vector3(22.5f, 0f, -9f),
-        };
+        static readonly Site TurretSite = new Site("turret_diner", new Vector3(15.4f, 0f, 10.4f), 180f, startsBuilt: true);
+
+        /// <summary>
+        /// The Toastapult: the turret's mirror across the drive, on the grass between the top of the
+        /// drive and the car park (x 25.4), 6.1 m from the diner door. Its leaves and roots reach
+        /// 0.7 m from the middle, clear of the drive, the bays and the diner's 3 m to grow forward.
+        /// </summary>
+        static readonly Site ToastapultSite = new Site("toastapult_diner", new Vector3(24.2f, 0f, 10.4f), 180f, startsBuilt: true);
+
+        /// <summary>
+        /// Where this level's night comes from, one point per lane.
+        ///
+        /// The spawner's own placement assumes the road is to the north. Here it is to the south,
+        /// so left to itself the night arrives from wherever the grid's bounding box happens to
+        /// fall. The world-edge layout owns the real approaches - lane 0 across the road to the
+        /// gate the starting tower watches, then west, east and out of the trees - and each
+        /// point sits square with its wall, because an enemy off the nav grid walks straight in
+        /// to its nearest edge.
+        /// </summary>
+        static EnvironmentLayout.Lane[] RoadLanes => EnvironmentLayout.Lanes;
 
         [MenuItem("Last Orders/Defense/Set Up Guard Towers (Current Scene)", priority = 40)]
         public static void Run()
@@ -96,7 +112,7 @@ namespace LastOrders.EditorTools
                 $"This edits '{scene.name}' in place:\n\n" +
                 "- Adds the guard tower the restaurant starts with, beside the gate\n" +
                 $"- Adds {Sites.Length - 1} empty sites where more towers can be bought\n" +
-                "- Points the enemy lanes at the road, if none are authored\n" +
+                "- Points the enemy lanes at the world edge's approaches, if none are authored\n" +
                 "- Creates the guard tower content and prefab if they do not exist\n\n" +
                 "Back the scene up first if it is not under version control.",
                 "Set up", "Cancel");
@@ -176,6 +192,143 @@ namespace LastOrders.EditorTools
             return report.ToString();
         }
 
+        [MenuItem("Last Orders/Defense/Set Up Starting Turret (Current Scene)", priority = 42)]
+        public static void RunTurret()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            GameLifetimeScope scope = Object.FindFirstObjectByType<GameLifetimeScope>();
+
+            if (scope == null)
+            {
+                EditorUtility.DisplayDialog("Last Orders",
+                    "This scene has no GameLifetimeScope, so nothing would run the turret.\n\n" +
+                    "Open the level that has the Last Orders systems in it.", "OK");
+                return;
+            }
+
+            bool proceed = EditorUtility.DisplayDialog(
+                "Last Orders",
+                $"This edits '{scene.name}' in place:\n\n" +
+                $"- Adds the scrap turret the restaurant starts with, in front of the diner at {TurretSite.Position}\n" +
+                "- Creates the turret's content (definition, guns, motion profile) and prefab if they do not exist\n\n" +
+                "A turret already in the scene is rewired where it stands, not moved. The guard towers are left alone.",
+                "Set up", "Cancel");
+
+            if (!proceed) return;
+
+            Debug.Log(ApplyTurret(scope, save: true));
+        }
+
+        /// <summary>The turret setup against the open scene's scope, with no dialogs - for automation.</summary>
+        public static string ApplyTurretToActiveScene(bool save)
+        {
+            GameLifetimeScope scope = Object.FindFirstObjectByType<GameLifetimeScope>();
+            return scope != null
+                ? ApplyTurret(scope, save)
+                : "[Last Orders] No GameLifetimeScope in the open scene; nothing was changed.";
+        }
+
+        /// <summary>
+        /// Places the starting turret, with no dialogs. Found by its id if it is already there, and
+        /// then only rewired - never moved, so a turret dragged somewhere better by hand stays put.
+        /// </summary>
+        public static string ApplyTurret(GameLifetimeScope scope, bool save)
+        {
+            DefenseDefinition turret = DefenseContentGenerator.GenerateScrapTurret();
+            GameObject prefab = ScrapTurretModel.Ensure(turret, DefenseContentGenerator.LoadScrapTurretMotion());
+            return PlaceStartingDefense(scope, TurretSite, turret, prefab, "ScrapTurret", save);
+        }
+
+        [MenuItem("Last Orders/Defense/Set Up Toastapult (Current Scene)", priority = 44)]
+        public static void RunToastapult()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            GameLifetimeScope scope = Object.FindFirstObjectByType<GameLifetimeScope>();
+
+            if (scope == null)
+            {
+                EditorUtility.DisplayDialog("Last Orders",
+                    "This scene has no GameLifetimeScope, so nothing would run the Toastapult.\n\n" +
+                    "Open the level that has the Last Orders systems in it.", "OK");
+                return;
+            }
+
+            bool proceed = EditorUtility.DisplayDialog(
+                "Last Orders",
+                $"This edits '{scene.name}' in place:\n\n" +
+                $"- Plants the Toastapult in front of the diner at {ToastapultSite.Position}, across the drive from the scrap turret\n" +
+                "- Creates its content (definition, toast, motion profile) and prefab if they do not exist\n\n" +
+                "One already in the scene is rewired where it stands, not moved. Nothing else is touched.",
+                "Set up", "Cancel");
+
+            if (!proceed) return;
+
+            Debug.Log(ApplyToastapult(scope, save: true));
+        }
+
+        /// <summary>The Toastapult setup against the open scene's scope, with no dialogs - for automation.</summary>
+        public static string ApplyToastapultToActiveScene(bool save)
+        {
+            GameLifetimeScope scope = Object.FindFirstObjectByType<GameLifetimeScope>();
+            return scope != null
+                ? ApplyToastapult(scope, save)
+                : "[Last Orders] No GameLifetimeScope in the open scene; nothing was changed.";
+        }
+
+        /// <summary>Plants the Toastapult, with no dialogs: placed if missing, otherwise rewired where it stands.</summary>
+        public static string ApplyToastapult(GameLifetimeScope scope, bool save)
+        {
+            DefenseDefinition toaster = DefenseContentGenerator.GenerateToastapult();
+            GameObject prefab = ToastapultModel.Ensure(toaster, DefenseContentGenerator.LoadToastapultMotion());
+            return PlaceStartingDefense(scope, ToastapultSite, toaster, prefab, "Toastapult", save);
+        }
+
+        /// <summary>
+        /// A defense placed at <paramref name="site"/> if no post there has its id yet, then wired to
+        /// the scope and its definition. One already placed is never moved.
+        /// </summary>
+        static string PlaceStartingDefense(GameLifetimeScope scope, Site site, DefenseDefinition definition, GameObject prefab,
+                                           string namePrefix, bool save)
+        {
+            Scene scene = scope.gameObject.scene;
+
+            GameBalanceConfig balance = new SerializedObject(scope).FindProperty("balance")
+                .objectReferenceValue as GameBalanceConfig;
+            WorldUiPrefabGenerator.Ensure(balance);
+
+            Transform root = FindOrCreateRoot(scene, RootName);
+
+            DefensePost post = FindPost(root, site.Id);
+            bool placed = post == null;
+
+            if (placed)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root);
+                instance.name = $"{namePrefix}_{site.Id}";
+                Undo.RegisterCreatedObjectUndo(instance, "Place defense");
+                instance.transform.SetPositionAndRotation(site.Position, Quaternion.Euler(0f, site.Yaw, 0f));
+                post = instance.GetComponent<DefensePost>();
+            }
+
+            var so = new SerializedObject(post);
+            so.FindProperty("scope").objectReferenceValue = scope;
+            so.FindProperty("definition").objectReferenceValue = definition;
+            so.FindProperty("postId").stringValue = site.Id;
+            so.FindProperty("startsBuilt").boolValue = site.StartsBuilt;
+            so.ApplyModifiedProperties();
+
+            ShowInEditor(so.FindProperty("builtVisuals").objectReferenceValue as GameObject, site.StartsBuilt);
+            ShowInEditor(so.FindProperty("siteVisuals").objectReferenceValue as GameObject, !site.StartsBuilt);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (save) EditorSceneManager.SaveScene(scene);
+
+            WeaponDefinition gun = definition.Level(0)?.weapon;
+            return $"[Last Orders] {definition.displayName} {(placed ? "placed" : "rewired where it stands")} at {post.transform.position}: " +
+                   $"{(gun != null ? $"{gun.displayName} {gun.Describe()}" : "no weapon")}, " +
+                   $"spots {definition.Level(0)?.SpotRange:0.#} m out, {(definition.requiresCrew ? "needs crew" : "needs no crew")}.";
+        }
+
         static DefensePost FindPost(Transform root, string id)
         {
             foreach (DefensePost post in root.GetComponentsInChildren<DefensePost>(true))
@@ -215,7 +368,7 @@ namespace LastOrders.EditorTools
 
             for (int i = 0; i < RoadLanes.Length; i++)
             {
-                string name = $"Lane{i}_Road";
+                string name = RoadLanes[i].Name;
                 Transform point = spawner.transform.Find(name);
 
                 if (point == null)
@@ -224,12 +377,12 @@ namespace LastOrders.EditorTools
                     Undo.RegisterCreatedObjectUndo(point.gameObject, "Place approach lane");
                 }
 
-                point.position = RoadLanes[i];
+                point.position = RoadLanes[i].Spawn;
                 lanes.GetArrayElementAtIndex(i).objectReferenceValue = point;
             }
 
             so.ApplyModifiedProperties();
-            return $"Approach lanes set to the road in front of the gate ({RoadLanes.Length}).";
+            return $"Approach lanes set to the world edge's approaches ({RoadLanes.Length}).";
         }
 
         static void ShowInEditor(GameObject part, bool active)

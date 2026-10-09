@@ -15,5 +15,5 @@ MonoBehaviour:
   displayName: Pistol
   damagePerShot: 16
   secondsBetweenShots: 1.5
-  rangeMetres: 6
+  rangeMetres: 8
   ammoPerShot: 0

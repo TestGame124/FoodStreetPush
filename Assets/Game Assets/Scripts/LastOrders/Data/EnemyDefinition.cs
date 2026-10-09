@@ -30,6 +30,11 @@ namespace LastOrders.Data
                  "heavily on hue.")]
         public Color silhouetteColour = Color.grey;
 
+        [Tooltip("Tint the whole body in the silhouette colour as it spawns - the hue doing the " +
+                 "identifying for archetypes that share a model. Off for one with a model of its " +
+                 "own, painted in its own colours, which the tint would wash out.")]
+        public bool tintBody = true;
+
         [Header("Behaviour - this single field IS the AI (24.3)")]
         [Tooltip("Which flow field this archetype samples. Doors routes to a door with walls " +
                  "solid. Breach makes walls passable but expensive. WeakestPoint pools at the " +

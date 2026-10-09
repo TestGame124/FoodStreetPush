@@ -1,3 +1,4 @@
+using LastOrders.EditorTools;
 using UnityEngine;
 
 namespace FoodStreet.Visitors.EditorTools
@@ -23,20 +24,23 @@ namespace FoodStreet.Visitors.EditorTools
     {
         // --- The road -----------------------------------------------------------------
         //
-        // Measured off the one surviving road tile at (22.2, -7.1), which is what is left of
-        // the street after the apocalypse dressing pass. The road runs east to west along the
-        // south side of the compound.
+        // The road runs east to west along the south side of the compound, across the defense
+        // ring from the south wall: the wall, the ring's open ground (the strip at the wall's
+        // foot, pads for guns further out), a verge, then the kerb. There is no land to claim on
+        // this side - the road is the customers', and the ring stops at it.
         //
-        // Both numbers are pinned by what is already standing either side of it, and there is
-        // less room than there looks. The town's southern terrace fronts onto Z -9.2, and the
-        // compound's south wall lands on Z -3.1 once it has been moved out for the car park.
-        // Six metres, for a road and two verges - so a five metre carriageway centred between
-        // them, which leaves about half a metre of verge on each side.
+        // It used to run along the wall's foot at Z -6.2, when the town's southern terrace still
+        // fronted onto Z -9.2. That terrace went with the old environment, and the world edge's
+        // suburbs keep clear of the road wherever it is, so the ring alone pins it now.
         //
-        // A wider road here would not read as a wider road. It would read as tarmac running
-        // through somebody's front room.
+        // A five metre carriageway. A wider road here would not read as a wider road; it would
+        // read as tarmac running through somebody's front room.
 
-        public const float RoadCentreZ = -6.2f;
+        /// <summary>Metres of verge between the defense ring's outer edge and the road's north kerb.</summary>
+        public const float RoadVerge = 0.6f;
+
+        public const float RoadCentreZ =
+            PerimeterStripLayout.SouthLine - PerimeterStripLayout.Ring - RoadVerge - RoadWidth * 0.5f;
 
         public const float RoadWidth = 5f;
 
@@ -44,12 +48,23 @@ namespace FoodStreet.Visitors.EditorTools
         /// Where the road leaves the map, west and east.
         ///
         /// Well past anything the camera can reach. The requirement is not "spawn off screen" -
-        /// it is that nobody is ever seen arriving out of nothing, and forty metres of road
-        /// between the spawn and the gate is what turns a spawn into a journey.
+        /// it is that nobody is ever seen arriving out of nothing. Since the world edge was built
+        /// (Last Orders / Environment), both ends are deep in its fog: a car appears inside the
+        /// mist behind the survivors' checkpoint and drives out of it, through the suburbs, to
+        /// the gate. Measured from the clear ground's edges, so they follow it when it is resized.
         /// </summary>
-        public const float RoadWestEnd = -45f;
+        public const float RoadWestEnd = EnvironmentLayout.ClearMinX - 48f;
 
-        public const float RoadEastEnd = 95f;
+        public const float RoadEastEnd = EnvironmentLayout.ClearMaxX + 48f;
+
+        /// <summary>
+        /// Where the road's kerbs stop, west and east: the edges of the clear ground round the
+        /// compound. Past them the road runs through the suburbs, whose pavements line it instead,
+        /// and a kerb carrying on would cut across the mouth of every side street.
+        /// </summary>
+        public const float KerbWestEnd = EnvironmentLayout.ClearMinX;
+
+        public const float KerbEastEnd = EnvironmentLayout.ClearMaxX;
 
         /// <summary>Metres between the dashed lane markings.</summary>
         public const float LaneMarkSpacing = 3.2f;

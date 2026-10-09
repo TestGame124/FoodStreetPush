@@ -35,7 +35,14 @@ namespace FoodStreet.Visitors
                  "quick. Below this it is manoeuvring; above it, driving.")]
         [SerializeField] int manoeuvreLegs = 2;
 
+        [Tooltip("Seconds a parked car sits before it moves off once told to leave: long enough " +
+                 "for the door to shut and the engine to catch.")]
+        [SerializeField, Min(0f)] float pullAwaySeconds = 1.3f;
+
         readonly WaypointWalker walker = new WaypointWalker();
+
+        /// <summary>Time left before a car pulling out of a bay starts to move.</summary>
+        float startingFor;
 
         ParkingLot lot;
         ParkingSlot bay;
@@ -53,6 +60,12 @@ namespace FoodStreet.Visitors
 
         /// <summary>The bay this car holds, or null once it has pulled away.</summary>
         public ParkingSlot Bay => bay;
+
+        /// <summary>Told to leave from a standstill and not moving yet: the door is shutting and
+        /// the engine starting. What the car's animation plays its start-up to.</summary>
+        public bool IsStartingUp => startingFor > 0f;
+
+        public float PullAwaySeconds => pullAwaySeconds;
 
         /// <summary>Raised the frame the car comes to rest in its bay. The visitor gets out on
         /// this, rather than on a timer that has to be kept in step with the drive.</summary>
@@ -137,6 +150,9 @@ namespace FoodStreet.Visitors
         {
             ReleaseBay();
 
+            // Only from a standstill: a car turned away on the drive is already rolling.
+            startingFor = Stage == VehicleStage.Parked ? pullAwaySeconds : 0f;
+
             slowLegs = slowLegsAtEnd;
             walker.Follow(path);
             Stage = VehicleStage.DrivingOut;
@@ -176,6 +192,12 @@ namespace FoodStreet.Visitors
         void Update()
         {
             if (Stage != VehicleStage.DrivingIn && Stage != VehicleStage.DrivingOut) return;
+
+            if (startingFor > 0f)
+            {
+                startingFor -= Time.deltaTime;
+                return;
+            }
 
             float speed = walker.Remaining <= slowLegs ? ManoeuvreSpeed : DriveSpeed;
 
@@ -217,6 +239,7 @@ namespace FoodStreet.Visitors
             lot = null;
             roads = null;
             slowLegs = manoeuvreLegs;
+            startingFor = 0f;
             stopForward = Vector3.zero;
             Stage = VehicleStage.Idle;
 

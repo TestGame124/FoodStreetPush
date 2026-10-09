@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
+using FoodStreet.Navigation;
 using LastOrders.Data;
 using LastOrders.DayCycle;
-using LastOrders.Defense;
 using LastOrders.Economy;
 using LastOrders.Expansion;
+using LastOrders.Perimeter;
 using UnityEngine;
 
 namespace LastOrders.Restaurant
@@ -31,34 +32,34 @@ namespace LastOrders.Restaurant
     /// move themselves when it says a side has grown; whether the ground a side would grow into
     /// is clear is theirs to find out, because only the scene can see what is standing on it.
     ///
-    /// The walls are the last line. A zombie that gets past the compound wall and the towers and
-    /// comes within <see cref="RestaurantTuning.killDistance"/> of them dies there, so nothing
-    /// that gets into the compound gets into the diner.
+    /// The walls are the last line. A zombie that gets past the compound wall and the towers is
+    /// stopped at them and batters them, and they never come down, so nothing that gets into the
+    /// compound gets into the diner. It stays there, alive, until the defenses finish it - and
+    /// every second it spends at the door is pressure on the night
+    /// (<see cref="Night.NightDangerService"/>). The scene registers this as an
+    /// <see cref="IMovementBarrier"/> while the walls stand.
     /// </summary>
-    public sealed class RestaurantService
+    public sealed class RestaurantService : IMovementBarrier, IBreakable
     {
         readonly RestaurantTuning tuning;
         readonly ResourceLedger ledger;
         readonly IWallet coins;
         readonly DayCycleMachine machine;
         readonly Func<bool> breached;
-        readonly Func<IReadOnlyList<IDefenseTarget>> hostiles;
 
         readonly int[] steps = new int[3];
-        readonly List<IDefenseTarget> scratch = new List<IDefenseTarget>();
 
         Rect footprint;
         Vector2 front = Vector2.down;
 
         public RestaurantService(RestaurantTuning tuning, ResourceLedger ledger, IWallet coins, DayCycleMachine machine,
-                                 Func<bool> breached, Func<IReadOnlyList<IDefenseTarget>> hostiles)
+                                 Func<bool> breached)
         {
             this.tuning = tuning ?? new RestaurantTuning();
             this.ledger = ledger;
             this.coins = coins;
             this.machine = machine;
             this.breached = breached;
-            this.hostiles = hostiles;
         }
 
         public RestaurantTuning Tuning => tuning;
@@ -75,8 +76,8 @@ namespace LastOrders.Restaurant
 
         public int TotalExpansions => steps[0] + steps[1] + steps[2];
 
-        /// <summary>Zombies stopped dead at the walls since the game started.</summary>
-        public int KilledAtWalls { get; private set; }
+        /// <summary>Blows the walls have taken since the game started.</summary>
+        public int BlowsTaken { get; private set; }
 
         /// <summary>The walls moved: the footprint they now stand round.</summary>
         public event Action<Rect> OnFootprintChanged;
@@ -84,8 +85,8 @@ namespace LastOrders.Restaurant
         /// <summary>A side grew, with the strip of ground it took in.</summary>
         public event Action<RestaurantSide, Rect> OnExpanded;
 
-        /// <summary>A zombie came too close to the walls and died there, with where it fell.</summary>
-        public event Action<IDefenseTarget, Vector3> OnHostileKilled;
+        /// <summary>A zombie's blow landed on the walls, with the point of them it struck.</summary>
+        public event Action<Vector3> OnHit;
 
         // --- The scene says where it is -------------------------------------------------------
 
@@ -244,38 +245,32 @@ namespace LastOrders.Restaurant
 
         // --- The line no zombie crosses -------------------------------------------------------
 
-        public void Tick(float deltaSeconds)
+        /// <summary>
+        /// Refuses a zombie any step deeper into the walls' footprint, the way the compound wall
+        /// does, so it stops at them and starts hitting them. Staff and visitors are never
+        /// stopped: they come and go through the door on routes of their own.
+        /// </summary>
+        public bool Blocks(Vector3 from, Vector3 to, float radius, MoverKind mover) =>
+            mover == MoverKind.Hostile && HasFootprint &&
+            MovementBarriers.StepEnters(from, to, new Vector3(footprint.center.x, 0f, footprint.center.y), 0f,
+                                        footprint.size * 0.5f, radius);
+
+        /// <summary>For as long as the walls stand: they never fall and never open to a zombie.</summary>
+        public bool IsInTheWay => HasFootprint;
+
+        public Vector3 ClosestPoint(Vector3 from) => new Vector3(
+            Mathf.Clamp(from.x, footprint.xMin, footprint.xMax), from.y,
+            Mathf.Clamp(from.z, footprint.yMin, footprint.yMax));
+
+        /// <summary>A blow on the walls. It lands - the scene shows it - but they never come
+        /// down, so it is never the blow that breaks them.</summary>
+        public bool TakeHit(float damage, Vector3 from)
         {
-            if (!HasFootprint || hostiles == null) return;
+            if (!HasFootprint) return false;
 
-            IReadOnlyList<IDefenseTarget> targets = hostiles();
-            if (targets == null || targets.Count == 0) return;
-
-            float reach = tuning.killDistance;
-
-            // Copied first: a death takes the zombie off the night's list there and then.
-            scratch.Clear();
-            for (int i = 0; i < targets.Count; i++)
-            {
-                IDefenseTarget target = targets[i];
-                if (target == null || (target is UnityEngine.Object o && o == null) || !target.IsAlive) continue;
-
-                if (DistanceTo(footprint, target.Position) <= reach) scratch.Add(target);
-            }
-
-            for (int i = 0; i < scratch.Count; i++)
-            {
-                IDefenseTarget target = scratch[i];
-                Vector3 at = target.Position;
-
-                target.ApplyDamage(float.MaxValue);
-                if (target.IsAlive) continue;
-
-                KilledAtWalls++;
-                OnHostileKilled?.Invoke(target, at);
-            }
-
-            scratch.Clear();
+            BlowsTaken++;
+            OnHit?.Invoke(ClosestPoint(from));
+            return false;
         }
 
         // --- Geometry -------------------------------------------------------------------------

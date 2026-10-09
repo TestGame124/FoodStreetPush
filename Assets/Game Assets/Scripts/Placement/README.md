@@ -78,6 +78,40 @@ This implements Sims-style snapped furniture and floor placement on a single XZ
 plot. Wall-edge topology, room generation, multiple storeys, and free-angle/free
 placement are not implemented. Walls remain ordinary footprint-based buildables.
 
+## Auto-tiling (joined objects)
+
+Objects of one kind placed side by side can join into one piece: two plant pots become
+one long bed, a square of four one big bed. Add `GridAutoTile` to the placed object's
+root, point it at the `MeshFilter` that draws the tile, and give it an `AutoTileSet`.
+Objects sharing a set join; anything else is ignored.
+
+| Module | Responsibility |
+| --- | --- |
+| `TileMask` | Eight-neighbour bits, the shape of each cell quarter, seam posts (pure logic) |
+| `AutoTileSet` | 20 quarter pieces + a joint post; combines and caches one mesh per neighbourhood |
+| `GridAutoTile` | Claims its cell, finds same-set neighbours, swaps the mesh, settles on change |
+
+Each cell is drawn as four quarters round its centre, and each quarter takes one of
+five shapes from the two sides and the corner it touches: `Corner`, `BorderZ`,
+`BorderX`, `InsideCorner` or `Open`. A cell claims the seams on its east and north
+edges; where a straight border runs on there, the set's joint post is added. At most
+85 distinct meshes exist per set, built on first use and shared.
+
+Pieces are modelled round the cell's centre, axis-aligned to the world, and the tile's
+renderer is kept on the footprint centre with no rotation, so rows and borders line up
+whatever way each object faces. Anything that crosses a seam (a cross-section, a
+pattern) must repeat every cell so neighbours meet without a step.
+
+`GridAutoTile` watches its own transform and renderer, not the grid: it works for
+placed, moved, loaded and scene-authored objects alike (scene pots are not registered
+on the grid). A tile whose renderer is switched off, as while the move ghost carries
+it, counts as absent and its neighbours close their borders. Only 1 x 1 footprints
+join. The plant beds' set is built by **Last Orders > Farming > Build Soil Beds**
+(`SoilBed`), which also squares scene pots onto their cells.
+
+Run `TileMaskTests` in **Test Runner > EditMode** for shapes, seams, canonical masks
+and mesh combining.
+
 ## Verification
 
 `python Tools/Placement/verify_placement.py` builds game source and the NUnit placement

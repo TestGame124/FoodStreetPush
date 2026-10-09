@@ -20,21 +20,37 @@ namespace LastOrders.EditorTools
     /// The level's own boundary cubes stay where they are - the visitor setup and the expansion
     /// setup both measure and move them - and only stop being drawn. The wall is laid along
     /// their lines, in sections of about four metres, so a zombie breaks through one section
-    /// rather than a whole side. Pieces tied to an expansion follow it: the stretch across the
-    /// yard's opening, and its gate, go when the yard is claimed; the yard's own new wall comes
-    /// up as it is built.
+    /// rather than a whole side. Where land to claim lies across the defense ring, the stretch of
+    /// wall facing it is laid along the expansion's own pieces, with the small gate out to it, and
+    /// stands for good; the land's own new wall comes up round it as it is built.
     ///
     /// A gap between two pieces on the same line is a way in, and gets a gate: the south gate
-    /// on the road, and the small one out to the yard.
+    /// on the road, and the small ones out to the yard and the plots.
     ///
     /// Safe to re-run: everything it made is thrown away and laid again from the boundary as it
     /// stands, so run it again after 'Set Up Visitor System' or the expansion setup has moved
     /// the boundary.
+    ///
+    /// The wall, its gates and its bastions are built from <see cref="CompoundWallModels"/>; the
+    /// boxes over the concrete-block texture they were first built from can be had back with
+    /// <see cref="PreviousLook"/>.
     /// </summary>
-    public static class CompoundWallSceneSetup
+    public static partial class CompoundWallSceneSetup
     {
         const string RootName = "CompoundWalls";
         const string BoundaryName = "OuterBoundries";
+        const string PreviousLookKey = "LastOrders.CompoundWalls.PreviousLook";
+
+        /// <summary>
+        /// True to build the wall, gates and bastions as they first were - boxes over the concrete-block
+        /// texture - instead of the modelled ones. Remembered by the editor, so every setup that lays the
+        /// wall again lays it in the same look.
+        /// </summary>
+        public static bool PreviousLook
+        {
+            get => EditorPrefs.GetBool(PreviousLookKey, false);
+            set => EditorPrefs.SetBool(PreviousLookKey, value);
+        }
 
         const string WallMaterialPath = "Assets/Game Assets/Content/LastOrders/Walls/Wall_Brick.asset";
         const string DustPath = "Assets/Game Assets/Content/LastOrders/Prefabs/Effects/Fx_BuildDust.prefab";
@@ -86,7 +102,23 @@ namespace LastOrders.EditorTools
 
             public string Label;
 
+            /// <summary>The expansion the piece belongs to, by its wall label ("Yard"); null for the compound's own.</summary>
+            public string Owner;
+
             public float Length => To - From;
+
+            /// <summary>
+            /// Pieces that can make a gate between them: the compound's own, or one expansion's pieces of
+            /// one kind. Two plots' walls on the same line overlap, and a gap in one must not be read as
+            /// filled by the other.
+            /// </summary>
+            public Object Group => TiedTo != null && TiedTo.transform.parent != null ? TiedTo.transform.parent : null;
+
+            public WallRun Cut(float from, float to) => new WallRun
+            {
+                Source = Source, TiedTo = TiedTo, AlongX = AlongX, Line = Line, From = from, To = to,
+                Interior = Interior, Label = Label, Owner = Owner,
+            };
 
             public Vector3 Point(float along) =>
                 AlongX ? new Vector3(along, 0f, Line) : new Vector3(Line, 0f, along);
@@ -119,6 +151,66 @@ namespace LastOrders.EditorTools
             if (!proceed) return;
 
             Debug.Log(Apply(scope, save: true));
+        }
+
+        [MenuItem("Last Orders/Compound Walls/Rebuild Wall, Gate & Bastion Models (Current Scene)", priority = 76)]
+        static void RebuildModels() => RunLook(previous: false);
+
+        [MenuItem("Last Orders/Compound Walls/Restore Previous Walls, Gates & Bastions (Current Scene)", priority = 77)]
+        static void RestorePrevious() => RunLook(previous: true);
+
+        static void RunLook(bool previous)
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[Last Orders] Leave Play mode before rebuilding the walls.");
+                return;
+            }
+
+            Debug.Log(ApplyLook(previous));
+        }
+
+        /// <summary>
+        /// Lays the walls and gates again in the modelled look, or the previous one, re-dresses every
+        /// bastion in the open scene in place and rebuilds the shop's bastion with the shooters that carry
+        /// it. No dialogs; the scene is left unsaved.
+        /// </summary>
+        public static string ApplyLook(bool previous)
+        {
+            PreviousLook = previous;
+
+            var report = new StringBuilder(ApplyToActiveScene(save: false));
+            Scene scene = SceneManager.GetActiveScene();
+
+            // The wall sites' bastions, in place: the sites and the defenses on them keep pointing at them.
+            // A shooter bought from the shop carries the prefab's bastion, rebuilt below.
+            int bastions = 0;
+            foreach (GameObject top in scene.GetRootGameObjects())
+            {
+                foreach (CompoundWall wall in top.GetComponentsInChildren<CompoundWall>(true))
+                {
+                    if (wall.name != "Bastion" || PrefabUtility.IsPartOfPrefabInstance(wall)) continue;
+
+                    RedressBastion(wall, (wall.transform.parent != null ? wall.transform.parent.GetSiblingIndex() : 0) + 1);
+                    bastions++;
+                }
+            }
+
+            report.Append($"  {bastions} wall-site bastion(s) re-dressed in place.\n");
+
+            try
+            {
+                DefenseShopSetup.BuildItems();
+                report.Append($"  The shop's bastion ({DefenseShopSetup.BastionPath}) and the shooters carrying it rebuilt.\n");
+            }
+            catch (System.Exception e)
+            {
+                report.Append($"  WARNING: the shop's bastion was not rebuilt ({e.Message}); run 'Set Up Defense Shop'.\n");
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            report.Append(previous ? "  Look: the previous boxes and texture.\n" : "  Look: modelled.\n");
+            return report.ToString();
         }
 
         /// <summary>The setup against the open scene's scope, with no dialogs - for automation.</summary>
@@ -163,18 +255,38 @@ namespace LastOrders.EditorTools
             }
 
             var yardZones = new List<(Rect area, GameObject tiedTo, string name)>();
+            var openings = new List<WallRun>();
 
             foreach (ExpansionArea area in Object.FindObjectsByType<ExpansionArea>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (area.gameObject.scene != scene) continue;
-                CollectExpansion(area, compound, runs, yardZones);
+                CollectExpansion(area, compound, runs, yardZones, openings);
             }
 
+            // An expansion's front stands in for the compound's own wall where they overlap - the
+            // whole stretch, gate gap and all - so the boundary cubes never need cutting up.
+            int replaced = CutOpenings(runs, openings);
+            if (replaced > 0) report.Append($"  {replaced} stretches of the compound wall stand in front of land to claim.\n");
+
+            JoinAdjacent(yardZones);
+
             List<(WallRun left, WallRun right)> gaps = FindGaps(runs);
+
+            // Where a run ends at a gate, the gate's pillar stands in for the wall's own post.
+            var gateEnds = new HashSet<(WallRun run, bool atTo)>();
+            foreach ((WallRun left, WallRun right) in gaps)
+            {
+                gateEnds.Add((left, true));
+                gateEnds.Add((right, false));
+            }
 
             // --- Build -------------------------------------------------------------------------------
 
             K.Reset();
+            EnvKit.Reset();
+            CompoundWallModels.Begin();
+            painted = new[] { BuildingKit.PaintedMaterial() };
+            if (PreviousLook) blockWallDark = SurfaceKit.CompoundWallDark();
 
             var material = AssetDatabase.LoadAssetAtPath<WallMaterialDefinition>(WallMaterialPath);
             if (material == null)
@@ -201,6 +313,8 @@ namespace LastOrders.EditorTools
                     string name = $"{run.Label.Replace(' ', '_')}_{n:00}";
 
                     BuildSection(root, name, run, centre, length, first: i == 0, last: i == count - 1,
+                                 gateAtStart: i == 0 && gateEnds.Contains((run, false)),
+                                 gateAtEnd: i == count - 1 && gateEnds.Contains((run, true)),
                                  seed: sections, scope, material, dust);
                     sections++;
                 }
@@ -279,15 +393,36 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
-        /// An expansion's share of the wall: the pieces across its opening, which go when it is
-        /// claimed, and the new wall its build raises. Its ground counts as inside once claimed.
+        /// An expansion's share of the wall: the stretch of the compound's wall in front of it, with
+        /// the gate out to it, and the new wall its build raises. Its ground counts as inside once
+        /// claimed.
+        ///
+        /// The stretch in front stands for good when its pieces are under the area's
+        /// <see cref="LandPlotSetup.CompoundFrontName"/> group: the land is out across the defense
+        /// ring and walled on its own once claimed. Wall pieces among what is shown until the land is
+        /// claimed instead go when it is - land that, claimed, joins the compound.
         /// </summary>
         static void CollectExpansion(ExpansionArea area, Rect compound, List<WallRun> runs,
-                                     List<(Rect, GameObject, string)> zones)
+                                     List<(Rect, GameObject, string)> zones, List<WallRun> openings)
         {
             var so = new SerializedObject(area);
+            string owner = area.Definition != null ? area.Definition.WallLabel : "Yard";
+            var compoundCentre = new Vector3(compound.center.x, 0f, compound.center.y);
 
-            // Across the opening: the wall pieces among what is shown until the land is claimed.
+            var front = new List<WallRun>();
+
+            Transform standing = area.transform.Find(LandPlotSetup.CompoundFrontName);
+            for (int i = 0; standing != null && i < standing.childCount; i++)
+            {
+                if (!TryRun(standing.GetChild(i), null, out WallRun run)) continue;
+
+                run.Interior = compoundCentre;
+                run.Label = SideOf(run, compound) + " wall";
+                run.Owner = owner;
+                runs.Add(run);
+                front.Add(run);
+            }
+
             SerializedProperty locked = so.FindProperty("lockedVisuals");
             for (int i = 0; locked != null && i < locked.arraySize; i++)
             {
@@ -296,10 +431,14 @@ namespace LastOrders.EditorTools
 
                 if (!TryRun(piece.transform, piece, out WallRun run)) continue;
 
-                run.Interior = new Vector3(compound.center.x, 0f, compound.center.y);
+                run.Interior = compoundCentre;
                 run.Label = SideOf(run, compound) + " wall";
+                run.Owner = owner;
                 runs.Add(run);
+                front.Add(run);
             }
+
+            openings.AddRange(Spans(front));
 
             // The new wall round the yard.
             var plan = so.FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan;
@@ -314,7 +453,8 @@ namespace LastOrders.EditorTools
                 var piece = pieces.GetArrayElementAtIndex(i).objectReferenceValue as Transform;
                 if (piece == null || !TryRun(piece, piece.gameObject, out WallRun run)) continue;
 
-                run.Label = "Yard wall";
+                run.Label = owner + " wall";
+                run.Owner = owner;
                 yardRuns.Add(run);
             }
 
@@ -350,10 +490,37 @@ namespace LastOrders.EditorTools
             zones.Add((ground, claimed, area.name.Replace("Area_", "")));
         }
 
-        /// <summary>Two pieces on one line with a gap between them a gate fits in.</summary>
+        /// <summary>
+        /// Two pieces on one line with a gap between them a gate fits in. Only pieces of one group
+        /// are paired: where two plots' walls share a line, one plot's gate gap is not closed by the
+        /// other's wall, which never stands at the same time.
+        /// </summary>
         static List<(WallRun, WallRun)> FindGaps(List<WallRun> runs)
         {
             var gaps = new List<(WallRun, WallRun)>();
+            var groups = new Dictionary<Object, List<WallRun>>();
+            var compound = new List<WallRun>();
+
+            foreach (WallRun run in runs)
+            {
+                Object key = run.Group;
+                if (key == null)
+                {
+                    compound.Add(run);
+                    continue;
+                }
+
+                if (!groups.TryGetValue(key, out List<WallRun> list)) groups[key] = list = new List<WallRun>();
+                list.Add(run);
+            }
+
+            FindGapsIn(compound, gaps);
+            foreach (List<WallRun> group in groups.Values) FindGapsIn(group, gaps);
+            return gaps;
+        }
+
+        static void FindGapsIn(List<WallRun> runs, List<(WallRun, WallRun)> gaps)
+        {
             var sorted = new List<WallRun>(runs);
             sorted.Sort((a, b) =>
             {
@@ -374,8 +541,99 @@ namespace LastOrders.EditorTools
                 float gap = b.From - a.To;
                 if (gap >= MinGap && gap <= MaxGap) gaps.Add((a, b));
             }
+        }
 
-            return gaps;
+        /// <summary>The stretch each line of an expansion's front covers, end to end, gap included.</summary>
+        static IEnumerable<WallRun> Spans(List<WallRun> front)
+        {
+            var done = new List<WallRun>();
+
+            foreach (WallRun run in front)
+            {
+                WallRun span = null;
+                foreach (WallRun d in done)
+                    if (d.AlongX == run.AlongX && Mathf.Abs(d.Line - run.Line) < 0.3f) span = d;
+
+                if (span == null) done.Add(run.Cut(run.From, run.To));
+                else
+                {
+                    span.From = Mathf.Min(span.From, run.From);
+                    span.To = Mathf.Max(span.To, run.To);
+                }
+            }
+
+            return done;
+        }
+
+        /// <summary>
+        /// Takes each opening out of the compound's own runs on its line, keeping whatever is left
+        /// either side of it. Returns how many runs were cut.
+        /// </summary>
+        static int CutOpenings(List<WallRun> runs, List<WallRun> openings)
+        {
+            int cut = 0;
+
+            foreach (WallRun opening in openings)
+            {
+                for (int i = runs.Count - 1; i >= 0; i--)
+                {
+                    // Only the compound's own boundary is cut: never an expansion's piece, standing for good or not.
+                    WallRun run = runs[i];
+                    if (run.TiedTo != null || run.Owner != null) continue;
+                    if (run.AlongX != opening.AlongX || Mathf.Abs(run.Line - opening.Line) > 0.3f) continue;
+                    if (run.To <= opening.From + 0.05f || run.From >= opening.To - 0.05f) continue;
+
+                    runs.RemoveAt(i);
+                    cut++;
+
+                    // What stands either side of the opening is still the compound's.
+                    if (opening.From - run.From > 0.3f) runs.Add(run.Cut(run.From, opening.From));
+                    if (run.To - opening.To > 0.3f) runs.Add(run.Cut(opening.To, run.To));
+                }
+            }
+
+            return cut;
+        }
+
+        /// <summary>
+        /// Two pieces of land claimed side by side are one ground: where two zones' edges are within a
+        /// wall's width of each other, both are carried to the line between, so nothing walking from one
+        /// into the other is ever outside for a step.
+        /// </summary>
+        static void JoinAdjacent(List<(Rect area, GameObject tiedTo, string name)> zones)
+        {
+            const float Reach = 1.5f;
+
+            for (int i = 0; i < zones.Count; i++)
+            {
+                for (int j = 0; j < zones.Count; j++)
+                {
+                    if (i == j) continue;
+
+                    Rect a = zones[i].area, b = zones[j].area;
+                    bool overlapZ = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin) > 0.5f;
+                    bool overlapX = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin) > 0.5f;
+
+                    // a's east edge meets b's west edge; a's north edge meets b's south edge. The
+                    // other two ways round come up when i and j swap.
+                    if (overlapZ && Mathf.Abs(a.xMax - b.xMin) < Reach && a.xMax < b.xMax)
+                    {
+                        float mid = (a.xMax + b.xMin) * 0.5f;
+                        a.xMax = mid;
+                        b.xMin = mid;
+                    }
+
+                    if (overlapX && Mathf.Abs(a.yMax - b.yMin) < Reach && a.yMax < b.yMax)
+                    {
+                        float mid = (a.yMax + b.yMin) * 0.5f;
+                        a.yMax = mid;
+                        b.yMin = mid;
+                    }
+
+                    zones[i] = (a, zones[i].tiedTo, zones[i].name);
+                    zones[j] = (b, zones[j].tiedTo, zones[j].name);
+                }
+            }
         }
 
         static Rect Extent(List<WallRun> runs)
@@ -409,9 +667,12 @@ namespace LastOrders.EditorTools
 
         // --- Wall sections -------------------------------------------------------------------------
 
+        /// <summary>The modelled pieces' material, set at the start of each build.</summary>
+        static Material[] painted;
+
         static void BuildSection(Transform root, string name, WallRun run, Vector3 centre, float length, bool first,
-                                 bool last, int seed, GameLifetimeScope scope, WallMaterialDefinition material,
-                                 PooledEffect dust)
+                                 bool last, bool gateAtStart, bool gateAtEnd, int seed, GameLifetimeScope scope,
+                                 WallMaterialDefinition material, PooledEffect dust)
         {
             var go = new GameObject(name);
             go.transform.SetParent(root, false);
@@ -421,30 +682,85 @@ namespace LastOrders.EditorTools
             Vector3 outward = centre - run.Interior;
             float outside = Vector3.Dot(go.transform.rotation * Vector3.back, outward) > 0f ? -1f : 1f;
 
-            var rng = new System.Random(seed * 7919 + 17);
-
             Transform visual = K.Group("Visual", go.transform);
+            GameObject intact, damaged, rubble;
 
-            Transform intact = K.Group("Intact", visual);
-            BuildIntact(intact, length, first, last, outside, seed);
+            if (PreviousLook)
+            {
+                BuildBakedLooks(visual, name, run, centre, length, first, last, outside, seed, out intact, out damaged, out rubble);
+            }
+            else
+            {
+                // Every section puts up the post at its start, the last of a run the one at its end too;
+                // where a gate is, its pillar stands there instead.
+                CompoundWallModels.End start = gateAtStart ? CompoundWallModels.End.Gate : CompoundWallModels.End.Post;
+                CompoundWallModels.End end = gateAtEnd ? CompoundWallModels.End.Gate
+                                           : last ? CompoundWallModels.End.Post
+                                           : CompoundWallModels.End.Open;
 
-            Transform damaged = K.Group("Damaged", visual);
-            BuildDamaged(damaged, length, first, last, outside, rng);
-            damaged.gameObject.SetActive(false);
+                // The models are built with +Z out; a section whose outside is its -Z has them turned round.
+                // Its make is picked by where it stands, not its name: the runs are numbered in whatever
+                // order the scene hands them over, and a rebuild must not patch a different stretch.
+                bool turned = outside < 0f;
+                string spot = $"{Mathf.RoundToInt(centre.x * 10f)},{Mathf.RoundToInt(centre.z * 10f)}";
+                CompoundWallModels.Section section = CompoundWallModels.SectionFor(spot, length, start, end, turned);
 
-            Transform rubble = K.Group("Rubble", visual);
-            BuildRubble(rubble, length, first, last, rng);
-            rubble.gameObject.SetActive(false);
+                intact = ModelledLook(visual, "Intact", section, CompoundWallModels.State.Intact, turned);
+                damaged = ModelledLook(visual, "Damaged", section, CompoundWallModels.State.Damaged, turned);
+                rubble = ModelledLook(visual, "Rubble", section, CompoundWallModels.State.Rubble, turned);
+                damaged.SetActive(false);
+                rubble.SetActive(false);
+            }
 
             Transform bar = K.Group("HealthBarAnchor", go.transform);
             bar.localPosition = new Vector3(0f, 0.3f, 0f);
 
             var wall = go.AddComponent<CompoundWall>();
             wall.ConfigureStructure(scope, run.Label, length, Thickness, run.TiedTo, visual.gameObject, bar, dust);
-            wall.ConfigureWall(material, intact.gameObject, damaged.gameObject, rubble.gameObject);
+            wall.ConfigureWall(material, intact, damaged, rubble);
 
             // As it will look when the game starts: an expansion's piece is only there once it is.
             if (run.TiedTo != null && !run.TiedTo.activeInHierarchy) visual.gameObject.SetActive(false);
+        }
+
+        /// <summary>One of a section's looks: its bays and posts under a group, turned round with them when its outside is its -Z.</summary>
+        static GameObject ModelledLook(Transform visual, string name, CompoundWallModels.Section section, CompoundWallModels.State state, bool turned)
+        {
+            Transform group = K.Group(name, visual);
+            if (turned) group.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+            CompoundWallModels.Build(group, section, state, painted);
+            return group.gameObject;
+        }
+
+        /// <summary>
+        /// The previous look: each state built from boxes, then baked to one renderer with the wall
+        /// texture running along the wall.
+        /// </summary>
+        static void BuildBakedLooks(Transform visual, string name, WallRun run, Vector3 centre, float length, bool first, bool last,
+                                    float outside, int seed, out GameObject intact, out GameObject damaged, out GameObject rubble)
+        {
+            var rng = new System.Random(seed * 7919 + 17);
+            float along = run.AlongX ? centre.x : centre.z;
+            blockWall = SurfaceKit.CompoundWall(PanelFor(name));
+
+            Transform whole = K.Group("Intact", visual);
+            BuildIntact(whole, length, first, last, outside, seed);
+            MeshBaker.Bake(whole, WallRemap, along, TextureGenerator.WallTileLength, TextureGenerator.WallHeight);
+
+            Transform broken = K.Group("Damaged", visual);
+            BuildDamaged(broken, length, first, last, outside, rng);
+            MeshBaker.Bake(broken, WallRemap, along, TextureGenerator.WallTileLength, TextureGenerator.WallHeight);
+            broken.gameObject.SetActive(false);
+
+            Transform fallen = K.Group("Rubble", visual);
+            BuildRubble(fallen, length, first, last, rng);
+            MeshBaker.Bake(fallen, WallRemap, along, TextureGenerator.WallTileLength, TextureGenerator.WallHeight);
+            fallen.gameObject.SetActive(false);
+
+            intact = whole.gameObject;
+            damaged = broken.gameObject;
+            rubble = fallen.gameObject;
         }
 
         static void BuildIntact(Transform p, float length, bool first, bool last, float outside, int seed)
@@ -455,8 +771,8 @@ namespace LastOrders.EditorTools
             K.Box("Panel", p, new Vector3(0f, FootingHeight, 0f), new Vector3(length, panelHeight, Thickness), Panel);
             K.Box("Cap", p, new Vector3(0f, Height - CapHeight, 0f), new Vector3(length + 0.02f, CapHeight, Thickness + 0.1f), Cap);
 
-            // One course line, so the panel reads as blocks at the camera's distance.
-            K.Cube("Course", p, new Vector3(0f, 1.1f, 0f), new Vector3(length - 0.04f, 0.05f, Thickness + 0.03f), Band);
+            // The blocks and their courses are in the texture; the course line that used to be a
+            // mesh of its own is not needed.
 
             if (first) BuildPillar(p, -length * 0.5f, Height);
             if (last) BuildPillar(p, length * 0.5f, Height);
@@ -470,6 +786,45 @@ namespace LastOrders.EditorTools
 
             GameObject high = K.Box("Board_1", p, new Vector3(-length * 0.08f, 0.85f, z), new Vector3(1.0f, 0.2f, 0.05f), K.WoodLight);
             high.transform.localRotation = Quaternion.Euler(0f, 0f, -4f);
+        }
+
+        static Material blockWall;
+        static Material blockWallDark;
+
+        /// <summary>
+        /// What a section is made of: concrete slabs mostly, about one in five patched with
+        /// timber and one in six with tin, as a wall held for a year would be. Decided by the
+        /// section's name, so a rebuild - or a restyle of a scene built before panels came in -
+        /// gives every section the same panel again.
+        /// </summary>
+        public static TextureGenerator.WallPanel PanelFor(string sectionName)
+        {
+            // FNV-1a: string.GetHashCode is not promised to be the same from one run to the next.
+            uint hash = 2166136261;
+            foreach (char c in sectionName) hash = (hash ^ c) * 16777619;
+
+            uint roll = hash % 100;
+            return roll < 19 ? TextureGenerator.WallPanel.Planks
+                 : roll < 35 ? TextureGenerator.WallPanel.Tin
+                 : TextureGenerator.WallPanel.Concrete;
+        }
+
+        /// <summary>
+        /// Which of a section's flat colours become the wall texture: the panel, footing, cap and
+        /// band all do - the texture has a band for each at its height - and the pillars take the
+        /// darker concrete. Planks, rebar and cracks keep their own materials and UVs.
+        /// </summary>
+        static Material WallRemap(Material source, out bool project)
+        {
+            project = true;
+            if (source == K.MaterialFor(Panel) || source == K.MaterialFor(Footing) || source == K.MaterialFor(Cap) ||
+                source == K.MaterialFor(Band))
+                return blockWall;
+
+            if (source == K.MaterialFor(Pillar)) return blockWallDark;
+
+            project = false;
+            return source;
         }
 
         static void BuildPillar(Transform p, float x, float height)
@@ -574,10 +929,13 @@ namespace LastOrders.EditorTools
             Vector3 inward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
             if (Vector3.Dot(inward, compoundCentre - centre) < 0f) yaw += 180f;
 
+            // The main gates are the compound's own; one out to a piece of land is a small gate named
+            // for it, whether it stands for good or comes and goes with the land.
             GameObject tiedTo = left.TiedTo != null ? left.TiedTo : right.TiedTo;
-            bool main = tiedTo == null;
+            string owner = left.Owner ?? right.Owner;
+            bool main = tiedTo == null && owner == null;
 
-            string label = main ? SideOf(left, compound) + " gate" : "Yard gate";
+            string label = main ? SideOf(left, compound) + " gate" : $"{owner ?? "Yard"} gate";
 
             var go = new GameObject(label.Replace(' ', '_'));
             go.transform.SetParent(root, false);
@@ -588,36 +946,76 @@ namespace LastOrders.EditorTools
             Material lampMaterial = LampMaterial();
             var lamps = new List<Renderer>();
 
-            foreach (float side in new[] { -1f, 1f })
+            Transform standing, broken, leftLeaf, rightLeaf;
+            float leafWidth;
+
+            if (PreviousLook)
             {
-                float x = side * width * 0.5f;
-                string tag = side < 0f ? "L" : "R";
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    float x = side * width * 0.5f;
+                    string tag = side < 0f ? "L" : "R";
 
-                K.Box($"Post_{tag}", visual, new Vector3(x, 0f, 0f), new Vector3(0.75f, Height + 0.55f, Thickness + 0.3f), Post);
-                K.Box($"PostCap_{tag}", visual, new Vector3(x, Height + 0.55f, 0f), new Vector3(0.86f, 0.1f, Thickness + 0.4f), Cap);
+                    K.Box($"Post_{tag}", visual, new Vector3(x, 0f, 0f), new Vector3(0.75f, Height + 0.55f, Thickness + 0.3f), Post);
+                    K.Box($"PostCap_{tag}", visual, new Vector3(x, Height + 0.55f, 0f), new Vector3(0.86f, 0.1f, Thickness + 0.4f), Cap);
 
-                GameObject lamp = K.Cube($"Lamp_{tag}", visual, new Vector3(x, Height + 0.83f, 0f), new Vector3(0.3f, 0.3f, 0.3f), Hazard);
-                var renderer = lamp.GetComponent<Renderer>();
-                if (lampMaterial != null) renderer.sharedMaterial = lampMaterial;
-                lamps.Add(renderer);
+                    GameObject lamp = K.Cube($"Lamp_{tag}", visual, new Vector3(x, Height + 0.83f, 0f), new Vector3(0.3f, 0.3f, 0.3f), Hazard);
+                    var renderer = lamp.GetComponent<Renderer>();
+                    if (lampMaterial != null) renderer.sharedMaterial = lampMaterial;
+                    lamps.Add(renderer);
+                }
+
+                standing = K.Group("Standing", visual);
+                K.Box("Track", standing, Vector3.zero, new Vector3(width + 0.4f, 0.03f, 0.18f), K.MetalDark);
+
+                leafWidth = width * 0.5f + 0.05f;
+                float leafHeight = Height - 0.12f;
+
+                leftLeaf = K.Group("Leaf_L", standing);
+                leftLeaf.localPosition = new Vector3(-width * 0.25f, 0f, 0f);
+                BuildLeaf(leftLeaf, leafWidth, leafHeight);
+
+                rightLeaf = K.Group("Leaf_R", standing);
+                rightLeaf.localPosition = new Vector3(width * 0.25f, 0f, 0f);
+                BuildLeaf(rightLeaf, leafWidth, leafHeight);
+
+                broken = K.Group("Broken", visual);
+                BuildBrokenGate(broken, width, leafWidth);
+            }
+            else
+            {
+                // The pillars, threshold and rail stay whatever happens to the leaves.
+                CompoundWallModels.Part(visual, "Pillars", CompoundWallModels.GatePillars(width), painted);
+
+                Material[] glass = { lampMaterial };
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    GameObject lamp = CompoundWallModels.Part(visual, side < 0f ? "Lamp_L" : "Lamp_R", CompoundWallModels.GateLens(), glass);
+                    lamp.transform.localPosition = new Vector3(side * width * 0.5f, CompoundWallModels.LampHeight, 0f);
+
+                    var renderer = lamp.GetComponent<Renderer>();
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    lamps.Add(renderer);
+                }
+
+                // Two leaves meeting in the middle, a hair apart.
+                leafWidth = width * 0.5f - 0.01f;
+                Mesh leftMesh = CompoundWallModels.GateLeaf(leafWidth, left: true);
+                Mesh rightMesh = CompoundWallModels.GateLeaf(leafWidth, left: false);
+
+                standing = K.Group("Standing", visual);
+                leftLeaf = CompoundWallModels.Part(standing, "Leaf_L", leftMesh, painted).transform;
+                leftLeaf.localPosition = new Vector3(-(width * 0.25f + 0.005f), 0f, 0f);
+                rightLeaf = CompoundWallModels.Part(standing, "Leaf_R", rightMesh, painted).transform;
+                rightLeaf.localPosition = new Vector3(width * 0.25f + 0.005f, 0f, 0f);
+
+                broken = K.Group("Broken", visual);
+                CompoundWallModels.Part(broken, "Wreck", CompoundWallModels.GateWreck(width), painted);
+                Transform fallenLeft = CompoundWallModels.Part(broken, "Fallen_L", leftMesh, painted).transform;
+                Transform fallenRight = CompoundWallModels.Part(broken, "Fallen_R", rightMesh, painted).transform;
+                CompoundWallModels.FallenLeaves(fallenLeft, fallenRight, width);
             }
 
-            Transform standing = K.Group("Standing", visual);
-            K.Box("Track", standing, Vector3.zero, new Vector3(width + 0.4f, 0.03f, 0.18f), K.MetalDark);
-
-            float leafWidth = width * 0.5f + 0.05f;
-            float leafHeight = Height - 0.12f;
-
-            Transform leftLeaf = K.Group("Leaf_L", standing);
-            leftLeaf.localPosition = new Vector3(-width * 0.25f, 0f, 0f);
-            BuildLeaf(leftLeaf, leafWidth, leafHeight);
-
-            Transform rightLeaf = K.Group("Leaf_R", standing);
-            rightLeaf.localPosition = new Vector3(width * 0.25f, 0f, 0f);
-            BuildLeaf(rightLeaf, leafWidth, leafHeight);
-
-            Transform broken = K.Group("Broken", visual);
-            BuildBrokenGate(broken, width, leafWidth);
             broken.gameObject.SetActive(false);
 
             Transform bar = K.Group("HealthBarAnchor", go.transform);

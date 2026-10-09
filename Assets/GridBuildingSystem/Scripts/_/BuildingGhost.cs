@@ -81,7 +81,9 @@ public class BuildingGhost : MonoBehaviour
         visual.localPosition = Vector3.zero;
         visual.localRotation = Quaternion.identity;
         foreach (var collider in visual.GetComponentsInChildren<Collider>()) collider.enabled = false;
-        foreach (var behaviour in visual.GetComponentsInChildren<MonoBehaviour>()) behaviour.enabled = false;
+        // A preview behaviour only changes how the ghost looks for where it is held, so it keeps running.
+        foreach (var behaviour in visual.GetComponentsInChildren<MonoBehaviour>())
+            if (!(behaviour is FoodStreet.Placement.IPlacementPreview)) behaviour.enabled = false;
         renderers = visual.GetComponentsInChildren<Renderer>();
         centerObject = visual;
         var ui = UIGame.GetUI();

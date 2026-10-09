@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VehicleDefinition
   displayName: Saloon
   bodySize: {x: 1.85, y: 0.82, z: 4.3}
-  bodyColour: {r: 0.30588236, g: 0.5254902, b: 0.6901961, a: 1}
-  cabinColour: {r: 0.20392157, g: 0.1882353, b: 0.16862746, a: 1}
-  wheelRadius: 0.369
+  bodyColour: {r: 0.33333334, g: 0.4117647, b: 0.49019608, a: 1}
+  cabinColour: {r: 0.23529412, g: 0.28235295, b: 0.33333334, a: 1}
+  wheelRadius: 0.37
   driveSpeed: 6.2
   manoeuvreSpeed: 2.2
   turnSpeed: 150
   arriveRadius: 0.6
   bayFootprint: {x: 2.55, y: 4.9}
-  prefab: {fileID: 7765799472860776809, guid: a1cb39665cf2e5541b0bd2b77b5b98ab, type: 3}
+  prefab: {fileID: 788416013107236271, guid: 3a161879af1c8124eb301a090d003c66, type: 3}

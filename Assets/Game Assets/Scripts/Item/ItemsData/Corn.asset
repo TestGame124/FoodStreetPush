@@ -14,13 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Name: Corn
   Type: 1
+  coinsReward: 0
+  starsReward: 0
   canBePlanted: 1
   totalTimeInSeconds: 60
-  itemImage: {fileID: 21300000, guid: f66eef3ba4df62b40a98f33a485ba001, type: 3}
-  plantGrowMeshes:
-  - {fileID: 4300000, guid: 2b4d37b8a04925949b8d2ae559996a37, type: 3}
-  - {fileID: 4300000, guid: f87bba4954ce6484eb1f059e27e91885, type: 3}
-  - {fileID: 4300000, guid: 9333d0a3f3a62ac46bef3c5118614f6f, type: 3}
-  - {fileID: 4300000, guid: 1022635a846bed042a94fb059fae9445, type: 3}
-  plantMat:
-  - {fileID: 2100000, guid: fdf18c58b725a2f469593ece1786d307, type: 2}
+  itemImage: {fileID: 21300000, guid: 0c152fa0403b79c4c8c4d381def3408c, type: 3}
+  growStages:
+  - {fileID: 21300000, guid: 31494b746d986d8449c0734ce7dafde4, type: 3}
+  - {fileID: 21300000, guid: 1076343073617a74895b8d6770ab2168, type: 3}
+  - {fileID: 21300000, guid: b65678736fec0594d945957e193515a3, type: 3}
+  - {fileID: 21300000, guid: f398ea4a229707249bed1c479c9bf264, type: 3}
+  cropLook: {fileID: 11400000, guid: 5369423658bf9e443a1b846b556ee04e, type: 2}

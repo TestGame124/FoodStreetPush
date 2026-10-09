@@ -41,6 +41,9 @@ public class PlacedObjectTypeSO : ScriptableObject {
     [Header("UI Settings")]
     public Sprite previewImage;
 
+    [Tooltip("Shown on this item's shop button. Empty: the button keeps its own art.")]
+    public Sprite shopIcon;
+
     public void Initialize() => PlacementPools.Initialize(this);
     public Transform GetObject() => PlacementPools.Get(this, false);
     public Transform GetVisual() => PlacementPools.Get(this, true);
@@ -223,6 +226,7 @@ public enum ObjectCategory
     Decoration,
     Floor,
     Props,
+    Defense,
 }
 public enum ObjectType
 {
@@ -248,5 +252,17 @@ public enum ObjectType
     Barrel = 101,
     Well = 102,
     Letterbox = 103,
-    Cafe = 104
+    Cafe = 104,
+
+    // Defense: the shooters, bought from the shop's Defense tab and set down on the grid.
+    ________Defense_________ = 200, // Should not be set to any Object
+    CornShooter = 201,
+    TomatoShooter = 202,
+    CabbageShooter = 203,
+    PlateShooter = 204,
+
+    // Farm animals: their houses, bought from the shop's Farming tab and set down on the grid.
+    ________Livestock_________ = 300, // Should not be set to any Object
+    ChickenCoop = 301,
+    CowShelter = 302,
 }

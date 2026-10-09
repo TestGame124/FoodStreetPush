@@ -35,6 +35,12 @@ namespace LastOrders.Night
                  "happens to fall.")]
         [SerializeField] Transform[] laneOverrides;
 
+        [Tooltip("Metres either side of a lane's point that each enemy may appear, across the way it " +
+                 "comes in. Zero: every one from the point itself, so they all reach the wall at one " +
+                 "place. Wider: a lane is a side the night comes from, not a single path, and the " +
+                 "whole length of that wall is in play.")]
+        [Min(0f)] [SerializeField] float laneSpread;
+
         [Tooltip("The warning over the road a few seconds before a group arrives.")]
         [SerializeField] Color warningColour = new Color(1f, 0.4f, 0.3f);
 
@@ -101,7 +107,7 @@ namespace LastOrders.Night
                 return;
             }
 
-            Vector3 position = LanePosition(lane);
+            Vector3 position = Spread(LanePosition(lane));
 
             EnemyAgent agent = composition.Pools.Take(
                 agentPrefab, prewarm: Mathf.Max(poolPrewarm, definition.poolPrewarm), maxSize: 256);
@@ -109,19 +115,19 @@ namespace LastOrders.Night
             if (agent == null) return;
 
             agent.Configure(definition, position);
-            Tint(agent, definition.silhouetteColour);
+            if (definition.tintBody) Tint(agent, definition.silhouetteColour);
 
             night.Register(agent);
 
-            // Released back to the pool on death rather than destroyed. The subscription is
-            // cleared in the agent's own reset path, so a pooled instance cannot carry this
-            // handler into its next life.
-            agent.OnDied += HandleDied;
+            // Released back to the pool once the body has fallen and sunk, rather than destroyed.
+            // The subscription is cleared in the agent's own reset path, so a pooled instance
+            // cannot carry this handler into its next life.
+            agent.OnFallen += HandleFallen;
         }
 
-        void HandleDied(EnemyAgent agent, EnemyDefinition definition)
+        void HandleFallen(EnemyAgent agent)
         {
-            agent.OnDied -= HandleDied;
+            agent.OnFallen -= HandleFallen;
             composition.Pools.Return(agent);
         }
 
@@ -162,6 +168,29 @@ namespace LastOrders.Night
             float radius = Mathf.Max(width, height) * 0.5f + spawnMargin;
 
             return centre + new Vector3(Mathf.Sin(angle) * radius, 0f, Mathf.Cos(angle) * radius);
+        }
+
+        /// <summary>
+        /// A spot up to <see cref="laneSpread"/> either side of <paramref name="point"/>, across the
+        /// line from it to the middle of the plot - along the edge the lane comes in from. Each enemy
+        /// then walks straight in from its own spot, so a group fans out along the wall it reaches.
+        /// </summary>
+        Vector3 Spread(Vector3 point)
+        {
+            if (laneSpread <= 0f) return point;
+
+            NavigationSystem nav = NavigationSystem.Instance;
+            if (nav == null || nav.Grid == null) return point;
+
+            NavGrid grid = nav.Grid.Grid;
+            Vector3 centre = grid.Origin + new Vector3(grid.BuildWidth * grid.BuildCellSize, 0f, grid.BuildHeight * grid.BuildCellSize) * 0.5f;
+
+            Vector3 inward = centre - point;
+            inward.y = 0f;
+            if (inward.sqrMagnitude < 1e-4f) return point;
+
+            Vector3 across = Vector3.Cross(Vector3.up, inward.normalized);
+            return point + across * Random.Range(-laneSpread, laneSpread);
         }
 
         /// <summary>

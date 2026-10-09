@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FoodStreet.Navigation
@@ -82,6 +83,10 @@ namespace FoodStreet.Navigation
         // Per build tile.
         readonly PlacedObject_Done[] occupant;
         readonly bool[] tileDirty;
+
+        /// <summary>Solid areas that are not placed objects, by whoever set them. See
+        /// <see cref="SetStaticWalls"/>.</summary>
+        readonly Dictionary<object, Rect[]> staticWalls = new Dictionary<object, Rect[]>();
 
         int dirtyTileCount;
 
@@ -232,6 +237,50 @@ namespace FoodStreet.Navigation
         }
 
         /// <summary>
+        /// Solid ground that is not a placed object: walls the layout tools lay as plain scene
+        /// cubes, which the build grid never hears about. Every nav cell an area touches counts
+        /// as wall - routed round by anything that will not cross walls, and only crossed by a
+        /// field that pays to. A doorway placed in one stays open.
+        ///
+        /// Areas are flat world rectangles, x across and y along the world's Z. Setting the same
+        /// owner again replaces its areas; null or none clears them. Takes effect on the next
+        /// <see cref="Rebuild"/>, like any other edit.
+        /// </summary>
+        public void SetStaticWalls(object owner, IReadOnlyList<Rect> areas)
+        {
+            if (owner == null) return;
+
+            if (areas == null || areas.Count == 0)
+            {
+                if (!staticWalls.Remove(owner)) return;
+            }
+            else
+            {
+                var copy = new Rect[areas.Count];
+                for (int i = 0; i < copy.Length; i++) copy[i] = areas[i];
+                staticWalls[owner] = copy;
+            }
+
+            MarkAllDirty();
+        }
+
+        /// <summary>True when the nav cell's square overlaps any static wall.</summary>
+        bool TouchesStaticWall(int x, int z)
+        {
+            if (staticWalls.Count == 0) return false;
+
+            Vector3 centre = Grid.CellToWorld(x, z);
+            float half = Grid.CellSize * 0.5f;
+            var cell = Rect.MinMaxRect(centre.x - half, centre.z - half, centre.x + half, centre.z + half);
+
+            foreach (Rect[] areas in staticWalls.Values)
+                for (int i = 0; i < areas.Length; i++)
+                    if (areas[i].Overlaps(cell)) return true;
+
+            return false;
+        }
+
+        /// <summary>
         /// Folds accumulated tile edits into the cell data. Returns true if anything moved,
         /// in which case <see cref="Version"/> has advanced.
         /// </summary>
@@ -272,12 +321,21 @@ namespace FoodStreet.Navigation
             byte tileCost;
             ClassifyTile(placed, out tileFlags, out tileCost);
 
+            bool doorway = (tileFlags & CellFlags.Door) != 0;
+
             Vector2Int origin = Grid.BuildTileToCellOrigin(tx, tz);
             for (int dz = 0; dz < NavGrid.Subdivision; dz++)
             {
                 int rowStart = Grid.Index(origin.x, origin.y + dz);
                 for (int dx = 0; dx < NavGrid.Subdivision; dx++)
                 {
+                    if (!doorway && TouchesStaticWall(origin.x + dx, origin.y + dz))
+                    {
+                        flags[rowStart + dx] = CellFlags.Wall;
+                        baseCost[rowStart + dx] = MaxCost;
+                        continue;
+                    }
+
                     flags[rowStart + dx] = tileFlags;
                     baseCost[rowStart + dx] = tileCost;
                 }

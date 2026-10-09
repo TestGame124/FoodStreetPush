@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LastOrders.Build;
 using LastOrders.Consequence;
 using LastOrders.Data;
@@ -95,6 +96,9 @@ namespace LastOrders.Core
         /// <summary>Guard towers now, automated turrets later: who is posted where, what each
         /// one shoots, and what building and upgrading one costs.</summary>
         public readonly DefenseService Defense;
+
+        /// <summary>The barricades, traps and wire in the strip outside the walls, and the slots they stand in.</summary>
+        public readonly GroundDefenseService GroundDefenses;
 
         /// <summary>The hospital tent: who is in which cot, how far along they are, and the
         /// medic who makes it faster.</summary>
@@ -194,10 +198,15 @@ namespace LastOrders.Core
             Machine.AddState(Resolution);
 
             // After the states, because what the defenses shoot at is what the night has put on
-            // the map, and whether a Superstitious guard turns up is tonight's wave's business.
+            // the map - and the zombies on land still to be cleared - and whether a Superstitious
+            // guard turns up is tonight's wave's business.
             Defense = new DefenseService(Survivors, Ledger, new GemWallet(), Progression, Machine,
-                                         () => Night.LiveEnemies,
+                                         DefenseTargets,
                                          () => Context.TonightsWave?.NamedNight != null);
+
+            // What the strip outside the walls catches is only ever the night's: the zombies lurking on
+            // uncleared land never come out into it.
+            GroundDefenses = new GroundDefenseService(Ledger, Progression, Machine, () => Night.LiveEnemies);
 
             // Recovery stops with the clock at dawn, so a stay is never spent on the morning screen.
             Hospital = new HospitalService(balance.hospital, Survivors, () => Time.IsPaused);
@@ -219,11 +228,34 @@ namespace LastOrders.Core
             Compound.RepairsAtDawn = repair.autoRepairAtDawn;
             Repairs = new RepairService(repair, Jobs, Ledger, new CoinWallet(), Machine, () => Compound.IsBreached);
 
-            // Priced in the level's Coins and the stores, like the shelters; the zombies it stops are the night's.
+            // Priced in the level's Coins and the stores, like the shelters.
             Restaurant = new RestaurantService(balance.restaurant, Ledger, new CoinWallet(), Machine,
-                                               () => Compound.IsBreached, () => Night.LiveEnemies);
+                                               () => Compound.IsBreached);
 
             WireCrossCuttingEvents();
+        }
+
+        readonly List<IDefenseTarget> defenseTargets = new List<IDefenseTarget>();
+
+        /// <summary>
+        /// Everything a tower or turret may shoot at: the night's zombies, and the ones lurking on
+        /// land still to be cleared, for a defense standing near enough to it. Refilled on every
+        /// call - once a frame, by the defenses - into the same list.
+        /// </summary>
+        IReadOnlyList<IDefenseTarget> DefenseTargets()
+        {
+            defenseTargets.Clear();
+
+            IReadOnlyList<EnemyAgent> night = Night.LiveEnemies;
+            for (int i = 0; i < night.Count; i++) defenseTargets.Add(night[i]);
+
+            IReadOnlyList<IAreaZombie> lurking = Field != null ? Field.Zombies : null;
+            if (lurking == null) return defenseTargets;
+
+            for (int i = 0; i < lurking.Count; i++)
+                if (lurking[i] is IDefenseTarget target && lurking[i].IsAlive) defenseTargets.Add(target);
+
+            return defenseTargets;
         }
 
         /// <summary>
@@ -392,14 +424,13 @@ namespace LastOrders.Core
 
             // And so do the guards: a paused game is not one where the towers keep shooting.
             Defense.Tick(deltaSeconds);
+            GroundDefenses.Tick(deltaSeconds);
 
             Hospital.Tick(deltaSeconds);
 
             if (Machine.CurrentPhase == DayPhase.Night) Danger.Tick(deltaSeconds);
 
             Compound.Tick(deltaSeconds);
-
-            Restaurant.Tick(deltaSeconds);
         }
     }
 }

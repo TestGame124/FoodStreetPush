@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
+  m_Name: Defense_Toastapult
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  id: toastapult
+  displayName: Toastapult
+  description: A toaster left on a hot plate too long, until it came alive. It glares
+    at anything that shambles too close and lobs flaming toast at it.
+  requiresCrew: 0
+  crewRole: 3
+  buildPrice:
+    resources:
+    - type: 6
+      amount: 40
+    premium: 15
+  prefab: {fileID: 5978115744081573844, guid: 50ffab6ddfe12424a88e48d1330e147c, type: 3}
+  levels:
+  - weapon: {fileID: 11400000, guid: 9d26fa431191b144cbd9325197aadc4f, type: 2}
+    spotRangeMetres: 12
+    upgradePrice:
+      resources: []
+      premium: 0
+  - weapon: {fileID: 11400000, guid: 3ea100dafe17ccd418d9fdc8a4b7779b, type: 2}
+    spotRangeMetres: 13.5
+    upgradePrice:
+      resources:
+      - type: 6
+        amount: 65
+      premium: 25

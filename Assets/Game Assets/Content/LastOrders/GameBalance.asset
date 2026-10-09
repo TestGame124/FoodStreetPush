@@ -53,6 +53,38 @@ MonoBehaviour:
   injuryChanceAtThreshold: 0.35
   injuryChancePerPressureSecond: 0.03
   hospital: {fileID: 11400000, guid: 81df9236eed7ad1489704230012f5515, type: 2}
+  repair:
+    role: 1
+    baseSeconds: 3
+    secondsForFullDamage: 7
+    extraSecondsWhenDestroyed: 4
+    fullRepairCost:
+      coins: 0
+      resources: []
+    autoRepairAtDawn: 0
+  restaurant:
+    killDistance: 1
+    forward:
+      side: 0
+      depth: 1.5
+      maxSteps: 2
+    left:
+      side: 1
+      depth: 3
+      maxSteps: 2
+    right:
+      side: 2
+      depth: 3
+      maxSteps: 2
+    firstExpansionCost:
+      coins: 60
+      resources:
+      - type: 5
+        amount: 15
+      - type: 1
+        amount: 10
+    costGrowth: 1.5
+    buildSeconds: 0.8
   closedForRepairsBuildBonus: 0.5
   closedForRepairsReputationCost: 15
   incompleteForecastChance: 0.16666667
@@ -108,6 +140,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f27f37aacb49d7643953d3b391b4458c, type: 2}
   - {fileID: 11400000, guid: 9b6b921202709394fa284fe2bc85af7d, type: 2}
   - {fileID: 11400000, guid: 11f2d0770b4de724e8109fe8d17f69ce, type: 2}
+  - {fileID: 11400000, guid: be0043d0f95d5d64eb6590485dc2f7d4, type: 2}
   waveManifests:
   - {fileID: 11400000, guid: d67632761ae02ab41ad263c0bfe99811, type: 2}
   - {fileID: 11400000, guid: edaeb45c5592dda4f9cd378ca113cf7a, type: 2}

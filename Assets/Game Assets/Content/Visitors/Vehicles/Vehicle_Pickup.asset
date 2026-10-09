@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VehicleDefinition
   displayName: Pickup
   bodySize: {x: 1.95, y: 0.9, z: 4.6}
-  bodyColour: {r: 0.54509807, g: 0.35686275, b: 0.24313726, a: 1}
-  cabinColour: {r: 0.27450982, g: 0.34509805, b: 0.47843137, a: 1}
-  wheelRadius: 0.40499997
+  bodyColour: {r: 0.5254902, g: 0.25882354, b: 0.22745098, a: 1}
+  cabinColour: {r: 0.70980394, g: 0.68235296, b: 0.6039216, a: 1}
+  wheelRadius: 0.43
   driveSpeed: 6
   manoeuvreSpeed: 2.2
   turnSpeed: 150
   arriveRadius: 0.6
   bayFootprint: {x: 2.65, y: 5.2}
-  prefab: {fileID: 8518292881355181610, guid: 1a47bccfccaddb54dbc2bf068be60561, type: 3}
+  prefab: {fileID: 960459688984384417, guid: aaac88872c7f5174d8f72923020a63b8, type: 3}

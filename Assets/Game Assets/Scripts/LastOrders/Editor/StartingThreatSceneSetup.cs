@@ -45,8 +45,8 @@ namespace LastOrders.EditorTools
         /// round the tower rather than through it.</summary>
         static readonly Vector3 TowerBypass = new Vector3(15.6f, 0f, 3.6f);
 
-        /// <summary>On the road's far lane, east of the gate, facing along the road.</summary>
-        static readonly Vector3 ShuttleStop = new Vector3(26f, 0f, -7.4f);
+        /// <summary>On the road's far lane, east of the gate, facing along the road - wherever the road runs.</summary>
+        public static Vector3 ShuttleStop => new Vector3(26f, 0f, FoodStreet.Visitors.EditorTools.ZoneLayout.RoadCentreZ - 1.2f);
 
         const float ShuttleYaw = 90f;
 
@@ -69,16 +69,11 @@ namespace LastOrders.EditorTools
         };
 
         /// <summary>
-        /// Patches of the ruined town, clear of the houses, the craters and the road. None to the
-        /// north: that is the courtyard the workers clear by day.
+        /// Patches of the ruined town: the streets of the suburbs at the world's edge, clear of the
+        /// houses and the road. None to the north: that is the trees, and the courtyard the workers
+        /// clear by day. Owned by the world-edge layout, which lays those streets.
         /// </summary>
-        static readonly TownZombies.Area[] TownAreas =
-        {
-            new TownZombies.Area("SouthWest", new Vector3(-17f, 0f, -20.5f), new Vector2(14f, 6f), 3),
-            new TownZombies.Area("SouthEast", new Vector3(44f, 0f, -18.5f), new Vector2(14f, 6f), 3),
-            new TownZombies.Area("West", new Vector3(-22f, 0f, 16f), new Vector2(8f, 20f), 2),
-            new TownZombies.Area("East", new Vector3(58f, 0f, 9.5f), new Vector2(10f, 11f), 2),
-        };
+        static TownZombies.Area[] TownAreas => EnvironmentLayout.TownPatches;
 
         /// <summary>Where the lights and the noise come from. What the town is drawn toward at dusk.</summary>
         static readonly Vector3 Lure = new Vector3(20f, 0f, -4.8f);

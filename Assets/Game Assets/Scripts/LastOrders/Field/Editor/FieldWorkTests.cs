@@ -281,6 +281,23 @@ public class FieldWorkTests
     }
 
     [Test]
+    public void AZombieShotByADefenseStaysDeadAndIsNotFoughtAgain()
+    {
+        OpenArea("yard", new Vector3(0f, 0f, 5f));
+        FakeZombie zombie = Zombie("yard/z1", "yard", new Vector3(0f, 0f, 6f));
+
+        Assign(main, "yard");
+        Assert.AreSame(zombie, field.NextTask(main).Zombie);
+
+        Assert.IsFalse(field.ShootZombie(zombie, 30f), "Still standing after the first shot.");
+        Assert.IsTrue(field.ShootZombie(zombie, 30f), "The second one kills it.");
+        Assert.IsFalse(field.ShootZombie(zombie, 30f), "Nothing to kill twice.");
+
+        Assert.IsTrue(field.IsKilled("yard/z1"), "A defense's kill is on record like a worker's.");
+        Assert.AreEqual(FieldTaskKind.Clear, field.NextTask(main).Kind, "The worker goes on to the clearing.");
+    }
+
+    [Test]
     public void AJobHeldForAWorkerIsNotTakenByAnother()
     {
         OpenArea("yard", new Vector3(0f, 0f, 5f));

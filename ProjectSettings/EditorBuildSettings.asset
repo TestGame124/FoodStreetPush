@@ -11,4 +11,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/GridBuildingSystem/Main Level.unity
     guid: cd7db13123ae4f64da2bc06408df3ef3
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.addressableassets: {fileID: 11400000, guid: 3e2d1f67d3e5f8f429ee04a60f1dfd94, type: 2}
+  m_UseUCBPForAssetBundles: 0

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e714102fc22f26641ad30b6f15c659f5, type: 3}
+  m_Name: DefenseMotion_CabbageShooter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseMotionProfile
+  turnSpeed: 140
+  targetHeight: 0.7
+  idleScanDegrees: 25
+  idleScanSeconds: 9
+  flashSeconds: 0.05
+  recoilDistance: 0
+  recoilReturnSeconds: 0.12
+  casingsPerShot: 0
+  lobHeight: 3.2
+  projectileSpin: 260
+  projectileSpinAxis: {x: 1, y: 0, z: 0}
+  projectileFacesFlight: 0
+  breatheAmount: 0
+  breatheSeconds: 1.4
+  shotSquash: 0.07
+  shotSettleSeconds: 0.55
+  blinkSeconds: 0
+  swayDegrees: 0
+  reloadShowsAt: 0.75

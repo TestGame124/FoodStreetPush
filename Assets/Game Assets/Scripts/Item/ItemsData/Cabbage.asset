@@ -14,12 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Name: Cabbage
   Type: 3
+  coinsReward: 0
+  starsReward: 0
   canBePlanted: 1
   totalTimeInSeconds: 120
-  itemImage: {fileID: 21300000, guid: c8222d185af008442ab1ac1f627eea07, type: 3}
-  plantGrowMeshes:
-  - {fileID: 4300000, guid: 05a69d01e60103244a2cab7f83d0a04a, type: 3}
-  - {fileID: 4300000, guid: 4bc74109cf7da26409a2910b61b0ddf1, type: 3}
-  - {fileID: 4300000, guid: 613f9cdbc89e1df458f716a6cef6445a, type: 3}
-  plantMat:
-  - {fileID: 2100000, guid: fdf18c58b725a2f469593ece1786d307, type: 2}
+  itemImage: {fileID: 21300000, guid: fba88484f4e1cd84f9549a30135676c0, type: 3}
+  growStages:
+  - {fileID: 21300000, guid: e4c03765beca3034fb91dfdf5f0a0f21, type: 3}
+  - {fileID: 21300000, guid: 2efbc9f50cbf82245b2689c9040ec637, type: 3}
+  - {fileID: 21300000, guid: ba7c2752d0a90c74cb6cc3fe4ce4274a, type: 3}
+  - {fileID: 21300000, guid: fb13e53893f4fbf4da2375d6714b71c2, type: 3}
+  cropLook: {fileID: 11400000, guid: f07c1db395ec7034e9f9685453b51496, type: 2}

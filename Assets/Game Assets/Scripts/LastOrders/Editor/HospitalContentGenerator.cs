@@ -90,8 +90,7 @@ namespace LastOrders.EditorTools
             VisitorContentGenerator.EnsureFolders();
             K.Reset();
 
-            return VisitorContentGenerator.Vehicle("Shuttle", "Shuttle", new Vector3(2.2f, 1.35f, 6f),
-                                                   body: "E8B93C", cabin: "34302B", drive: 5.5f);
+            return VisitorContentGenerator.Vehicle("Shuttle", "Shuttle", new Vector3(2.2f, 1.35f, 6f), drive: 5.5f);
         }
 
         public static GameObject EnsureTent(bool rebuild)

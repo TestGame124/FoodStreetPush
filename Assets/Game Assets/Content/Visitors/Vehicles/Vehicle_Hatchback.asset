@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FoodStreet.Visitors.VehicleDefinition
   displayName: Hatchback
   bodySize: {x: 1.75, y: 0.8, z: 3.7}
-  bodyColour: {r: 0.76862746, g: 0.4117647, b: 0.29411766, a: 1}
-  cabinColour: {r: 0.23137255, g: 0.2901961, b: 0.3882353, a: 1}
-  wheelRadius: 0.35999998
+  bodyColour: {r: 0.37254903, g: 0.5411765, b: 0.5176471, a: 1}
+  cabinColour: {r: 0.70980394, g: 0.68235296, b: 0.6039216, a: 1}
+  wheelRadius: 0.37
   driveSpeed: 6.5
   manoeuvreSpeed: 2.2
   turnSpeed: 150
   arriveRadius: 0.6
   bayFootprint: {x: 2.45, y: 4.3}
-  prefab: {fileID: 3961743747569939596, guid: bea3b51a34e0c304daa10a1b93c9a686, type: 3}
+  prefab: {fileID: 6044239891972025467, guid: fa222b52c5a93114eb55ff3dceb119f5, type: 3}

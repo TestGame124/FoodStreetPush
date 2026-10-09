@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e714102fc22f26641ad30b6f15c659f5, type: 3}
+  m_Name: DefenseMotion_CornShooter
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseMotionProfile
+  turnSpeed: 220
+  targetHeight: 0.9
+  idleScanDegrees: 45
+  idleScanSeconds: 7
+  flashSeconds: 0.05
+  recoilDistance: 0.05
+  recoilReturnSeconds: 0.14
+  casingsPerShot: 0
+  lobHeight: 0.6
+  projectileSpin: 900
+  projectileSpinAxis: {x: 0, y: 0, z: 1}
+  projectileFacesFlight: 1
+  breatheAmount: 0
+  breatheSeconds: 1.4
+  shotSquash: 0
+  shotSettleSeconds: 0.45
+  blinkSeconds: 3.5
+  swayDegrees: 7
+  reloadShowsAt: 0.55

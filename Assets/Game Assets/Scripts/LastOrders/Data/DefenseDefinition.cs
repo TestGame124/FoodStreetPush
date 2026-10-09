@@ -92,6 +92,10 @@ namespace LastOrders.Data
         [Tooltip("What an additional one costs. The one a scene starts with is not charged.")]
         public DefensePrice buildPrice;
 
+        [Tooltip("The post placed for it on a site that takes a choice of defenses - a wall site. " +
+                 "Empty: it cannot be chosen there.")]
+        public GameObject prefab;
+
         [Header("Levels")]
         [Tooltip("Level 1 first. Each upgrade is the next entry.")]
         public DefenseLevel[] levels;

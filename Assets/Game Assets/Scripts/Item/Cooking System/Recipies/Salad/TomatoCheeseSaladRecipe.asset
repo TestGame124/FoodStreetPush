@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f14fd4e5d57ec49936e3f584fa9001, type: 3}
+  m_Name: TomatoCheeseSaladRecipe
+  m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
+  RecipeImage: {fileID: 21300000, guid: 900e6d899a361594383bd4d5aa5ec686, type: 3}
+  TotalTimeToCook: 180
+  Ingrediants:
+  - item:
+      itemDataSO: {fileID: 11400000, guid: e531fbcf676582943b3d6092186b87ea, type: 2}
+      itemsAmount: 1
+    Amount: 2
+  - item:
+      itemDataSO: {fileID: 11400000, guid: 2bc90e270dc1ca74082204c13178f047, type: 2}
+      itemsAmount: 1
+    Amount: 1
+  Results:
+    item:
+      itemDataSO: {fileID: 11400000, guid: 31e619ab948a6164098c3d86947e971b, type: 2}
+      itemsAmount: 1
+    Amount: 0
+  startRewards: 2

@@ -43,7 +43,8 @@ public class InventorySystem : MonoBehaviour
     }
     public bool AddItem(Item item)
     {
-        if (IsFull())
+        // Full means no room for another kind of item: one already held still stacks.
+        if (!CanAdd(item.type))
         {
             Debug.Log("Inventory is full!");
             return false;
@@ -134,6 +135,12 @@ public class InventorySystem : MonoBehaviour
     public bool IsFull()
     {
         return items.Count >= inventorySize;
+    }
+
+    /// <summary>Whether one more <paramref name="type"/> fits: it stacks on its own kind, or there is a free slot for a new kind.</summary>
+    public bool CanAdd(ItemType type)
+    {
+        return ContainsItem(type) || !IsFull();
     }
 
     public Item GetItem(ItemType type)

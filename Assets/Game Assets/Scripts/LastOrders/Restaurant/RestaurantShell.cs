@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using DG.Tweening;
+using FoodStreet.Navigation;
 using FoodStreet.Visitors;
 using LastOrders.Core;
 using LastOrders.Data;
@@ -15,6 +16,7 @@ using LastOrders.Perimeter;
 using LastOrders.UI.Popups;
 using LastOrders.UI.World;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace LastOrders.Restaurant
 {
@@ -34,10 +36,13 @@ namespace LastOrders.Restaurant
     /// The walls are plain cubes with their length along local Z, as the layout tools lay them.
     /// A side that grows moves its own wall out and lengthens the two walls either side of it;
     /// the front wall is in two pieces round the door, and the door, its route nodes and the
-    /// night shelter's door move out with them.
+    /// night shelter's door move out with them. The floor (<see cref="RestaurantFloor"/>) is laid
+    /// again between the walls on every frame they move.
     ///
-    /// It also plays the part the player sees of the rule the service enforces: a zombie that
-    /// comes within reach of these walls drops where it stands.
+    /// It also stands the walls up for the night: the service is registered as the barrier that
+    /// stops every zombie at them, and the walls' outlines go to the nav grid so the night's
+    /// routes lead round the building to its door rather than through its side - the door the
+    /// defenses out front are watching.
     /// </summary>
     [DefaultExecutionOrder(1130)]
     public sealed class RestaurantShell : MonoBehaviour, ITappable, IInteractableObject
@@ -67,6 +72,9 @@ namespace LastOrders.Restaurant
         [Tooltip("Routes round the building are kept outside its footprint. Found when left empty.")]
         [SerializeField] NightShelter shelter;
 
+        [Tooltip("The floor inside, laid wall to wall again whenever a wall moves.")]
+        [SerializeField] RestaurantFloor floor;
+
         [Header("Choosing where to grow")]
         [Tooltip("A transparent unlit material for the strips. Colour is set per strip.")]
         [SerializeField] Material highlightMaterial;
@@ -81,8 +89,9 @@ namespace LastOrders.Restaurant
         [SerializeField] float homeClearance = 1f;
 
         [Header("Effects")]
-        [Tooltip("Played where a zombie drops at the walls.")]
-        [SerializeField] PooledEffect killEffect;
+        [Tooltip("Played where a zombie's blow lands on the walls.")]
+        [FormerlySerializedAs("killEffect")]
+        [SerializeField] PooledEffect hitEffect;
 
         [Tooltip("Played along a wall as it moves out.")]
         [SerializeField] PooledEffect buildEffect;
@@ -116,6 +125,11 @@ namespace LastOrders.Restaurant
         bool building;
         int handledTapFrame = -1;
         float nextRecheck;
+
+        /// <summary>The nav grid has the walls as they stand now. False until it exists to be told.</summary>
+        bool wallsOnGrid;
+
+        readonly List<Rect> wallAreas = new List<Rect>(5);
 
         /// <summary>One side's strip of ground while the player is choosing.</summary>
         sealed class Strip
@@ -165,8 +179,12 @@ namespace LastOrders.Restaurant
 
             restaurant.SetFootprint(MeasureWalls(), FrontDirection());
             Refit();
+            FitFloor();
 
-            restaurant.OnHostileKilled += HandleHostileKilled;
+            MovementBarriers.Register(restaurant);
+            wallsOnGrid = PutWallsOnGrid();
+
+            restaurant.OnHit += HandleHit;
             composition.Machine.OnPhaseChanged += HandlePhaseChanged;
         }
 
@@ -174,7 +192,15 @@ namespace LastOrders.Restaurant
         {
             Mouse3D.WorldTapResolved -= HandleWorldTap;
 
-            if (restaurant != null) restaurant.OnHostileKilled -= HandleHostileKilled;
+            if (restaurant != null)
+            {
+                restaurant.OnHit -= HandleHit;
+                MovementBarriers.Unregister(restaurant);
+            }
+
+            NavigationSystem nav = NavigationSystem.Instance;
+            if (nav != null && nav.Grid != null) nav.Grid.SetStaticWalls(this, null);
+
             if (composition != null) composition.Machine.OnPhaseChanged -= HandlePhaseChanged;
         }
 
@@ -191,6 +217,9 @@ namespace LastOrders.Restaurant
         void Update()
         {
             if (restaurant == null) return;
+
+            // The nav grid can come up after this does.
+            if (!wallsOnGrid) wallsOnGrid = PutWallsOnGrid();
 
             if (choosing)
             {
@@ -701,10 +730,15 @@ namespace LastOrders.Restaurant
                 }
             }
 
+            // The floor follows the walls out as they move, not after.
+            walls.OnUpdate(FitFloor);
+
             walls.OnComplete(() =>
             {
                 building = false;
+                FitFloor();
                 Refit();
+                wallsOnGrid = PutWallsOnGrid();
 
                 foreach (WorkerAgent worker in FindObjectsByType<WorkerAgent>(FindObjectsSortMode.None))
                     worker.KeepHomeOutOf(grown, homeClearance);
@@ -774,10 +808,34 @@ namespace LastOrders.Restaurant
 
         // --- The line no zombie crosses ------------------------------------------------------
 
-        void HandleHostileKilled(IDefenseTarget target, Vector3 at)
+        /// <summary>Dust off the wall where a blow lands, at the height the arms come down.</summary>
+        void HandleHit(Vector3 at)
         {
-            composition.Effects.Play(killEffect != null ? killEffect : buildEffect, at + Vector3.up * 0.4f);
-            composition.WorldUi.ShowWarning(at + Vector3.up * 2f, "Stopped at the wall!");
+            composition.Effects.Play(hitEffect != null ? hitEffect : buildEffect,
+                                     new Vector3(at.x, transform.position.y + 1f, at.z));
+        }
+
+        /// <summary>
+        /// Gives the nav grid each wall's outline as it stands, so the night's routes go round the
+        /// building to the door instead of straight through a side wall. The door is the gap
+        /// between the two front pieces, left open. False while there is no grid to tell yet.
+        /// </summary>
+        bool PutWallsOnGrid()
+        {
+            NavigationSystem nav = NavigationSystem.Instance;
+            if (nav == null || nav.Grid == null) return false;
+
+            wallAreas.Clear();
+            foreach (Transform wall in new[] { backWall, leftWall, rightWall, frontLeftWall, frontRightWall })
+            {
+                if (wall == null) continue;
+
+                Bounds b = BoundsOf(wall);
+                wallAreas.Add(Rect.MinMaxRect(b.min.x, b.min.z, b.max.x, b.max.z));
+            }
+
+            nav.Grid.SetStaticWalls(this, wallAreas);
+            return true;
         }
 
         void HandlePhaseChanged(DayPhase previous, DayPhase current)
@@ -798,6 +856,66 @@ namespace LastOrders.Restaurant
                 if (wall != null) all.Encapsulate(BoundsOf(wall));
 
             return Rect.MinMaxRect(all.min.x, all.min.z, all.max.x, all.max.z);
+        }
+
+        /// <summary>
+        /// The room between the walls' inner faces, flat. Each wall trims the side it stands on:
+        /// runs along X the south or north side, runs along Z the west or east.
+        /// </summary>
+        Rect MeasureInside()
+        {
+            Rect outer = MeasureWalls();
+            float xMin = outer.xMin, xMax = outer.xMax, zMin = outer.yMin, zMax = outer.yMax;
+
+            foreach (Transform wall in new[] { backWall, leftWall, rightWall, frontLeftWall, frontRightWall })
+            {
+                if (wall == null) continue;
+                Bounds b = BoundsOf(wall);
+
+                if (b.size.x >= b.size.z)
+                {
+                    if (b.center.z < outer.center.y) zMin = Mathf.Max(zMin, b.max.z);
+                    else zMax = Mathf.Min(zMax, b.min.z);
+                }
+                else
+                {
+                    if (b.center.x < outer.center.x) xMin = Mathf.Max(xMin, b.max.x);
+                    else xMax = Mathf.Min(xMax, b.min.x);
+                }
+            }
+
+            return Rect.MinMaxRect(xMin, zMin, xMax, zMax);
+        }
+
+        /// <summary>
+        /// Lays the floor between the walls as they stand now: the kitchen tiles along the back
+        /// wall, the pattern measured from the doorway's middle on the back wall's line - neither of
+        /// which moves sideways as the building grows. Also run by the setup tool, in the editor.
+        /// </summary>
+        public void FitFloor()
+        {
+            if (floor == null || !HasWalls()) return;
+
+            Rect inner = MeasureInside();
+            Vector2 front = FrontDirection();
+            Vector2 back = Mathf.Abs(front.x) > Mathf.Abs(front.y)
+                ? new Vector2(-Mathf.Sign(front.x), 0f)
+                : new Vector2(0f, -Mathf.Sign(front.y));
+
+            // The doorway: the gap between the two front pieces' facing ends.
+            Vector2 door = inner.center;
+            if (frontLeftWall != null && frontRightWall != null)
+            {
+                Bounds l = BoundsOf(frontLeftWall), r = BoundsOf(frontRightWall);
+                door = new Vector2((Mathf.Min(l.max.x, r.max.x) + Mathf.Max(l.min.x, r.min.x)) * 0.5f,
+                                   (Mathf.Min(l.max.z, r.max.z) + Mathf.Max(l.min.z, r.min.z)) * 0.5f);
+            }
+
+            Vector2 anchor = back.x != 0f
+                ? new Vector2(back.x > 0f ? inner.xMax : inner.xMin, door.y)
+                : new Vector2(door.x, back.y > 0f ? inner.yMax : inner.yMin);
+
+            floor.Fit(inner, back, anchor);
         }
 
         /// <summary>Out through the front wall: from the middle of the building toward it.</summary>
@@ -861,7 +979,7 @@ namespace LastOrders.Restaurant
         /// <summary>Editor wiring, for the setup tool.</summary>
         public void Configure(GameLifetimeScope lifetimeScope, Transform back, Transform left, Transform right,
                               Transform frontLeft, Transform frontRight, Transform[] fixtures,
-                              NightShelter nightShelter, Material highlight, PooledEffect kill, PooledEffect dust)
+                              NightShelter nightShelter, Material highlight, PooledEffect hit, PooledEffect dust)
         {
             scope = lifetimeScope;
             backWall = back;
@@ -872,8 +990,14 @@ namespace LastOrders.Restaurant
             frontFixtures = fixtures;
             shelter = nightShelter;
             highlightMaterial = highlight;
-            killEffect = kill;
+            hitEffect = hit;
             buildEffect = dust;
+        }
+
+        /// <summary>Editor wiring, for the setup tool: the floor to keep laid between the walls.</summary>
+        public void ConfigureFloor(RestaurantFloor restaurantFloor)
+        {
+            floor = restaurantFloor;
         }
 
         void OnDrawGizmosSelected()

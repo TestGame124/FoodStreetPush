@@ -1,5 +1,6 @@
 using DG.Tweening;
 using LastOrders.Core;
+using LastOrders.Defense;
 using LastOrders.Interaction;
 using LastOrders.Jobs;
 using UnityEngine;
@@ -17,9 +18,13 @@ namespace LastOrders.Field
     ///
     /// Made by <see cref="AreaZombies"/>, which gives it its numbers. Dead ones stay dead: the
     /// kill is recorded, and the area never spawns it again.
+    ///
+    /// A tower or turret near enough shoots it like any other zombie, and a kill that way is
+    /// recorded the same.
     /// </summary>
     [DefaultExecutionOrder(1170)]
-    public sealed class AreaZombie : MonoBehaviour, IAreaZombie, ITappable, IInteractableObject, IWorkStrikeReceiver
+    public sealed class AreaZombie : MonoBehaviour, IAreaZombie, IDefenseTarget, ITappable, IInteractableObject,
+                                     IWorkStrikeReceiver
     {
         public struct Tuning
         {
@@ -196,6 +201,13 @@ namespace LastOrders.Field
 
             health = Mathf.Max(0f, health - amount);
             if (health <= 0f) Die();
+        }
+
+        /// <summary>A defense's shot. Goes through the field service, so a kill is on record.</summary>
+        void IDefenseTarget.ApplyDamage(float amount)
+        {
+            if (field != null) field.ShootZombie(this, amount);
+            else ApplyDamage(amount);
         }
 
         /// <summary>A blow of the worker's tool landed: a stagger, so the hit reads.</summary>
