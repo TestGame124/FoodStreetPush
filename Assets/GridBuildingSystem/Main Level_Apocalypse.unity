@@ -368657,7 +368657,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1065981916}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40238914, y: -0.2863725, z: 0.13412969, w: 0.85911757}
+  m_LocalRotation: {x: 0.37965238, y: -0.28980148, z: 0.12655082, w: 0.8694045}
   m_LocalPosition: {x: 34, y: 30, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -412253,7 +412253,7 @@ MonoBehaviour:
   kitchen: {fileID: 2100000, guid: dfdf89d5253122a4ca01b97022070312, type: 2}
   diningTile: 4.8
   kitchenTile: 1.2
-  kitchenDepth: 3
+  kitchenDepth: 5
   top: 0.035
   trim: {fileID: 2100000, guid: 93caaa6c42c0f6040a541590b34bb408, type: 2}
   trimWidth: 0.12
@@ -415238,18 +415238,6 @@ PrefabInstance:
     - target: {fileID: 4386906205654504650, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7106431954522682975, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 4.2802973
-      objectReference: {fileID: 0}
-    - target: {fileID: 7106431954522682975, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 3.9243078
-      objectReference: {fileID: 0}
-    - target: {fileID: 7106431954522682975, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.086
       objectReference: {fileID: 0}
     - target: {fileID: 7320521722276497447, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
       propertyPath: m_Name
