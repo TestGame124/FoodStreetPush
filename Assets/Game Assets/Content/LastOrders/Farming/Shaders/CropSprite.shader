@@ -4,7 +4,8 @@
 // The shading is already painted into the sprite, as the crop looks under the level's daylight in
 // the editor. This only follows the light as it changes: the sprite takes the sun's colour and the
 // sky's, weighted so a white sun and a white sky leave it exactly as painted, and darkens where the
-// sun's shadow falls - so a crop dims at dusk and in a building's shadow like the props round it.
+// sun's shadow falls - so a crop dims at dusk and in a building's shadow like the props round it -
+// and under the main light's cookie, the level's drifting cloud shadows.
 //
 // A sprite facing the camera stands in a plane through the crop's base, tilted back with the view,
 // so its lower half - a cabbage's front leaves, the foot of a corn stalk - lies below the soil it
@@ -48,6 +49,7 @@ Shader "LastOrders/CropSprite"
             #pragma fragment Frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -106,7 +108,7 @@ Shader "LastOrders/CropSprite"
                 half4 sprite = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.colour;
                 clip(sprite.a - 0.004);
 
-                Light sun = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                Light sun = GetMainLight(TransformWorldToShadowCoord(input.positionWS), input.positionWS, half4(1, 1, 1, 1));
                 half shade = lerp(1.0, sun.shadowAttenuation, 0.85);
                 half3 light = min(sun.color * shade * _SunWeight + input.sky, _MaxLight);
 

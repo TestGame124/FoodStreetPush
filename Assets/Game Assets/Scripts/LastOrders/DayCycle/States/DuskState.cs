@@ -61,7 +61,11 @@ namespace LastOrders.DayCycle.States
 
         public void OnEnter(DayPhase previous)
         {
-            remaining = context.Balance.duskWarningSeconds;
+            // An attack's warning is the attack cycle's preparation countdown; the old timed
+            // night keeps its own.
+            remaining = context.Encounters != null
+                ? context.Encounters.Tuning.preparationSeconds
+                : context.Balance.duskWarningSeconds;
 
             CloseAllDoors();
 
@@ -73,8 +77,12 @@ namespace LastOrders.DayCycle.States
             float locked = context.Heat.LockForNight();
             context.Report.HeatAtDusk = locked;
 
-            // Tonight is now decided and cannot be influenced further.
-            context.TonightsWave = context.Waves.BuildPlan(context.Time.CurrentDay, locked);
+            // Tonight is now decided and cannot be influenced further: the attack's difficulty
+            // is locked the moment its warning appears.
+            context.TonightsWave = context.Encounters != null
+                ? context.Encounters.Lock(context.Time.CurrentDay)
+                : context.Waves.BuildPlan(context.Time.CurrentDay, locked);
+
             OnWaveTelegraphed?.Invoke(context.TonightsWave);
 
             context.CrisisBar.BeginNight();

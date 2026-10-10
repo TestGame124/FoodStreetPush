@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4173376739099269036}
   - component: {fileID: 7193616266743091765}
   - component: {fileID: 8805797428791581766}
+  - component: {fileID: 7280871019720460398}
   m_Layer: 6
   m_Name: MainCharacter
   m_TagString: Untagged
@@ -89,6 +90,27 @@ MonoBehaviour:
   - hand_r
   - mixamorig:RightHand
   tool: {fileID: 0}
+--- !u!114 &7280871019720460398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5417518906302535288}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06c78ab7ceb6149428ebe99818de4885, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Jobs.WorkerLife
+  strollRadius: 8
+  strollPace: 0.45
+  restSeconds: {x: 7, y: 15}
+  betweenGestures: {x: 2.5, y: 6}
+  chatRange: 16
+  noticeRange: 10
+  waveChance: 0.35
+  waveEvery: 20
+  betweenChats: {x: 35, y: 75}
 --- !u!1 &7419208633410114294
 GameObject:
   m_ObjectHideFlags: 0
@@ -243,7 +265,7 @@ PrefabInstance:
     - target: {fileID: 95672999797837872, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+      objectReference: {fileID: 9100000, guid: be9a5e8bfe6b4f5428658dadf65e6977, type: 2}
     - target: {fileID: 95672999797837872, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0
@@ -251,13 +273,38 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1674885529865632, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8549892418242374616}
   m_SourcePrefab: {fileID: 100100000, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
 --- !u!4 &1973487564063632391 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4596640331168922, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
   m_PrefabInstance: {fileID: 1978039996026753181}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1978940240181370173 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1674885529865632, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
+  m_PrefabInstance: {fileID: 1978039996026753181}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8549892418242374616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1978940240181370173}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 193e1bae4a239784499553704caf5420, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Jobs.CharacterLookAt
+  head: 0.9
+  body: 0.22
+  eyes: 0.6
+  clamp: 0.55
+  ease: 4
 --- !u!1001 &7062312824428071568
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -314,6 +361,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2559285840627121667, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.0012735937
+      objectReference: {fileID: 0}
+    - target: {fileID: 2559285840627121667, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.009004812
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -321,6 +376,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7884108430015037192}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1467480203253165772}
   m_SourcePrefab: {fileID: 100100000, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
 --- !u!4 &7316336626337443195 stripped
 Transform:
@@ -342,7 +400,7 @@ Animator:
   m_GameObject: {fileID: 7981233725616011201}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: bd98a0d379d6aed409a7d2c746d087a4, type: 3}
-  m_Controller: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+  m_Controller: {fileID: 9100000, guid: be9a5e8bfe6b4f5428658dadf65e6977, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -354,3 +412,20 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1467480203253165772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7981233725616011201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 193e1bae4a239784499553704caf5420, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Jobs.CharacterLookAt
+  head: 0.9
+  body: 0.065
+  eyes: 0.724
+  clamp: 0.6
+  ease: 2

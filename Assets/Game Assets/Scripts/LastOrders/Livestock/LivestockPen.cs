@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Consequence;
 using LastOrders.Core;
 using LastOrders.DayCycle;
 using LastOrders.Interaction;
@@ -176,7 +177,11 @@ namespace LastOrders.Livestock
         public bool Paused => composition != null && composition.Time.IsPaused;
 
         /// <summary>Fed, awake, room left: an egg or a churn is on its way.</summary>
-        public bool Producing => !Resting && !Paused && !Full && !Hungry;
+        public bool Producing => !Resting && !Paused && !Full && !Hungry && !Wrecked;
+
+        /// <summary>Smashed by zombies in an attack: the animals huddle in the ruins and lay nothing
+        /// until a repair kit puts the pen back together. The stock already made is kept.</summary>
+        public bool Wrecked => OutdoorWreck.IsWreckedOn(this);
 
         public Vector3 CollectPoint => collectPoint != null ? collectPoint.position : transform.position + Vector3.up * 0.4f;
 
@@ -274,7 +279,7 @@ namespace LastOrders.Livestock
 
         void Update()
         {
-            if (!Resting && !Paused && !Hungry)
+            if (!Resting && !Paused && !Hungry && !Wrecked)
             {
                 int made = Clock.Tick(Time.deltaTime, feed != null ? Trough.Portions : int.MaxValue);
                 if (made > 0)
@@ -303,6 +308,9 @@ namespace LastOrders.Livestock
         /// </summary>
         public string OnTapped()
         {
+            if (Wrecked)
+                return $"The {displayName.ToLowerInvariant()} was wrecked by zombies. A repair kit puts it back together.";
+
             if (Clock.Stored > 0)
             {
                 cardUntil = Time.time + cardSeconds;

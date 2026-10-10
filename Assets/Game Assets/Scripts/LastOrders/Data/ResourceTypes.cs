@@ -32,6 +32,10 @@ namespace LastOrders.Data
 
         /// <summary>The opening crop of that document's 7: two beds, one recipe, one meal.</summary>
         Tomato = 15,
+
+        /// <summary>One kit puts every wreck in the yard back together at once. Won by holding off
+        /// an attack, or bought. Appended at the next unused value, like the others.</summary>
+        RepairKit = 16,
     }
 
     /// <summary>One line of a cost or a reward. A serialisable pair, so costs author as a
@@ -138,7 +142,14 @@ namespace LastOrders.Data
 
         /// <summary>The name a player reads. The enum's own name everywhere it already reads
         /// as a word; "TradeToken" does not.</summary>
-        public static string DisplayName(this ResourceType type) =>
-            type == ResourceType.TradeToken ? "Trade Tokens" : type.ToString();
+        public static string DisplayName(this ResourceType type)
+        {
+            switch (type)
+            {
+                case ResourceType.TradeToken: return "Trade Tokens";
+                case ResourceType.RepairKit: return "Repair Kits";
+                default: return type.ToString();
+            }
+        }
     }
 }

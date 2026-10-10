@@ -78,11 +78,47 @@ namespace FoodStreet.Visitors
         static readonly int SitHash = Animator.StringToHash("Sit");
         static readonly int EatHash = Animator.StringToHash("Eat");
 
+        /// <summary>Seconds from standing in front of the chair to sat on it. The animator's
+        /// stand-to-sit transition is set to the same by 'Set Up Seated Visitors'.</summary>
+        public const float SitSeconds = 0.55f;
+
+        /// <summary>Seconds from sat to standing in front of the chair, likewise.</summary>
+        public const float StandSeconds = 0.5f;
+
+        /// <summary>Seconds to turn and face the table before sitting.</summary>
+        const float TurnSeconds = 0.2f;
+
+        /// <summary>Seconds after stepping out before the empty chair is pushed back in.</summary>
+        const float TuckDelay = 0.45f;
+
+        /// <summary>Metres short of the spot in front of the chair that counts as there. Tight, so
+        /// nobody slides sideways into the chair while sitting down.</summary>
+        const float StandArriveRadius = 0.04f;
+
+        /// <summary>Seconds the walk/idle blend takes to settle, so a stop is not a snap.</summary>
+        const float MoveDamping = 0.1f;
+
+        /// <summary>
+        /// Getting into the chair and out of it, in order. Sitting down and getting up each take a
+        /// beat of their own: the chair slides out as they reach the table, they step in, turn, sit
+        /// back onto it and scoot in to the table with it - and on leaving, the chair scoots out,
+        /// they stand, step clear and it is pushed back in.
+        /// </summary>
+        enum Seating { None, SitDown, ScootIn, Settled, ScootOut, StandUp }
+
         [SerializeField] VisitorDefinition definition;
         [SerializeField] OrderBubble bubble;
         [SerializeField] Animator animator;
 
         readonly WaypointWalker walker = new WaypointWalker();
+
+        Seating seating;
+        float seatingClock;
+        bool chairPulled;
+        Vector3 seatFrom, seatTo;
+        Quaternion turnFrom;
+        List<Vector3> afterStanding;
+        SeatedPose pose;
 
         VisitorRoads roads;
         ParkingLot lot;
@@ -126,7 +162,7 @@ namespace FoodStreet.Visitors
 
         /// <summary>True while they are at the table with an unfilled order. The one state the
         /// player can act on, and the one the HUD counts.</summary>
-        public bool IsWaitingToBeServed => Stage == VisitorStage.Seated && !order.IsEmpty;
+        public bool IsWaitingToBeServed => Stage == VisitorStage.Seated && seating == Seating.Settled && !order.IsEmpty;
 
         /// <summary>Frozen at the table because zombies are inside the walls.</summary>
         public bool IsAlarmed => alarmed;
@@ -169,6 +205,10 @@ namespace FoodStreet.Visitors
             eatRemaining = 0f;
             plate = null;
 
+            seating = Seating.None;
+            chairPulled = false;
+            afterStanding = null;
+
             Stage = VisitorStage.Riding;
 
             // Out of sight until the car stops. A person sliding along the road inside their own
@@ -177,14 +217,18 @@ namespace FoodStreet.Visitors
             bubble?.Hide();
         }
 
-        /// <summary>Called by the manager when the car has parked. The visitor gets out.</summary>
-        public void GetOutOfCar()
+        /// <summary>Called by the manager when the car has parked. The visitor gets out - the
+        /// <paramref name="order"/>th of the party to, a step behind the one before.</summary>
+        public void GetOutOfCar(int order = 0)
         {
             if (Stage != VisitorStage.Riding) return;
 
             ParkingSlot bay = car != null ? car.Bay : null;
 
-            transform.position = bay != null ? bay.DoorPoint : transform.position;
+            Vector3 door = bay != null ? bay.DoorPoint : transform.position;
+            if (bay != null && order > 0) door -= bay.ParkForward * (0.75f * order);
+
+            transform.position = door;
             SetVisible(true);
 
             walker.Follow(roads != null ? roads.WalkToSeat(lot, seat) : null);
@@ -193,10 +237,23 @@ namespace FoodStreet.Visitors
 
         void Update()
         {
+            // Sitting down, scooting in and getting up again have the body to themselves while
+            // they last; what the visitor is there for picks up once they are sat, or up.
+            if (StepSeating(Time.deltaTime))
+            {
+                Animate();
+                return;
+            }
+
             switch (Stage)
             {
                 case VisitorStage.Walking:
-                    if (walker.Advance(transform, WalkSpeed, TurnSpeed, ArriveRadius, Time.deltaTime))
+                    // The chair comes out as they reach the table, so it is out by the time they
+                    // step in front of it.
+                    if (!chairPulled && walker.Remaining <= 1) PullOutChair();
+
+                    float radius = walker.Remaining <= 1 ? StandArriveRadius : ArriveRadius;
+                    if (walker.Advance(transform, WalkSpeed, TurnSpeed, radius, Time.deltaTime))
                         SitDown();
                     break;
 
@@ -233,23 +290,176 @@ namespace FoodStreet.Visitors
             Animate();
         }
 
+        /// <summary>
+        /// Arrived in front of the chair: turn to the table and sit back onto the seat. They count
+        /// as seated from here - inside, and staying - but order only once they are in at the table.
+        /// </summary>
         void SitDown()
         {
-            transform.position = seat.SitPoint;
-            WaypointWalker.Face(transform, seat.SitForward);
+            Stage = VisitorStage.Seated;
+
+            if (!SeatIsMeasured)
+            {
+                // No chair left to get into - the table went while they walked over. Sat where the
+                // seat was, as before there was any getting in at all.
+                transform.position = seat.SitPoint;
+                WaypointWalker.Face(transform, seat.SitForward);
+                Settle();
+                return;
+            }
+
+            if (!chairPulled) PullOutChair();
+
+            seatFrom = transform.position;
+            seatTo = seat.PulledPoint;
+            turnFrom = transform.rotation;
+            seatingClock = 0f;
+            seating = Seating.SitDown;
+        }
+
+        /// <summary>In at the table: the chair is theirs as far as the staff can tell, and they ask.</summary>
+        void Settle()
+        {
+            seating = Seating.Settled;
 
             TableBehaviour.Chair chair = seat.Chair;
             if (chair != null) chair.isSitted = true;
 
-            Stage = VisitorStage.Seated;
-
             ShowOrder();
+        }
+
+        void PullOutChair()
+        {
+            chairPulled = true;
+            if (seat.Seating != null) seat.Seating.PullOut(seat.Index);
+        }
+
+        bool SeatIsMeasured => seat.IsValid && seat.Seating != null && seat.Seating.Has(seat.Index);
+
+        /// <summary>Progress of the sit itself, after the turn to face the table.</summary>
+        float SitProgress => Mathf.Clamp01((seatingClock - TurnSeconds) / SitSeconds);
+
+        float StandProgress => Mathf.Clamp01(seatingClock / StandSeconds);
+
+        /// <summary>
+        /// One step of getting in or out of the chair. Returns true while that is all the visitor
+        /// is doing.
+        ///
+        /// The body follows the chair while it slides rather than sliding beside it, so a visitor
+        /// scooting in is carried with their seat - which is the whole of what makes it read as
+        /// sitting IN a chair rather than hovering in front of one.
+        /// </summary>
+        bool StepSeating(float deltaSeconds)
+        {
+            switch (seating)
+            {
+                case Seating.SitDown:
+                {
+                    seatingClock += deltaSeconds;
+
+                    float turn = Smooth(seatingClock / TurnSeconds);
+                    transform.rotation = Quaternion.Slerp(turnFrom, Quaternion.LookRotation(seat.SitForward), turn);
+                    transform.position = Vector3.Lerp(seatFrom, seatTo, Smooth(SitProgress));
+
+                    if (SitProgress >= 1f)
+                    {
+                        seating = Seating.ScootIn;
+                        if (seat.Seating != null) seat.Seating.ScootIn(seat.Index);
+                    }
+
+                    return true;
+                }
+
+                case Seating.ScootIn:
+                    if (seat.IsValid) transform.position = seat.SeatNow;
+                    if (seat.Seating == null || !seat.Seating.IsSliding(seat.Index)) Settle();
+                    return true;
+
+                case Seating.ScootOut:
+                    if (seat.IsValid) transform.position = seat.SeatNow;
+                    if (seat.Seating == null || !seat.Seating.IsSliding(seat.Index)) BeginStandUp(transform.position);
+                    return true;
+
+                case Seating.StandUp:
+                    seatingClock += deltaSeconds;
+                    transform.position = Vector3.Lerp(seatFrom, seatTo, Smooth(StandProgress));
+
+                    if (StandProgress >= 1f) StepAwayFromTable();
+                    return true;
+            }
+
+            return false;
+        }
+
+        void BeginStandUp(Vector3 from)
+        {
+            seatFrom = from;
+            seatTo = seat.IsValid ? seat.StandPoint : from;
+            seatTo.y = from.y;
+            seatingClock = 0f;
+            seating = Seating.StandUp;
+        }
+
+        /// <summary>Up, and off: the chair is free, and goes back under the table once they are clear of it.</summary>
+        void StepAwayFromTable()
+        {
+            ReleaseSeat(TuckDelay);
+            seating = Seating.None;
+
+            walker.Follow(afterStanding);
+            afterStanding = null;
+        }
+
+        /// <summary>
+        /// Up from the table and off along <paramref name="path"/> - out past the side of the chair
+        /// first, so nobody walks away through the table. Called whatever point of sitting down
+        /// they had reached: caught halfway down, they go straight back up; already getting up,
+        /// only where they are off to changes.
+        /// </summary>
+        void GetUpAndGo(IReadOnlyList<Vector3> path)
+        {
+            walker.Clear();
+
+            var route = new List<Vector3>((path != null ? path.Count : 0) + 1);
+            if (path != null) route.AddRange(path);
+
+            switch (seating)
+            {
+                case Seating.None:
+                    ReleaseSeat();
+                    walker.Follow(route);
+                    return;
+
+                case Seating.SitDown:
+                    BeginStandUp(transform.position);
+                    break;
+
+                case Seating.ScootIn:
+                case Seating.Settled:
+                    seating = Seating.ScootOut;
+                    if (seat.Seating != null) seat.Seating.PullOut(seat.Index);
+                    break;
+            }
+
+            if (SeatIsMeasured)
+                route.Insert(0, seat.SidePoint(route.Count > 0 ? route[0] : transform.position - transform.forward));
+
+            afterStanding = route;
+        }
+
+        /// <summary>Out of the chair on the spot, with no getting up - for being carried off, and the pool.</summary>
+        void StopSeating()
+        {
+            ReleaseSeat();
+            seating = Seating.None;
+            afterStanding = null;
         }
 
         void ShowOrder()
         {
-            // Nobody orders with zombies in the yard. The bubble comes back when it is clear.
-            if (bubble == null || order.IsEmpty || alarmed) return;
+            // Nobody orders with zombies in the yard, nor halfway into a chair. The bubble comes
+            // back when it is clear, or once they are in at the table.
+            if (bubble == null || order.IsEmpty || alarmed || seating != Seating.Settled) return;
 
             ItemDataSO data = order.Data;
             lastAffordable = CanAfford();
@@ -299,9 +509,7 @@ namespace FoodStreet.Visitors
             ParkingSlot bay = car != null ? car.Bay : null;
             Vector3 doorPoint = bay != null ? bay.DoorPoint : transform.position;
 
-            ReleaseSeat();
-
-            walker.Follow(roads != null ? roads.WalkToCar(lot, doorPoint) : null);
+            GetUpAndGo(roads != null ? roads.WalkToCar(lot, doorPoint) : null);
             Stage = VisitorStage.Returning;
         }
 
@@ -310,7 +518,8 @@ namespace FoodStreet.Visitors
             SetVisible(false);
             Stage = VisitorStage.Boarding;
 
-            car?.DriveOut();
+            // The last of the party back in drives them all home.
+            car?.PassengerBoarded();
 
             Stage = VisitorStage.Gone;
             OnJourneyEnded?.Invoke(this);
@@ -343,17 +552,20 @@ namespace FoodStreet.Visitors
             ParkingSlot bay = car != null ? car.Bay : null;
             Vector3 doorPoint = bay != null ? bay.DoorPoint : transform.position;
 
-            // The way in is the apron, the door, the doorway, the chair. Past the door they are
-            // at the building and go back out through it; before it, straight back to the car.
-            bool atTheDoor = walker.Remaining <= 2;
+            // The way in is the apron, the door, the doorway, then up to the chair. Past the door
+            // they are at the building and go back out through it; before it, straight back to
+            // the car.
+            bool atTheDoor = walker.Remaining <= 1 + VisitorRoads.SeatApproachPoints;
+            bool pastTheApron = walker.Remaining <= 2 + VisitorRoads.SeatApproachPoints;
 
+            // A chair that had come out for them goes back in.
             ReleaseSeat();
 
             var path = new List<Vector3>(4);
             if (atTheDoor && roads != null) path.AddRange(roads.WalkToCar(lot, doorPoint));
             else
             {
-                if (walker.Remaining <= 3 && lot != null) path.Add(lot.LaneEntry);
+                if (pastTheApron && lot != null) path.Add(lot.LaneEntry);
                 path.Add(doorPoint);
             }
 
@@ -406,10 +618,10 @@ namespace FoodStreet.Visitors
             bedPose = bed;
             onInBed = arrived;
 
-            walker.Follow(path);
+            GetUpAndGo(path);
             Stage = VisitorStage.ToHospital;
 
-            if (walker.Arrived) LieDown(bed);
+            if (seating == Seating.None && walker.Arrived) LieDown(bed);
         }
 
         /// <summary>Straight into the cot - they were carried over in the night, while nobody
@@ -417,20 +629,25 @@ namespace FoodStreet.Visitors
         public void CarriedToHospital(Pose bed, Action<Visitor> arrived)
         {
             LeaveEverything();
+            StopSeating();
 
             onInBed = arrived;
             LieDown(bed);
         }
 
+        /// <summary>Drops the meal, the order and the car. The chair is left to whoever is taking
+        /// them away: walked off, they get up out of it first; carried off, they do not.</summary>
         void LeaveEverything()
         {
             ReturnPlate();
-            ReleaseSeat();
             bubble?.Hide();
             walker.Clear();
 
             holdDeparture = false;
             order = default;
+
+            // Not going back to the car: the rest of the party will drive it home without them.
+            car?.PassengerLost();
             car = null;
 
             SetVisible(true);
@@ -469,6 +686,9 @@ namespace FoodStreet.Visitors
 
         void Stand(IReadOnlyList<Vector3> path)
         {
+            // Sent off before they had finished getting out of a chair: this path wins.
+            if (seating != Seating.None) StopSeating();
+
             // Upright again, feet on the ground, facing where they are off to. Lying down is the
             // only time the body is anything but upright - and the walker keeps whatever height
             // it starts at, so leaving them at mattress height would float them all the way home.
@@ -564,7 +784,31 @@ namespace FoodStreet.Visitors
             if (at == null || pool == null) return;
 
             plate = pool.GetFoodPlate(at.position);
-            if (plate != null) plate.transform.SetParent(at, worldPositionStays: true);
+            if (plate == null) return;
+
+            if (SeatIsMeasured) SetOnTable(plate);
+            plate.transform.SetParent(at, worldPositionStays: true);
+        }
+
+        /// <summary>
+        /// Puts the plate down on the table that is actually there, all of it on the top. The
+        /// plate points were placed for an older, lower table: one left half sunk into this top
+        /// and hanging off its edge, the other hovering over it.
+        /// </summary>
+        void SetOnTable(GameObject dish)
+        {
+            Renderer[] renderers = dish.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+
+            Vector3 inward = seat.SitForward;
+            float inFromEdge = Vector3.Dot(bounds.center - seat.Seating.EdgePoint(seat.Index), inward);
+            float radius = Mathf.Max(bounds.extents.x, bounds.extents.z);
+            float onto = Mathf.Max(0f, radius + 0.03f - inFromEdge);
+
+            dish.transform.position += inward * onto + Vector3.up * (seat.Seating.TableTop - bounds.min.y);
         }
 
         void ReturnPlate()
@@ -585,11 +829,17 @@ namespace FoodStreet.Visitors
 
         // --- Housekeeping ----------------------------------------------------------------
 
-        void ReleaseSeat()
+        /// <summary>Frees the chair - and pushes it back under the table, after
+        /// <paramref name="tuckDelay"/> seconds, if it had come out for them.</summary>
+        void ReleaseSeat(float tuckDelay = 0f)
         {
+            if (seat.Seating != null && (chairPulled || seating != Seating.None))
+                seat.Seating.TuckIn(seat.Index, tuckDelay);
+
             if (seats != null) seats.Release(seat);
 
             seat = default;
+            chairPulled = false;
         }
 
         bool CanAfford()
@@ -619,14 +869,72 @@ namespace FoodStreet.Visitors
         {
             if (animator == null) return;
 
-            bool moving = Stage == VisitorStage.Walking || Stage == VisitorStage.Returning ||
-                          Stage == VisitorStage.ToHospital || Stage == VisitorStage.ToShuttle ||
-                          Stage == VisitorStage.LeavingOnFoot;
+            bool moving = seating == Seating.None &&
+                          (Stage == VisitorStage.Walking || Stage == VisitorStage.Returning ||
+                           Stage == VisitorStage.ToHospital || Stage == VisitorStage.ToShuttle ||
+                           Stage == VisitorStage.LeavingOnFoot);
 
-            animator.SetFloat(MoveHash, moving ? 1f : 0f);
-            animator.SetBool(SitHash, Stage == VisitorStage.Seated || Stage == VisitorStage.Eating ||
-                                      Stage == VisitorStage.Sheltering);
-            animator.SetBool(EatHash, Stage == VisitorStage.Eating && !alarmed);
+            // In the chair from the moment they start down until they start up again.
+            bool sitting = (seating == Seating.SitDown && seatingClock >= TurnSeconds) ||
+                           seating == Seating.ScootIn || seating == Seating.Settled || seating == Seating.ScootOut;
+
+            bool eating = Stage == VisitorStage.Eating && !alarmed && seating == Seating.Settled;
+
+            animator.SetFloat(MoveHash, moving ? 1f : 0f, MoveDamping, Time.deltaTime);
+            animator.SetBool(SitHash, sitting);
+            animator.SetBool(EatHash, eating);
+
+            DrivePose(eating);
+        }
+
+        /// <summary>Tells the body where the table is and what to do at it: hips onto the cushion,
+        /// the lean of getting in and out, hands on the top, the fork going up.</summary>
+        void DrivePose(bool eating)
+        {
+            if (pose == null)
+            {
+                pose = animator.GetComponent<SeatedPose>();
+                if (pose == null) pose = animator.gameObject.AddComponent<SeatedPose>();
+            }
+
+            if (seating == Seating.None || !SeatIsMeasured)
+            {
+                pose.Drive(default);
+                return;
+            }
+
+            float seated = 1f, lean = 0f;
+            if (seating == Seating.SitDown)
+            {
+                seated = SitProgress;
+                lean = Mathf.Sin(seated * Mathf.PI);
+            }
+            else if (seating == Seating.StandUp)
+            {
+                seated = 1f - StandProgress;
+                lean = Mathf.Sin(StandProgress * Mathf.PI);
+            }
+
+            Transform platePoint = seat.PlatePoint;
+
+            pose.Drive(new SeatedPose.Frame
+            {
+                seated = seated,
+                lean = lean,
+                handsOnTable = seating == Seating.ScootIn || seating == Seating.Settled,
+                eating = eating,
+                tableEdge = seat.Seating.EdgePoint(seat.Index),
+                inward = seat.SitForward,
+                seatTop = seat.Seating.SeatTop(seat.Index),
+                plate = plate != null ? plate.transform.position : platePoint != null ? platePoint.position : Vector3.zero,
+                hasPlate = plate != null || platePoint != null,
+            });
+        }
+
+        static float Smooth(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * (3f - 2f * t);
         }
 
         /// <summary>Puts the visitor back in its starting state, for the pool. Releases the
@@ -634,7 +942,8 @@ namespace FoodStreet.Visitors
         public void ResetForPool()
         {
             ReturnPlate();
-            ReleaseSeat();
+            StopSeating();
+            if (pose != null) pose.ResetPose();
 
             walker.Clear();
             bubble?.Hide();

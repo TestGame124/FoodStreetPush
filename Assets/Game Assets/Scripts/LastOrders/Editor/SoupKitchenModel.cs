@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using B = LastOrders.EditorTools.BuildingKit;
 using FX = LastOrders.EditorTools.PlantingEffects;
+using T = LastOrders.EditorTools.KitchenTools;
 using Object = UnityEngine.Object;
 
 namespace LastOrders.EditorTools
@@ -46,11 +47,13 @@ namespace LastOrders.EditorTools
         const string ModelName = "SoupKitchen";
 
         /// <summary>
-        /// Where the corner's middle stands in the station's space, on the floor (the station's origin
-        /// is a hair above it). The prototype stood about here, so the corner fills the same gap between
-        /// the bread oven and the salad station along the kitchen's back wall.
+        /// Where the corner's middle stands in the station's space. The station is placed on the build
+        /// grid like everything the shop sells, its origin the near left corner of a 3 x 2 cell
+        /// footprint at the grid's height: the pad is centred across the footprint, its back a hand
+        /// short of the footprint's back edge, and stands on the diner's floor, 0.035 up. Its front
+        /// faces -Z as the station's does, so it is not turned.
         /// </summary>
-        static readonly Vector3 Place = new Vector3(0.32f, -0.005f, 0.61f);
+        internal static readonly Vector3 Place = new Vector3(1.5f, 0.035f, 0.8f);
 
         // --- Measurements (metres; front toward -Z) ------------------------------------------------
 
@@ -203,10 +206,14 @@ namespace LastOrders.EditorTools
                 var go = new GameObject(ModelName);
                 go.transform.SetParent(root.transform, false);
                 go.transform.localPosition = Place;
-                go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                go.transform.localRotation = Quaternion.identity;
                 B.Show(go, corner, corner.subMeshCount > 1 ? new[] { painted, ember } : new[] { painted });
 
                 Transform model = go.transform;
+                Chopping(model, painted);
+
+                Transform centre = root.transform.Find("CenterPoint");
+                if (centre != null) centre.localPosition = new Vector3(Place.x, 0.5f, Place.z + PadFront);
                 Transform soupPart = Part(model, "Soup", soup, new Vector3(PotX, SoupY, PotZ), painted, ShadowCastingMode.Off);
 
                 var bubbles = new Transform[7];
@@ -277,7 +284,7 @@ namespace LastOrders.EditorTools
                 var go = new GameObject(ModelName);
                 go.transform.SetParent(root.transform, false);
                 go.transform.localPosition = Place;
-                go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                go.transform.localRotation = Quaternion.identity;
                 B.Show(go, corner, corner.subMeshCount > 1 ? new[] { painted, ember } : new[] { painted });
                 go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
 
@@ -318,7 +325,6 @@ namespace LastOrders.EditorTools
             var middle = new Vector3((PadLeft + PadRight) * 0.5f, 0.6f, (PadFront + PadBack) * 0.5f);
             collider.center = root.transform.InverseTransformPoint(model.TransformPoint(middle));
 
-            // Turned half round, so the box's sides still run along the station's axes.
             collider.size = new Vector3(PadRight - PadLeft, 1.2f, PadBack - PadFront);
             return $"; collider {before} x {beforeSize} -> {collider.center} x {collider.size}";
         }
@@ -641,6 +647,24 @@ namespace LastOrders.EditorTools
             }, 16);
         }
 
+        /// <summary>
+        /// The knife on the prep counter's board, its own part: while the station cooks it rocks
+        /// through the nearer tomato half and the pieces hop onto the pile of diced tomato beside it
+        /// (a <see cref="KitchenToolMotion"/>).
+        /// </summary>
+        static void Chopping(Transform model, Material painted)
+        {
+            float cx = (CounterLeft + CounterRight) * 0.5f, onBoard = CounterTop + 0.025f;
+            Mesh knife = SaveMesh(T.ChopKnife(), "SoupKitchen_Knife");
+            Mesh dice = SaveMesh(T.Piece(TomatoRed, TomatoFlesh, new Vector3(0.022f, 0.016f, 0.022f)), "SoupKitchen_TomatoDice");
+
+            var tip = new Vector3(cx - 0.05f, onBoard, 0.2f);
+            Transform blade = T.Tool(model, "Knife", knife, tip, Quaternion.identity, painted);
+            Transform[] pieces = T.Pieces(model, "Dice", dice, 6, tip, painted);
+            blade.gameObject.AddComponent<KitchenToolMotion>().Configure(KitchenToolMotion.Motion.Chop, 3f, 24f, Vector3.right)
+                 .Cuts(pieces, new Vector3(cx - 0.06f, onBoard + 0.01f, 0.1f), new Vector3(cx + 0.07f, onBoard, 0.04f));
+        }
+
         // --- The counter, the woodpile, the floor -------------------------------------------------
 
         /// <summary>
@@ -712,7 +736,7 @@ namespace LastOrders.EditorTools
                 m.Box(k % 3 == 0 ? TomatoFlesh : TomatoRed, at, Vector3.one * 0.022f, 0.005f, Quaternion.Euler(0f, 40f * B.Jitter(k + 220), 0f));
             }
 
-            Knife(m, new Vector3(cx - 0.04f, onBoard, 0.33f), 35f);
+            // The knife at work through the first tomato half is its own part (Chopping).
 
             Tomato(m, new Vector3(cx - 0.12f, top, 0.56f), 0.046f, 3);
             Tomato(m, new Vector3(cx - 0.035f, top, 0.62f), 0.044f, 4);
@@ -845,13 +869,6 @@ namespace LastOrders.EditorTools
                 new Vector2(0f, 0f), new Vector2(r * 0.55f, 0.004f), new Vector2(r * 0.9f, h * 0.4f), new Vector2(r, h), new Vector2(r, h),
                 new Vector2(r * 0.88f, h), new Vector2(r * 0.84f, h), new Vector2(r * 0.44f, h), new Vector2(r * 0.4f, h), new Vector2(0f, h),
             }, 16);
-        }
-
-        static void Knife(B.Model m, Vector3 at, float yaw)
-        {
-            Quaternion q = Quaternion.Euler(0f, yaw, 0f);
-            m.Box(Steel, at + q * new Vector3(0.05f, 0.004f, 0f), new Vector3(0.16f, 0.006f, 0.032f), 0.0025f, q);
-            m.Box(B.Walnut, at + q * new Vector3(-0.08f, 0.009f, 0f), new Vector3(0.1f, 0.018f, 0.022f), 0.006f, q);
         }
 
         /// <summary>A bunch of herbs: stems tied with twine at one end, the leaves fanning out at the other.</summary>
@@ -1140,7 +1157,7 @@ namespace LastOrders.EditorTools
         /// <paramref name="h"/> above it, its tip carried over by <paramref name="lean"/>; <paramref name="flat"/>
         /// squashes it along <paramref name="turn"/>'s forward (front to back when left unturned).
         /// </summary>
-        static void Tongue(B.Model m, Vector3 foot, float h, float r, Vector3 lean, float flat, Quaternion? turn = null)
+        internal static void Tongue(B.Model m, Vector3 foot, float h, float r, Vector3 lean, float flat, Quaternion? turn = null)
         {
             Quaternion q = turn ?? Quaternion.identity;
             var flame = new SmoothMesh(1);
@@ -1228,7 +1245,7 @@ namespace LastOrders.EditorTools
             return ps;
         }
 
-        static void FadeInOut(ParticleSystem ps, float inUntil, float outFrom)
+        internal static void FadeInOut(ParticleSystem ps, float inUntil, float outFrom)
         {
             var gradient = new Gradient();
             gradient.SetKeys(
@@ -1289,7 +1306,7 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>Soft white puffs on the planting burst's cloud texture, taking part of the kitchen's light.</summary>
-        static Material SteamMaterial()
+        internal static Material SteamMaterial()
         {
             Shader shader = Shader.Find("LastOrders/SoftParticle");
             if (shader == null) throw new InvalidOperationException("Shader LastOrders/SoftParticle is missing.");

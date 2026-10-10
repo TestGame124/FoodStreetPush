@@ -44,6 +44,10 @@ namespace FoodStreet.Visitors
         /// <summary>Time left before a car pulling out of a bay starts to move.</summary>
         float startingFor;
 
+        /// <summary>Passengers who got out here and are not back in yet. The car leaves when the
+        /// last of them is.</summary>
+        int awaiting = 1;
+
         ParkingLot lot;
         ParkingSlot bay;
         VisitorRoads roads;
@@ -66,6 +70,30 @@ namespace FoodStreet.Visitors
         public bool IsStartingUp => startingFor > 0f;
 
         public float PullAwaySeconds => pullAwaySeconds;
+
+        /// <summary>How many people came in it.</summary>
+        public int Passengers { get; private set; } = 1;
+
+        /// <summary>True while somebody who came in it is still out: eating, or on their way back.</summary>
+        public bool WaitingForPassengers => awaiting > 0;
+
+        /// <summary>A party, not one person: the car waits in its bay for all of them.</summary>
+        public void ExpectPassengers(int count)
+        {
+            Passengers = Mathf.Max(1, count);
+            awaiting = Passengers;
+        }
+
+        /// <summary>One of them is back in. The last one in drives them all home.</summary>
+        public void PassengerBoarded()
+        {
+            awaiting = Mathf.Max(0, awaiting - 1);
+            if (awaiting == 0 && Stage == VehicleStage.Parked) DriveOut();
+        }
+
+        /// <summary>One of them will not be coming back to it - taken to the hospital tent. The car
+        /// still waits for the rest, and goes home in the morning once nobody else is out.</summary>
+        public void PassengerLost() => awaiting = Mathf.Max(0, awaiting - 1);
 
         /// <summary>Raised the frame the car comes to rest in its bay. The visitor gets out on
         /// this, rather than on a timer that has to be kept in step with the drive.</summary>
@@ -241,6 +269,8 @@ namespace FoodStreet.Visitors
             slowLegs = manoeuvreLegs;
             startingFor = 0f;
             stopForward = Vector3.zero;
+            Passengers = 1;
+            awaiting = 1;
             Stage = VehicleStage.Idle;
 
             OnParked = null;

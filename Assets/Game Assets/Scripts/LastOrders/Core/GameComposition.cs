@@ -126,6 +126,14 @@ namespace LastOrders.Core
         /// that no zombie crosses.</summary>
         public readonly RestaurantService Restaurant;
 
+        /// <summary>The yard in an attack: what a zombie over the wall smashes, the cap on how much
+        /// one attack may wreck, and the one repair-kit repair that puts it all back.</summary>
+        public readonly OutdoorDamageService Outdoor;
+
+        /// <summary>The zombie attack cycle: an attack every few days, its locked difficulty, its
+        /// waves, and the one result it leaves on the Safety Reputation.</summary>
+        public readonly EncounterService Encounters;
+
         public readonly BuildContext BuildContext;
         public readonly BuildCommandStack Commands;
 
@@ -232,6 +240,23 @@ namespace LastOrders.Core
             Restaurant = new RestaurantService(balance.restaurant, Ledger, new CoinWallet(), Machine,
                                                () => Compound.IsBreached);
 
+            // Last of all, because an attack touches nearly everything above: the restaurant's
+            // health, the yard inside the walls, the turrets in it, the reputation and the purse.
+            EncounterTuning encounter = balance.encounter ?? (balance.encounter = new EncounterTuning());
+
+            Outdoor = new OutdoorDamageService(encounter, Ledger, new CoinWallet(), Machine,
+                                               at => Compound.HasInterior && Compound.IsInside(at), Defense)
+            {
+                Scanner = () => OutdoorObjects.Tag(Compound, Restaurant, encounter.outdoorObjectHealth),
+            };
+
+            Encounters = new EncounterService(balance, Reputation, Ledger, Restaurant, Outdoor,
+                                              LastOrdersBridge.NotifyCoinsPaid, LastOrdersBridge.AddExperience);
+            Context.Encounters = Encounters;
+
+            // The morning forecast reads the next attack rather than guessing at it.
+            ThreatProfile.Planner = day => Encounters.Preview(Encounters.NextAttackDay(day));
+
             WireCrossCuttingEvents();
         }
 
@@ -294,6 +319,10 @@ namespace LastOrders.Core
             {
                 if (previous == DayPhase.Night && next == DayPhase.Resolution) SettleNight();
             };
+
+            // Whether a zombie ever got inside the walls is one of the things an attack's result
+            // is measured by.
+            Compound.OnBreached += Encounters.NoteBreach;
         }
 
         /// <summary>Rolls for the night's injury and writes the night's danger into the report.</summary>
@@ -337,6 +366,10 @@ namespace LastOrders.Core
             // rather than edited into the asset so the other design's starting kit is untouched.
             Ledger.Add(ResourceType.Wood, 20);
             Ledger.Add(ResourceType.Tomato, 4);
+
+            // Enough to put the yard back together once, before the first attack has paid any.
+            int kits = Balance.encounter != null ? Balance.encounter.startingRepairKits : 0;
+            if (kits > 0) Ledger.Add(ResourceType.RepairKit, kits);
 
             for (int i = 0; i < Balance.startingSurvivorCount; i++)
             {

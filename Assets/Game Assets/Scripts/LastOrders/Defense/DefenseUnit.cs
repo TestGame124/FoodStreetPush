@@ -91,6 +91,10 @@ namespace LastOrders.Defense
         /// for that to be rebuilt. It neither watches nor shoots meanwhile.</summary>
         public bool IsOutOfAction { get; internal set; }
 
+        /// <summary>Smashed by zombies inside the walls. It keeps its place, its level and its crew,
+        /// but neither watches nor shoots until a repair kit puts it back together.</summary>
+        public bool IsWrecked { get; internal set; }
+
         /// <summary>The last shot could not be paid for. Only a weapon that spends Ammo can be here.</summary>
         public bool IsOutOfAmmo { get; private set; }
 
@@ -111,7 +115,7 @@ namespace LastOrders.Defense
         /// <summary>True when the crew rule is satisfied: someone is up there, or nobody needs to be.</summary>
         public bool IsCrewed => !NeedsCrew || (Crew != null && CrewOnDuty);
 
-        public bool CanFire => IsBuilt && !IsOutOfAction && Weapon != null && IsCrewed;
+        public bool CanFire => IsBuilt && !IsOutOfAction && !IsWrecked && Weapon != null && IsCrewed;
 
         public bool HasNextLevel => Definition != null && Definition.HasLevel(LevelIndex + 1);
 

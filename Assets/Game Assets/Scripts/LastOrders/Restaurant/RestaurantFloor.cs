@@ -39,6 +39,12 @@ namespace LastOrders.Restaurant
         [Tooltip("Height of the floor's top above the ground. Kept under the furniture's feet.")]
         [SerializeField] float top = 0.035f;
 
+        [Tooltip("Optional. A threshold strip between the kitchen tiles and the dining room's floor.")]
+        [SerializeField] Material trim;
+
+        [Tooltip("How wide the threshold strip is, taken off the dining room's side.")]
+        [SerializeField] float trimWidth = 0.2f;
+
         Mesh mesh;
 
         /// <summary>Editor wiring, for the setup tool.</summary>
@@ -51,7 +57,23 @@ namespace LastOrders.Restaurant
             kitchenTile = kitchenMetres;
             kitchenDepth = kitchenStripDepth;
 
-            GetComponent<MeshRenderer>().sharedMaterials = new[] { dining, kitchen };
+            GetComponent<MeshRenderer>().sharedMaterials = Materials();
+        }
+
+        /// <summary>Editor wiring, for the setup tool: the threshold strip, or none for null.</summary>
+        public void ConfigureTrim(Material trimMaterial, float width)
+        {
+            trim = trimMaterial;
+            trimWidth = width;
+
+            GetComponent<MeshRenderer>().sharedMaterials = Materials();
+        }
+
+        /// <summary>One per submesh: dining, kitchen, and the threshold if there is one.</summary>
+        Material[] Materials()
+        {
+            Material k = kitchen != null ? kitchen : dining;
+            return trim != null ? new[] { dining, k, trim } : new[] { dining, k };
         }
 
         /// <summary>
@@ -102,29 +124,65 @@ namespace LastOrders.Restaurant
                 }
             }
 
+            // The threshold: a strip off the dining room's side of the kitchen line, in the dining
+            // room's mapping, so a strip as wide as a board shows as one darker board.
+            Rect trimRect = default;
+            bool hasTrim = hasKitchen && trim != null && trimWidth > 0.01f;
+            if (hasTrim)
+            {
+                float w = trimWidth;
+                if (alongX && back.x > 0f)
+                {
+                    trimRect = Rect.MinMaxRect(diningRect.xMax - w, diningRect.yMin, diningRect.xMax, diningRect.yMax);
+                    diningRect.xMax -= w;
+                }
+                else if (alongX)
+                {
+                    trimRect = Rect.MinMaxRect(diningRect.xMin, diningRect.yMin, diningRect.xMin + w, diningRect.yMax);
+                    diningRect.xMin += w;
+                }
+                else if (back.y > 0f)
+                {
+                    trimRect = Rect.MinMaxRect(diningRect.xMin, diningRect.yMax - w, diningRect.xMax, diningRect.yMax);
+                    diningRect.yMax -= w;
+                }
+                else
+                {
+                    trimRect = Rect.MinMaxRect(diningRect.xMin, diningRect.yMin, diningRect.xMax, diningRect.yMin + w);
+                    diningRect.yMin += w;
+                }
+            }
+
             var vertices = new System.Collections.Generic.List<Vector3>();
             var normals = new System.Collections.Generic.List<Vector3>();
             var uvs = new System.Collections.Generic.List<Vector2>();
             var diningTriangles = new System.Collections.Generic.List<int>();
             var kitchenTriangles = new System.Collections.Generic.List<int>();
+            var trimTriangles = new System.Collections.Generic.List<int>();
 
             Top(diningRect, diningTile, anchor, vertices, normals, uvs, diningTriangles);
             if (hasKitchen) Top(kitchenRect, kitchenTile, anchor, vertices, normals, uvs, kitchenTriangles);
+            if (hasTrim) Top(trimRect, diningTile, anchor, vertices, normals, uvs, trimTriangles);
             Sides(inner, diningTile, vertices, normals, uvs, diningTriangles);
 
+            Material[] materials = Materials();
+
             mesh.Clear();
-            mesh.subMeshCount = 2;
+            mesh.subMeshCount = materials.Length;
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
             mesh.SetTriangles(diningTriangles, 0);
             mesh.SetTriangles(kitchenTriangles, 1);
+            if (materials.Length > 2) mesh.SetTriangles(trimTriangles, 2);
             mesh.RecalculateTangents();
             mesh.RecalculateBounds();
 
             var renderer = GetComponent<MeshRenderer>();
-            if (renderer.sharedMaterials.Length != 2 || renderer.sharedMaterials[0] != dining || renderer.sharedMaterials[1] != kitchen)
-                renderer.sharedMaterials = new[] { dining, kitchen != null ? kitchen : dining };
+            Material[] current = renderer.sharedMaterials;
+            bool same = current.Length == materials.Length;
+            for (int i = 0; same && i < materials.Length; i++) same = current[i] == materials[i];
+            if (!same) renderer.sharedMaterials = materials;
 
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = true;

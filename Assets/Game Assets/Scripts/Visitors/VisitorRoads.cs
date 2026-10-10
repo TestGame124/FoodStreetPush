@@ -78,15 +78,23 @@ namespace FoodStreet.Visitors
             return path;
         }
 
-        /// <summary>From the car door to the chair, through the restaurant doorway.</summary>
+        /// <summary>How many points <see cref="WalkToSeat"/> has past the inside of the doorway: beside
+        /// the chair, then in front of it.</summary>
+        public const int SeatApproachPoints = 2;
+
+        /// <summary>
+        /// From the car door to the chair, through the restaurant doorway. Ends standing in front of
+        /// the chair, having stepped in from beside it - the visitor sits down from there.
+        /// </summary>
         public IReadOnlyList<Vector3> WalkToSeat(ParkingLot lot, in SeatRef seat)
         {
-            var path = new List<Vector3>(4);
+            var path = new List<Vector3>(5);
             if (lot != null) path.Add(lot.LaneEntry);
 
             path.Add(DoorOutside);
             path.Add(DoorInside);
-            path.Add(seat.SitPoint);
+            path.Add(seat.SidePoint(DoorInside));
+            path.Add(seat.StandPoint);
 
             return path;
         }

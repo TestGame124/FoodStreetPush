@@ -16,6 +16,14 @@
 // The height is world height, not the object's: the environment marks its trees for static
 // batching, which bakes them into world space and loses each one's own origin. They all stand on
 // the ground, which is at zero.
+//
+// With _WindBend or _WindFlutter above zero the plant moves with the level's wind (AmbientWind.hlsl):
+// the crown leans and sways, bending more the higher up the tree, and the leaves - green palette
+// pixels high enough to be canopy - shiver. Every pass moves it the same way, so its shadow sways
+// with it. The leaf pattern and the light stay pinned to where the point rests, so the texture does
+// not swim across a moving crown. At zero, the default, nothing moves: the furniture shares this.
+//
+// The main light's cookie is applied, so the level's drifting cloud shadows pass over the trees too.
 Shader "LastOrders/Toon"
 {
     Properties
@@ -35,6 +43,8 @@ Shader "LastOrders/Toon"
         _CanopyHeight ("Crown height (m)", Float) = 7
         _RimColor ("Rim light", Color) = (1, 0.97, 0.85, 1)
         _RimStrength ("Rim strength", Range(0, 1)) = 0.18
+        _WindBend ("Wind: how far the crown leans (m)", Float) = 0
+        _WindFlutter ("Wind: leaf shiver (m)", Float) = 0
     }
 
     SubShader
@@ -70,7 +80,24 @@ Shader "LastOrders/Toon"
             float _CanopyHeight;
             half4 _RimColor;
             half _RimStrength;
+            float _WindBend;
+            float _WindFlutter;
         CBUFFER_END
+
+        #include "AmbientWind.hlsl"
+
+        // Where the wind has moved this point of the plant to: the lean grows with the square of the
+        // height, so the trunk stays planted; the shiver only on canopy leaves.
+        float3 WindMoved(float3 positionWS, float2 uv)
+        {
+            if (_WindBend <= 0.0 && _WindFlutter <= 0.0) return positionWS;
+
+            float height = saturate(positionWS.y / _CanopyHeight);
+            half3 albedo = SAMPLE_TEXTURE2D_LOD(_BaseMap, sampler_BaseMap, uv * _BaseMap_ST.xy + _BaseMap_ST.zw, 0).rgb;
+            half foliage = saturate((albedo.g - max(albedo.r, albedo.b)) * 12.0);
+            float canopy = saturate((positionWS.y - 1.2) / 3.0);
+            return positionWS + AmbSway(positionWS, _WindBend * height * height, _WindFlutter * foliage * canopy);
+        }
         ENDHLSL
 
         Pass
@@ -84,6 +111,7 @@ Shader "LastOrders/Toon"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -112,12 +140,13 @@ Shader "LastOrders/Toon"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-                VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
-                output.positionCS = position.positionCS;
-                output.positionWS = position.positionWS;
+                // Drawn where the wind has it, lit and patterned where it rests.
+                float3 rest = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(WindMoved(rest, input.uv));
+                output.positionWS = rest;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-                output.fogFactor = ComputeFogFactor(position.positionCS.z);
+                output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -149,7 +178,7 @@ Shader "LastOrders/Toon"
                 half height = saturate(input.positionWS.y / _CanopyHeight);
                 albedo *= lerp(1.0, lerp(_CanopyLow, _CanopyHigh, height), foliage);
 
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS), input.positionWS, half4(1, 1, 1, 1));
                 half ndl = dot(normalWS, mainLight.direction);
                 half lit = smoothstep(_Threshold - _Softness, _Threshold + _Softness, ndl);
                 lit *= lerp(1.0, mainLight.shadowAttenuation, 0.85);
@@ -191,6 +220,7 @@ Shader "LastOrders/Toon"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -204,7 +234,7 @@ Shader "LastOrders/Toon"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
 
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 positionWS = WindMoved(TransformObjectToWorld(input.positionOS.xyz), input.uv);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
 
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
@@ -247,6 +277,7 @@ Shader "LastOrders/Toon"
             struct Attributes
             {
                 float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -259,7 +290,7 @@ Shader "LastOrders/Toon"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(WindMoved(TransformObjectToWorld(input.positionOS.xyz), input.uv));
                 return output;
             }
 
@@ -286,6 +317,7 @@ Shader "LastOrders/Toon"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -299,7 +331,7 @@ Shader "LastOrders/Toon"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(WindMoved(TransformObjectToWorld(input.positionOS.xyz), input.uv));
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 return output;
             }

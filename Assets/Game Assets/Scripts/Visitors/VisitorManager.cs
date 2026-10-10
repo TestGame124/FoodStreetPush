@@ -20,6 +20,11 @@ namespace FoodStreet.Visitors
     /// them still there they wait it out inside until morning. A level with no day cycle keeps
     /// the old behaviour and is open all hours.
     ///
+    /// The Safety Reputation sets the pace inside those limits: the safer survivors believe the
+    /// restaurant is, the more often a car turns off the road and the more people are in it. At
+    /// zero a car still comes now and then with one or two, so a restaurant can always earn its
+    /// way back.
+    ///
     /// It also looks after the visitors a bad night leaves hurt: their car goes home without
     /// them, they recover in the hospital tent, and they leave on the shuttle.
     ///
@@ -60,6 +65,7 @@ namespace FoodStreet.Visitors
 
         readonly List<Visitor> active = new List<Visitor>();
         readonly List<Visitor> finished = new List<Visitor>();
+        readonly List<SeatRef> partySeats = new List<SeatRef>(4);
 
         /// <summary>Cars whose driver is in the hospital tent. They go home in the morning,
         /// empty, and free their bays.</summary>
@@ -221,8 +227,25 @@ namespace FoodStreet.Visitors
             nextArrivalIn -= Time.deltaTime;
             if (nextArrivalIn > 0f) return;
 
-            nextArrivalIn = profile.RollInterval(seats.FreeChairRatio);
+            nextArrivalIn = profile.RollInterval(seats.FreeChairRatio) * ReputationPace;
             Arrive();
+        }
+
+        /// <summary>
+        /// How the Safety Reputation stretches or shortens the wait for the next car: survivors on
+        /// the road come more often to a place they believe is safe. One in a level with no day
+        /// cycle. The chairs and the car park still gate every arrival whatever this says.
+        /// </summary>
+        float ReputationPace => composition != null ? composition.Reputation.ArrivalIntervalScale : 1f;
+
+        /// <summary>How many the next car brings: by the Safety Reputation, never more than there
+        /// are free chairs and room on the street for.</summary>
+        int RollPartySize()
+        {
+            int room = Mathf.Min(seats.FreeChairCount, profile.maxConcurrent - active.Count);
+            if (composition == null || room <= 1) return 1;
+
+            return composition.Reputation.RollPartySize(room, Random.value);
         }
 
         /// <summary>
@@ -290,8 +313,9 @@ namespace FoodStreet.Visitors
 
                 case DayPhase.Day:
                     // The first car of the morning comes a moment after opening, not the frame
-                    // the sign turns - and not in a burst for the hours the road was shut.
-                    nextArrivalIn = profile.RollFirstDelay();
+                    // the sign turns - and not in a burst for the hours the road was shut. A
+                    // restaurant nobody trusts waits longer for even that one.
+                    nextArrivalIn = profile.RollFirstDelay() * Mathf.Max(1f, ReputationPace);
                     EndTheNight();
                     break;
             }
@@ -399,7 +423,9 @@ namespace FoodStreet.Visitors
         {
             for (int i = 0; i < carsGoingHome.Count; i++)
             {
-                if (carsGoingHome[i] != null && carsGoingHome[i].Stage == VisitorVehicle.VehicleStage.Parked)
+                // A car with the rest of a party still out waits for them; the last one in drives it.
+                if (carsGoingHome[i] != null && carsGoingHome[i].Stage == VisitorVehicle.VehicleStage.Parked &&
+                    !carsGoingHome[i].WaitingForPassengers)
                     carsGoingHome[i].DriveOut();
             }
 
@@ -472,9 +498,9 @@ namespace FoodStreet.Visitors
         // --- One arrival -------------------------------------------------------------------
 
         /// <summary>
-        /// Sends one visitor.
+        /// Sends one car, with a party of one or more in it.
         ///
-        /// The bay and the chair are claimed here, before anything is taken from the pool, so
+        /// The bay and the chairs are claimed here, before anything is taken from the pool, so
         /// the gap between "a space is spoken for" and "somebody is driving to it" is zero
         /// frames wide. Everything claimed is handed back on any failure below, because a
         /// half-built arrival that keeps a chair is a restaurant that quietly shrinks.
@@ -490,7 +516,7 @@ namespace FoodStreet.Visitors
                 return;
             }
 
-            if (who.prefab == null || who.vehicle == null || who.vehicle.prefab == null)
+            if (!Sendable(who))
             {
                 Debug.LogError($"[Visitors] '{who.displayName}' has no visitor prefab or no " +
                                "vehicle prefab. Run 'Food Street / Visitors / Generate Visitor " +
@@ -498,12 +524,13 @@ namespace FoodStreet.Visitors
                 return;
             }
 
-            if (!seats.TryReserve(out SeatRef chair)) return;
+            partySeats.Clear();
+            if (seats.TryReserveParty(RollPartySize(), partySeats) == 0) return;
 
             VisitorVehicle car = pool.Take<VisitorVehicle>(who.vehicle.prefab, roads.RoadStart);
             if (car == null)
             {
-                seats.Release(chair);
+                ReleaseParty();
                 return;
             }
 
@@ -512,36 +539,63 @@ namespace FoodStreet.Visitors
 
             if (!parking.TryReserve(car, out ParkingSlot bay))
             {
-                seats.Release(chair);
+                ReleaseParty();
                 pool.Return(car);
                 return;
             }
 
-            Visitor visitor = pool.Take<Visitor>(who.prefab, roads.RoadStart);
-            if (visitor == null)
+            // The driver is whoever the car belongs to; anyone with them is whoever else is on
+            // the road today, each with their own order.
+            int boarded = 0;
+            for (int i = 0; i < partySeats.Count; i++)
             {
-                seats.Release(chair);
+                VisitorDefinition passenger = i == 0 ? who : profile.PickVisitor();
+                if (!Sendable(passenger)) passenger = who;
+
+                Visitor visitor = pool.Take<Visitor>(passenger.prefab, roads.RoadStart);
+                if (visitor == null)
+                {
+                    seats.Release(partySeats[i]);
+                    continue;
+                }
+
+                visitor.ResetForPool();
+                visitor.Begin(passenger, roads, parking, seats, car, partySeats[i]);
+
+                visitor.OnServed += HandleServed;
+                visitor.OnJourneyEnded += HandleJourneyEnded;
+
+                active.Add(visitor);
+                boarded++;
+            }
+
+            partySeats.Clear();
+
+            if (boarded == 0)
+            {
                 bay.Release();
                 pool.Return(car);
                 return;
             }
 
-            visitor.ResetForPool();
-            visitor.Begin(who, roads, parking, seats, car, chair);
-
-            visitor.OnServed += HandleServed;
-            visitor.OnJourneyEnded += HandleJourneyEnded;
-
+            car.ExpectPassengers(boarded);
             car.OnParked += HandleParked;
             car.OnDeparted += HandleDeparted;
 
             car.DriveIn(roads, parking, bay);
+        }
 
-            active.Add(visitor);
+        static bool Sendable(VisitorDefinition who) =>
+            who != null && who.prefab != null && who.vehicle != null && who.vehicle.prefab != null;
+
+        void ReleaseParty()
+        {
+            for (int i = 0; i < partySeats.Count; i++) seats.Release(partySeats[i]);
+            partySeats.Clear();
         }
 
         /// <summary>
-        /// A car has stopped, so its own passenger gets out.
+        /// A car has stopped, so its own passengers get out, one after another.
         ///
         /// Matched on the car rather than on "whoever is still riding". Two cars are often on
         /// the drive at once, and the one that parks first is not reliably the one that set off
@@ -552,12 +606,12 @@ namespace FoodStreet.Visitors
         {
             car.OnParked -= HandleParked;
 
+            int order = 0;
             for (int i = 0; i < active.Count; i++)
             {
                 if (active[i] == null || active[i].Car != car) continue;
 
-                active[i].GetOutOfCar();
-                return;
+                active[i].GetOutOfCar(order++);
             }
         }
 

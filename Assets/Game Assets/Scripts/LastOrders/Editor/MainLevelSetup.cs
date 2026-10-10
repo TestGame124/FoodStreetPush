@@ -105,6 +105,10 @@ namespace LastOrders.EditorTools
             // replies.
             int hud = CompoundHudBuilder.Build(scope, minimal: true);
 
+            // Then the gameplay HUD over it, which switches the minimal one and the level's old
+            // wallet, shop and orders buttons off again and takes over all of it.
+            Debug.Log($"[Last Orders] {Hud.GameplayHudBuilder.Build()}");
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();

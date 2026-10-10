@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using LastOrders.Consequence;
 using LastOrders.Data;
+using LastOrders.Night;
 using UnityEngine;
 
 namespace LastOrders.DayCycle.States
@@ -20,6 +21,10 @@ namespace LastOrders.DayCycle.States
         readonly DayCycleContext context;
         readonly DayCycleMachine machine;
 
+        /// <summary>Seconds of morning left before the dawn screen: the zombies slinking off, the
+        /// crew coming out to patch the restaurant up. Zero after a quiet evening.</summary>
+        float morningLeft;
+
         public ResolutionState(DayCycleContext context, DayCycleMachine machine)
         {
             this.context = context;
@@ -33,6 +38,15 @@ namespace LastOrders.DayCycle.States
 
         public void OnEnter(DayPhase previous)
         {
+            // The attack's one result - victory or defeat, reward or none, one move of the Safety
+            // Reputation - before anything else is tallied, so the report carries it.
+            EncounterResult encounter = context.Encounters != null && context.Encounters.IsActive
+                ? context.Encounters.Resolve(context.Time.CurrentDay)
+                : null;
+
+            context.Report.Encounter = encounter;
+            if (encounter != null) context.Report.ReputationDelta += encounter.ReputationDelta;
+
             TallyStructures();
             ExtinguishFires();
 
@@ -45,8 +59,6 @@ namespace LastOrders.DayCycle.States
                 context.Report.ReputationDelta += passive;
             }
 
-            ApplyDecay();
-
             context.Survivors.AdvanceDay();
             context.Dispatch.AdvanceDay();
 
@@ -54,14 +66,33 @@ namespace LastOrders.DayCycle.States
 
             OnResolved?.Invoke(context.Report);
 
+            // After an attack the morning is shown rather than cut to: the zombies left standing
+            // turn and go, and the crew comes out to patch the restaurant up. After a quiet
+            // evening there is nothing to watch, so the dawn screen comes at once.
+            morningLeft = encounter != null && context.Encounters != null
+                ? Mathf.Max(0f, context.Encounters.Tuning.retreatSeconds)
+                : 0f;
+
             // Requested rather than applied directly. The machine defers it, so a subscriber
             // to OnResolved that opens a modal is not fighting a phase change underneath it.
-            machine.RequestTransition(DayPhase.Dawn);
+            if (morningLeft <= 0f) machine.RequestTransition(DayPhase.Dawn);
         }
 
-        public void OnTick(float deltaSeconds) { }
+        public void OnTick(float deltaSeconds)
+        {
+            if (morningLeft <= 0f) return;
 
-        public void OnExit(DayPhase next) { }
+            morningLeft -= deltaSeconds;
+            if (morningLeft <= 0f) machine.RequestTransition(DayPhase.Dawn);
+        }
+
+        public void OnExit(DayPhase next)
+        {
+            morningLeft = 0f;
+        }
+
+        /// <summary>Seconds of the morning still to watch before the dawn screen.</summary>
+        public float MorningSecondsRemaining => Mathf.Max(0f, morningLeft);
 
         /// <summary>
         /// Walks every structure, records its state, and converts the destroyed ones into
@@ -149,23 +180,6 @@ namespace LastOrders.DayCycle.States
         {
             var fires = Object.FindObjectsByType<StructureFire>(FindObjectsSortMode.None);
             for (int i = 0; i < fires.Length; i++) fires[i].ResetForNewDay();
-        }
-
-        /// <summary>
-        /// 10. Turtling has to lose slowly, so a day spent closed, badly damaged or serving
-        /// poorly costs Reputation even when nothing was destroyed. A player who bricks up
-        /// every door loses by attrition, which is correct for a game whose thesis is that
-        /// safety is unaffordable.
-        /// </summary>
-        void ApplyDecay()
-        {
-            bool closed = context.ClosedForRepairs;
-            bool badlyDamaged = context.Perimeter.Current.Integrity < 0.6f;
-            bool servedPoorly = context.Report.CustomersServed == 0 && !closed;
-
-            float before = context.Reputation.Current;
-            context.Reputation.ApplyDailyDecay(closed, badlyDamaged, servedPoorly);
-            context.Report.ReputationDelta += context.Reputation.Current - before;
         }
 
         /// <summary>

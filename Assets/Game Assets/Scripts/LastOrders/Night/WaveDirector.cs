@@ -70,6 +70,47 @@ namespace LastOrders.Night
 
         /// <summary>Distinct archetypes in this wave. What the Threat Profile broadcasts.</summary>
         public readonly HashSet<EnemyDefinition> Composition = new HashSet<EnemyDefinition>();
+
+        /// <summary>
+        /// A zombie attack's short waves, in order. When there are any, the night runs them one
+        /// after another - each sets off once the last is beaten - instead of releasing
+        /// <see cref="Spawns"/> on a clock. <see cref="Spawns"/> and <see cref="Groups"/> still list
+        /// every arrival, for anything that only wants to count them.
+        /// </summary>
+        public readonly List<EncounterWave> Waves = new List<EncounterWave>();
+
+        /// <summary>The threat band's name: Low, Medium, High.</summary>
+        public string ThreatName;
+
+        /// <summary>Which attack of the campaign this is, from 1.</summary>
+        public int EncounterNumber;
+
+        /// <summary>Share of the zombies sent after a run of defeats. One when nothing was taken off.</summary>
+        public float Relief = 1f;
+
+        public bool IsEncounter => Waves.Count > 0;
+
+        public int EnemyCount => Spawns.Count;
+    }
+
+    /// <summary>
+    /// One short wave of an attack: who comes, from which sides, and when each sets off -
+    /// counted from the moment the wave itself begins, not from nightfall.
+    /// </summary>
+    public sealed class EncounterWave
+    {
+        public int Index;
+
+        /// <summary>The lanes - the sides of the compound - this wave comes from.</summary>
+        public readonly List<int> Lanes = new List<int>();
+
+        public readonly List<WaveSpawn> Spawns = new List<WaveSpawn>();
+        public readonly List<WaveGroup> Groups = new List<WaveGroup>();
+
+        /// <summary>The kinds of zombie in it.</summary>
+        public readonly List<EnemyDefinition> Kinds = new List<EnemyDefinition>();
+
+        public int Count => Spawns.Count;
     }
 
     /// <summary>

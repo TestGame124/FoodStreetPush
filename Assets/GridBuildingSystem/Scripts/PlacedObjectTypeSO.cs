@@ -265,4 +265,10 @@ public enum ObjectType
     ________Livestock_________ = 300, // Should not be set to any Object
     ChickenCoop = 301,
     CowShelter = 302,
+
+    // Kitchen stations beside the bread and soup stoves, bought from the shop's Stoves tab.
+    ________Kitchen_________ = 400, // Should not be set to any Object
+    SaladStation = 401,
+    GriddleStation = 402,
+    GrillStation = 403,
 }

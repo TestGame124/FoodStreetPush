@@ -36,7 +36,11 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
     /// <summary>The ripe crop has just been picked.</summary>
     public event Action<PlantPot> Harvested;
 
-    public bool CanHarvest => currentState == PotState.Done;
+    public bool CanHarvest => currentState == PotState.Done && !IsWrecked;
+
+    /// <summary>Smashed by zombies in an attack. The crop stays where it was and stops growing, and
+    /// nothing is planted or picked until a repair kit puts the bed back together.</summary>
+    public bool IsWrecked => LastOrders.Consequence.OutdoorWreck.IsWreckedOn(this);
 
     /// <summary>Where a tool offered over this pot waits: above the middle of the crop.</summary>
     public Vector3 CropTop => (centerPoint != null ? centerPoint.position : transform.position) + Vector3.up * 0.35f;
@@ -68,7 +72,7 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
             seedinventoryUI.AddEmptyPots(this);
     }
 
-    public bool CanPlant(ItemDataSO seed) => currentState == PotState.Empty && seed != null && seed.canBePlanted;
+    public bool CanPlant(ItemDataSO seed) => currentState == PotState.Empty && !IsWrecked && seed != null && seed.canBePlanted;
 
     public bool TryPlant(ItemDataSO seed)
     {
@@ -114,6 +118,11 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
         {
             ShowStage(seed, GrowingStage(1f - timer / growTime, stageCount));
             yield return new WaitForSeconds(1);
+
+            // A wrecked bed holds its crop where it was until it is repaired.
+            while (IsWrecked)
+                yield return null;
+
             timer--;
         }
 
@@ -164,6 +173,9 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
     /// </summary>
     public bool OnTouch()
     {
+        if (IsWrecked)
+            return LastOrders.Interaction.TapFeedback.Report("This planting bed was wrecked by zombies. A repair kit puts it back together.");
+
         switch (currentState)
         {
             case PotState.Empty:

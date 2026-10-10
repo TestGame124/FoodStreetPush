@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f14fd4e5d57ec49936e3f584fa9001, type: 3}
+  m_Name: FriedEggsRecipe
+  m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
+  RecipeImage: {fileID: 21300000, guid: c231d4163966c2e4fa4f27d400f0832b, type: 3}
+  TotalTimeToCook: 45
+  Ingrediants:
+  - item:
+      itemDataSO: {fileID: 11400000, guid: 420aaf89478300a4dae5b51113d39ba8, type: 2}
+      itemsAmount: 1
+    Amount: 2
+  Results:
+    item:
+      itemDataSO: {fileID: 11400000, guid: 9313e0993b2bb604c953fc5435d38eb7, type: 2}
+      itemsAmount: 1
+    Amount: 0
+  startRewards: 1

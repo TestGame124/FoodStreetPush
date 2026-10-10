@@ -43,6 +43,9 @@ namespace LastOrders.DayCycle
 
         public float ReputationDelta;
 
+        /// <summary>How last night's zombie attack went, or null after a quiet evening.</summary>
+        public EncounterResult Encounter;
+
         /// <summary>
         /// The lowest health any perimeter structure reached, as a fraction.
         ///
@@ -75,6 +78,7 @@ namespace LastOrders.DayCycle
             ZombiesAtTheDoor = 0;
             Stolen = null;
             ReputationDelta = 0f;
+            Encounter = null;
             ClosestCall = 1f;
             WasBadNight = false;
         }
@@ -111,6 +115,11 @@ namespace LastOrders.DayCycle
 
         /// <summary>Tonight's wave, produced at dusk and consumed by Night.</summary>
         public WavePlan TonightsWave;
+
+        /// <summary>The zombie attack cycle: which days end in an attack, the attack locked for
+        /// tonight, and its result. Set by the composition once it exists; null in a bare test
+        /// context, where every night runs the wave it is handed.</summary>
+        public EncounterService Encounters;
 
         /// <summary>Set at dawn when the player chooses Closed for Repairs (15.10): no
         /// serving, faster building, and a Reputation cost they accepted knowingly.</summary>

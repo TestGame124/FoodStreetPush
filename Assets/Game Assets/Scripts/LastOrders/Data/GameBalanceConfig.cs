@@ -125,6 +125,16 @@ namespace LastOrders.Data
         [Tooltip("The restaurant's own walls: the line no zombie crosses, and growing it.")]
         public RestaurantTuning restaurant = new RestaurantTuning();
 
+        [Header("Zombie attacks")]
+        [Tooltip("When attacks come, the waves, the restaurant's health, the cap on wrecks in the " +
+                 "yard, the threat bands and how fast difficulty may change.")]
+        public EncounterTuning encounter = new EncounterTuning();
+
+        [Header("Safety Reputation")]
+        [Tooltip("The 0-100 meter: what each attack's result does to it, and what it does to the " +
+                 "customers in return.")]
+        public SafetyReputationTuning safety = new SafetyReputationTuning();
+
         [Header("Closed for Repairs (15.10)")]
         [Tooltip("Build speed bonus when the player skips serving entirely for a day.")]
         public float closedForRepairsBuildBonus = 0.5f;
@@ -215,6 +225,8 @@ namespace LastOrders.Data
 
             if (repair == null) repair = new RepairTuning();
             if (restaurant == null) restaurant = new RestaurantTuning();
+            if (encounter == null) encounter = new EncounterTuning();
+            if (safety == null) safety = new SafetyReputationTuning();
 
             // The arrival curve is a distribution; if it does not sum to 1 the day quietly
             // serves the wrong number of customers and every downstream number is off.

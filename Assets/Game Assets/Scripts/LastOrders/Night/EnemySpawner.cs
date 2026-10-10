@@ -65,6 +65,10 @@ namespace LastOrders.Night
             night = composition.Night;
             night.OnSpawnRequested += HandleSpawnRequested;
             night.OnGroupIncoming += HandleGroupIncoming;
+            night.OnRetreat += HandleRetreat;
+
+            // The attacks are planned against the sides this spawner can actually send them from.
+            DescribeLanes();
         }
 
         void OnDestroy()
@@ -73,6 +77,59 @@ namespace LastOrders.Night
 
             night.OnSpawnRequested -= HandleSpawnRequested;
             night.OnGroupIncoming -= HandleGroupIncoming;
+            night.OnRetreat -= HandleRetreat;
+        }
+
+        /// <summary>
+        /// Tells the attack cycle how many sides there are and what to call them. An authored lane's
+        /// name says where it is - "Lane1_West" is the west - which is what the warnings read out.
+        /// </summary>
+        void DescribeLanes()
+        {
+            if (composition.Encounters == null) return;
+
+            int authored = 0;
+            if (laneOverrides != null)
+                for (int i = 0; i < laneOverrides.Length; i++)
+                    if (laneOverrides[i] != null) authored = i + 1;
+
+            if (authored == 0) return;
+
+            var names = new string[authored];
+            for (int i = 0; i < authored; i++)
+            {
+                Transform lane = laneOverrides[i];
+                if (lane == null) continue;
+
+                string label = lane.name;
+                int underscore = label.LastIndexOf('_');
+                names[i] = underscore >= 0 && underscore < label.Length - 1 ? label.Substring(underscore + 1) : label;
+            }
+
+            composition.Encounters.LaneCount = authored;
+            composition.Encounters.LaneNames = names;
+        }
+
+        /// <summary>Morning: whatever is still standing turns its back on the restaurant and goes.</summary>
+        void HandleRetreat(System.Collections.Generic.IReadOnlyList<EnemyAgent> leaving)
+        {
+            Vector3 home = RestaurantCentre();
+
+            for (int i = 0; i < leaving.Count; i++)
+                if (leaving[i] != null && leaving[i].isActiveAndEnabled) leaving[i].Retreat(home);
+        }
+
+        Vector3 RestaurantCentre()
+        {
+            var restaurant = composition.Restaurant;
+            if (restaurant != null && restaurant.HasFootprint)
+                return new Vector3(restaurant.Footprint.center.x, 0f, restaurant.Footprint.center.y);
+
+            NavigationSystem nav = NavigationSystem.Instance;
+            if (nav == null || nav.Grid == null) return transform.position;
+
+            NavGrid grid = nav.Grid.Grid;
+            return grid.Origin + new Vector3(grid.BuildWidth * grid.BuildCellSize, 0f, grid.BuildHeight * grid.BuildCellSize) * 0.5f;
         }
 
         /// <summary>The warning, placed where they will appear: the player looks at the road
@@ -116,6 +173,10 @@ namespace LastOrders.Night
 
             agent.Configure(definition, position);
             if (definition.tintBody) Tint(agent, definition.silhouetteColour);
+
+            // Over the wall, it goes for the yard first - until the night's cap on wrecks is reached.
+            agent.ConfigureRaids(composition.Outdoor,
+                                 composition.Encounters != null ? composition.Encounters.Tuning.raidGiveUpSeconds : 20f);
 
             night.Register(agent);
 

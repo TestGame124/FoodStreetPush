@@ -85,5 +85,20 @@ public enum ItemType
     // Dishes made with them
     CustardTart = 21,
     CornChowder = 22,
+
+    // What the griddle and the grill need that nothing grows or keeps yet
+    Potato = 23,
+    Onion = 24,
+    Fish = 25,
+
+    // Griddle station
+    FriedEggs = 26,
+    HashBrowns = 27,
+    FrenchToast = 28,
+
+    // Grill station
+    GrilledCorn = 29,
+    ChickenSkewers = 30,
+    GrilledFish = 31,
 }
 

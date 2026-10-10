@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Griddle Station
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Griddle Station
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 0
+  type: 402
+  PriceAmount: 250
+  Sellable: 1
+  prefab: {fileID: 4386906205654504650, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
+  visual: {fileID: 3151800287701022893, guid: 3fbb69c66ad9da34f85892105a650ca9, type: 3}
+  width: 3
+  height: 2
+  placementProfile: {fileID: 11400000, guid: f3723ca6b24acb340b94dc3b348ee494, type: 2}
+  maxItems: 2
+  previewImage: {fileID: 0}
+  shopIcon: {fileID: 21300000, guid: 3b24c56ce4ee3674cbd79124d8180f08, type: 3}
+  buildCategory: 0
+  buildCost: []
+  buildClockMinutes: 1
+  maxHealth: 100
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1
+  requiredReputation: 0
+  requiresBlueprint: 0

@@ -43,6 +43,8 @@ Material:
     - _RimStrength: 0.18
     - _Softness: 0.07
     - _Threshold: 0.05
+    - _WindBend: 0.32
+    - _WindFlutter: 0.02
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimColor: {r: 1, g: 0.97, b: 0.85, a: 1}

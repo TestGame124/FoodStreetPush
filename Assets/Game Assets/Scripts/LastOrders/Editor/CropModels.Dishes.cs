@@ -15,7 +15,11 @@ namespace LastOrders.EditorTools
     /// </summary>
     public static partial class CropModels
     {
-        public enum Dish { Bread, CornBread, TomatoSoup, GardenSalad, SweetcornSalad, CarrotSlaw, TomatoCheeseSalad, BeanSalad, ChickenSalad, CustardTart, CornChowder }
+        public enum Dish
+        {
+            Bread, CornBread, TomatoSoup, GardenSalad, SweetcornSalad, CarrotSlaw, TomatoCheeseSalad, BeanSalad, ChickenSalad, CustardTart, CornChowder,
+            FriedEggs, HashBrowns, FrenchToast, GrilledCorn, ChickenSkewers, GrilledFish,
+        }
 
         /// <summary>The dish, as its recipe icon shows it.</summary>
         public static SmoothMesh Plated(Dish dish)
@@ -36,6 +40,12 @@ namespace LastOrders.EditorTools
                 case Dish.ChickenSalad: ChickenSalad(mesh, dice); break;
                 case Dish.CustardTart: CustardTart(mesh, dice); break;
                 case Dish.CornChowder: CornChowder(mesh, dice); break;
+                case Dish.FriedEggs: FriedEggs(mesh, dice); break;
+                case Dish.HashBrowns: HashBrowns(mesh, dice); break;
+                case Dish.FrenchToast: FrenchToast(mesh, dice); break;
+                case Dish.GrilledCorn: GrilledCorn(mesh, dice); break;
+                case Dish.ChickenSkewers: ChickenSkewers(mesh, dice); break;
+                case Dish.GrilledFish: GrilledFish(mesh, dice); break;
             }
 
             return mesh;

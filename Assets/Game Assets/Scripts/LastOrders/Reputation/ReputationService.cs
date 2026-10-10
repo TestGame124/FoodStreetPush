@@ -4,40 +4,59 @@ using UnityEngine;
 
 namespace LastOrders.Reputation
 {
+    /// <summary>How an attack ended, as the Safety Reputation counts it.</summary>
+    public enum EncounterResultKind
+    {
+        /// <summary>Held, and no zombie ever got inside the walls.</summary>
+        CleanVictory = 0,
+
+        /// <summary>Held, but zombies got inside the walls. Nothing in the yard was wrecked.</summary>
+        BreachedVictory = 1,
+
+        /// <summary>Held, but something in the yard was wrecked.</summary>
+        WreckedVictory = 2,
+
+        /// <summary>The restaurant's health reached zero.</summary>
+        Defeat = 3,
+    }
+
     /// <summary>
-    /// The single 0-100 stat of 10. Drives walk-in volume and quality, Survivor recruitment
-    /// tier, trader inventory, expansion gates and story beats.
+    /// The Safety Reputation: one 0-100 meter for how safe survivors believe the restaurant is.
     ///
-    /// Two rules do most of the design work here.
+    /// It moves once per zombie attack, by how that attack went, and nothing else nudges it from
+    /// day to day. That is what makes it readable: the player can always say why it changed. In
+    /// return it decides two things - how often customer cars turn up, and which threat band the
+    /// next attack is drawn from. Safety draws trade, and trade draws the dead.
     ///
-    /// It decays when the restaurant is closed, badly damaged, or serving poorly. That makes
-    /// turtling a losing strategy: a player who bricks up every door slowly loses by
-    /// attrition, which is correct for a game whose thesis is that safety is unaffordable.
-    ///
-    /// It never drops below the highest tier milestone reached. Tiers are permanent unlocks,
-    /// and this is one of the guarantees 15.1 makes absolute - a player cannot be demoted
-    /// out of content they have already earned, no matter how bad a run of nights they have.
+    /// It can fall all the way to zero. That is not a dead end: at zero, cars still come now and
+    /// then with one or two customers, and the next attacks are the lightest there are, so a
+    /// restaurant that lost everything can always earn its way back.
     /// </summary>
     public sealed class ReputationService
     {
+        public const float Max = 100f;
+
         readonly GameBalanceConfig balance;
 
         float current;
 
-        /// <summary>The highest tier ever reached. The floor under <see cref="Current"/>,
-        /// and the thing that makes progress impossible to lose.</summary>
+        /// <summary>The highest tier ever reached. Kept for the celebration when a new band is
+        /// entered; it is not a floor - the meter can drop back below it.</summary>
         public int HighestTierReached { get; private set; }
 
         public float Current => current;
 
+        /// <summary>0 to 1 across the meter.</summary>
+        public float Normalized => Mathf.Clamp01(current / Max);
+
         public int Tier => balance.ReputationTier(current);
+
+        SafetyReputationTuning Tuning => balance.safety ?? (balance.safety = new SafetyReputationTuning());
 
         /// <summary>Raised on any change, with the new value. Nothing polls this.</summary>
         public event Action<float> OnReputationChanged;
 
-        /// <summary>Raised when the tier steps up, with the new tier. Traders restock, better
-        /// clientele start arriving, and an expansion may have just unlocked - so this is a
-        /// loud, celebratory moment, not a quiet stat change.</summary>
+        /// <summary>Raised when the tier steps up past anything reached before, with the new tier.</summary>
         public event Action<int> OnTierReached;
 
         public ReputationService(GameBalanceConfig balance)
@@ -45,35 +64,26 @@ namespace LastOrders.Reputation
             this.balance = balance != null
                 ? balance
                 : throw new ArgumentNullException(nameof(balance));
-        }
 
-        /// <summary>The Reputation value below which the player can never fall, given the
-        /// tiers they have already unlocked.</summary>
-        public float Floor
-        {
-            get
-            {
-                if (balance.reputationTiers == null || balance.reputationTiers.Length == 0)
-                    return 0f;
-
-                int index = Mathf.Clamp(HighestTierReached, 0, balance.reputationTiers.Length - 1);
-                return balance.reputationTiers[index];
-            }
+            current = Mathf.Clamp(Tuning.startingReputation, 0f, Max);
+            HighestTierReached = Tier;
         }
 
         /// <summary>
-        /// The single mutation point. Clamps to the permanent floor and to 100, and raises
-        /// the tier event when a new band is entered.
+        /// The single mutation point. Clamps to 0-100 and raises the tier event when a band is
+        /// entered for the first time.
         /// </summary>
         public void Add(float delta)
         {
             if (Mathf.Approximately(delta, 0f)) return;
 
-            current = Mathf.Clamp(current + delta, Floor, 100f);
+            float before = current;
+            current = Mathf.Clamp(current + delta, 0f, Max);
+            if (Mathf.Approximately(before, current)) return;
 
-            // The tier event goes first so that a subscriber handling the value change
-            // already sees the unlock it implies, rather than reacting to a value whose
-            // tier has not been announced yet.
+            // The tier event goes first so that a subscriber handling the value change already
+            // sees the unlock it implies, rather than reacting to a value whose tier has not been
+            // announced yet.
             int tier = Tier;
             if (tier > HighestTierReached)
             {
@@ -84,37 +94,97 @@ namespace LastOrders.Reputation
             OnReputationChanged?.Invoke(current);
         }
 
-        /// <summary>The daily walk-in pool of 9.2: BasePool = 4 + floor(Reputation x 0.24),
-        /// before the menu-variety, comfort, damage and faction multipliers are applied.</summary>
-        public int BasePartyPool() =>
-            balance.basePartyCount + Mathf.FloorToInt(current * balance.reputationToParties);
+        /// <summary>Puts the meter at an exact value. For a new game and for tests.</summary>
+        public void Set(float value) => Add(Mathf.Clamp(value, 0f, Max) - current);
+
+        // --- One result per attack ----------------------------------------------------------------
 
         /// <summary>
-        /// Applies the full 9.2 multiplier chain. Kept here rather than in the customer
-        /// director so that the dawn projection the player is shown and the number actually
-        /// spawned come from one function.
+        /// What an attack that ended this way is worth, before it is applied. A victory earns its
+        /// row of the table, less a share for how far the restaurant's own health ran down - the
+        /// closer the call, the less the survivors on the road hear about it. A defeat is one fixed
+        /// penalty, whatever else broke.
         /// </summary>
-        public int DailyPartyPool(float menuVariety, float comfort, float damageState, float factionEvent)
+        public float ResultDelta(EncounterResultKind kind, float restaurantDamageFraction)
         {
-            float pool = BasePartyPool()
-                         * Mathf.Clamp(menuVariety, 0.8f, 1.3f)
-                         * Mathf.Clamp(comfort, 0.9f, 1.2f)
-                         * Mathf.Clamp(damageState, 0.5f, 1.0f)
-                         * Mathf.Clamp(factionEvent, 1.0f, 1.5f);
+            SafetyReputationTuning tuning = Tuning;
 
-            return Mathf.Max(0, Mathf.RoundToInt(pool));
+            if (kind == EncounterResultKind.Defeat) return -Mathf.Abs(tuning.defeatPenalty);
+
+            float gain;
+            switch (kind)
+            {
+                case EncounterResultKind.CleanVictory: gain = tuning.cleanVictory; break;
+                case EncounterResultKind.BreachedVictory: gain = tuning.breachedVictory; break;
+                default: gain = tuning.wreckedVictory; break;
+            }
+
+            if (gain <= 0f) return gain;
+
+            float kept = 1f - Mathf.Clamp01(tuning.restaurantDamageWeight) * Mathf.Clamp01(restaurantDamageFraction);
+            return Mathf.Round(gain * kept * 10f) / 10f;
         }
 
-        /// <summary>
-        /// Applied at Resolution. Turtling has to lose slowly, so a day spent closed or
-        /// badly damaged costs Reputation even though nothing was destroyed.
-        /// </summary>
-        public void ApplyDailyDecay(bool wasClosed, bool badlyDamaged, bool servedPoorly)
+        /// <summary>Applies an attack's result and returns how far the meter actually moved, which
+        /// can be less than the delta at either end of it.</summary>
+        public float ApplyEncounterResult(EncounterResultKind kind, float restaurantDamageFraction)
         {
-            if (!wasClosed && !badlyDamaged && !servedPoorly) return;
+            float before = current;
+            Add(ResultDelta(kind, restaurantDamageFraction));
+            return current - before;
+        }
 
-            int reasons = (wasClosed ? 1 : 0) + (badlyDamaged ? 1 : 0) + (servedPoorly ? 1 : 0);
-            Add(-balance.reputationDecayPerDay * reasons);
+        /// <summary>Which row of the table an attack lands in.</summary>
+        public static EncounterResultKind Classify(bool defeated, bool breached, int wrecks)
+        {
+            if (defeated) return EncounterResultKind.Defeat;
+            if (wrecks > 0) return EncounterResultKind.WreckedVictory;
+            return breached ? EncounterResultKind.BreachedVictory : EncounterResultKind.CleanVictory;
+        }
+
+        // --- Customers ----------------------------------------------------------------------------
+
+        /// <summary>
+        /// Multiplier on the time between customer cars: slow at zero, the traffic profile's own
+        /// pace at fifty, nearly twice as often at a hundred. Applied within the car park and
+        /// the chairs, which still gate every arrival.
+        /// </summary>
+        public float ArrivalIntervalScale
+        {
+            get
+            {
+                SafetyReputationTuning tuning = Tuning;
+                float t = Normalized;
+
+                return t <= 0.5f
+                    ? Mathf.Lerp(tuning.arrivalIntervalAtZero, tuning.arrivalIntervalAtHalf, t * 2f)
+                    : Mathf.Lerp(tuning.arrivalIntervalAtHalf, tuning.arrivalIntervalAtFull, (t - 0.5f) * 2f);
+            }
+        }
+
+        /// <summary>The smallest and largest party one car brings at today's reputation.</summary>
+        public Vector2Int PartySizeRange
+        {
+            get
+            {
+                SafetyReputationTuning tuning = Tuning;
+                float t = Normalized;
+
+                int low = Mathf.RoundToInt(Mathf.Lerp(tuning.partySizeAtZero.x, tuning.partySizeAtFull.x, t));
+                int high = Mathf.RoundToInt(Mathf.Lerp(tuning.partySizeAtZero.y, tuning.partySizeAtFull.y, t));
+
+                low = Mathf.Max(1, low);
+                return new Vector2Int(low, Mathf.Max(low, high));
+            }
+        }
+
+        /// <summary>How many customers the next car brings, never more than
+        /// <paramref name="room"/> - the free chairs - and always at least one.</summary>
+        public int RollPartySize(int room, float roll01)
+        {
+            Vector2Int range = PartySizeRange;
+            int size = range.x + Mathf.FloorToInt(Mathf.Clamp01(roll01) * (range.y - range.x + 1) * 0.9999f);
+            return Mathf.Clamp(size, 1, Mathf.Max(1, room));
         }
     }
 }

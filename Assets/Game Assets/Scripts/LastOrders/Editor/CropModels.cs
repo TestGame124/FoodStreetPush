@@ -47,6 +47,9 @@ namespace LastOrders.EditorTools
             GrillMark, Bone, Can, CanLabel, CanBand,
             // The farmyard's eggs and milk, and the dishes made with them.
             EggShell, EggShellCream, Milk, MilkGlass, Custard, CustardTop, Pastry, Chowder,
+            // The griddle's and the grill's dishes, and the potatoes, onions and fish they need.
+            EggWhite, EggWhiteCrisp, Yolk, HashBrown, HashBrownCrisp, FrenchToast, Syrup, PotatoSkin, PotatoFlesh, OnionSkin, Onion,
+            OnionRing, OnionGrilled, FishSkin, FishGrilled, FishFin, Skewer, CobGrilled, Lemon, LemonFlesh,
             Count,
         }
 
@@ -201,6 +204,50 @@ namespace LastOrders.EditorTools
                     Swatch chowder = S(0.9f, 0.8f, 0.52f, 0.98f, 0.91f, 0.68f, gloss: 0.55f);
                     chowder.Wrap = 0.3f;
                     return chowder;
+
+                // A fried egg: the set white, its lacy edge crisped brown on the griddle, the glossy yolk.
+                case Paint.EggWhite:
+                    Swatch white = S(0.88f, 0.87f, 0.82f, 0.98f, 0.97f, 0.93f, gloss: 0.5f);
+                    white.Wrap = 0.3f;
+                    return white;
+                case Paint.EggWhiteCrisp: return S(0.72f, 0.52f, 0.28f, 0.88f, 0.72f, 0.48f);
+                case Paint.Yolk: return S(0.93f, 0.56f, 0.06f, 1f, 0.76f, 0.2f, gloss: 0.85f);
+
+                // Hash browns: golden shreds, the crisp ones a deeper brown.
+                case Paint.HashBrown: return S(0.8f, 0.56f, 0.24f, 0.93f, 0.72f, 0.38f, gloss: 0.2f);
+                case Paint.HashBrownCrisp: return S(0.6f, 0.36f, 0.14f, 0.78f, 0.5f, 0.2f, gloss: 0.25f);
+
+                // French toast: bread soaked in egg and fried golden, maple syrup over it.
+                case Paint.FrenchToast: return S(0.82f, 0.56f, 0.26f, 0.94f, 0.73f, 0.4f, gloss: 0.3f);
+                case Paint.Syrup: return S(0.48f, 0.22f, 0.06f, 0.72f, 0.4f, 0.12f, gloss: 0.95f);
+
+                case Paint.PotatoSkin: return S(0.58f, 0.43f, 0.27f, 0.76f, 0.6f, 0.4f, gloss: 0.15f);
+                case Paint.PotatoFlesh:
+                    Swatch potato = S(0.9f, 0.82f, 0.56f, 0.98f, 0.92f, 0.7f, gloss: 0.3f);
+                    potato.Wrap = 0.25f;
+                    return potato;
+
+                // An onion: papery golden-brown skin; white rings inside, a shade greener between them; browned on the grill.
+                case Paint.OnionSkin: return S(0.58f, 0.33f, 0.14f, 0.82f, 0.56f, 0.28f, gloss: 0.45f, vein: 0.3f);
+                case Paint.Onion: return S(0.88f, 0.85f, 0.74f, 0.97f, 0.95f, 0.86f, gloss: 0.45f);
+                case Paint.OnionRing: return S(0.78f, 0.78f, 0.6f, 0.86f, 0.86f, 0.68f, gloss: 0.4f);
+                case Paint.OnionGrilled: return S(0.74f, 0.56f, 0.34f, 0.9f, 0.76f, 0.52f, gloss: 0.4f);
+
+                // A fish, pale along its belly to blue-grey along its back; grilled golden; its fins.
+                case Paint.FishSkin: return S(0.84f, 0.85f, 0.82f, 0.36f, 0.43f, 0.5f, gloss: 0.75f);
+                case Paint.FishGrilled: return S(0.86f, 0.72f, 0.5f, 0.64f, 0.44f, 0.24f, gloss: 0.5f);
+                case Paint.FishFin: return S(0.42f, 0.45f, 0.46f, 0.6f, 0.62f, 0.6f, gloss: 0.3f);
+
+                case Paint.Skewer: return S(0.64f, 0.5f, 0.32f, 0.82f, 0.68f, 0.48f);
+
+                // A husked cob off the grill: kernels a deeper gold, charred in patches.
+                case Paint.CobGrilled:
+                    Swatch grilled = S(0.86f, 0.56f, 0.14f, 0.97f, 0.76f, 0.28f, gloss: 0.45f);
+                    grilled.Kernels = new Vector3(ProduceKernelColumns, ProduceKernelRows, 0.22f);
+                    return grilled;
+
+                case Paint.Lemon: return S(0.88f, 0.74f, 0.16f, 0.98f, 0.88f, 0.34f, gloss: 0.5f);
+                case Paint.LemonFlesh: return S(0.95f, 0.88f, 0.48f, 1f, 0.96f, 0.68f, gloss: 0.6f);
                 default: return S(1f, 0f, 1f, 1f, 0f, 1f);
             }
         }

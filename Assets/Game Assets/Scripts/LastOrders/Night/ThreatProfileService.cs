@@ -43,6 +43,10 @@ namespace LastOrders.Night
 
         public ThreatProfile Current { get; private set; }
 
+        /// <summary>The attack a day's forecast reads, when the attack cycle decides it rather than
+        /// the Heat. Handed the day the forecast is made on.</summary>
+        public System.Func<int, WavePlan> Planner { get; set; }
+
         public ThreatProfileService(WaveDirector director, GameBalanceConfig balance)
         {
             this.director = director;
@@ -59,7 +63,7 @@ namespace LastOrders.Night
         /// </summary>
         public ThreatProfile Forecast(int day, float projectedHeat)
         {
-            WavePlan plan = director.BuildPlan(day, projectedHeat);
+            WavePlan plan = Planner != null ? Planner(day) : director.BuildPlan(day, projectedHeat);
 
             var profile = new ThreatProfile { Tier = plan.Tier };
 

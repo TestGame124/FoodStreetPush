@@ -27,6 +27,9 @@ MonoBehaviour:
   - item: 21
     amountRange: {x: 1, y: 2}
     weight: 1
+  - item: 28
+    amountRange: {x: 1, y: 2}
+    weight: 1
   eatSeconds: {x: 3, y: 5}
   payment: 60
   walkSpeed: 1.6

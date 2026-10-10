@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f14fd4e5d57ec49936e3f584fa9001, type: 3}
+  m_Name: GrilledFishRecipe
+  m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
+  RecipeImage: {fileID: 21300000, guid: 643b5344e645b9e40ae0bd0164152243, type: 3}
+  TotalTimeToCook: 150
+  Ingrediants:
+  - item:
+      itemDataSO: {fileID: 11400000, guid: 60dcb46300405474880214e2cfe052f2, type: 2}
+      itemsAmount: 1
+    Amount: 2
+  - item:
+      itemDataSO: {fileID: 11400000, guid: e531fbcf676582943b3d6092186b87ea, type: 2}
+      itemsAmount: 1
+    Amount: 1
+  Results:
+    item:
+      itemDataSO: {fileID: 11400000, guid: f9dd2e8a0735740409a7e50838ae7b54, type: 2}
+      itemsAmount: 1
+    Amount: 0
+  startRewards: 3

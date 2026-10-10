@@ -13,9 +13,9 @@ namespace LastOrders.Night
     /// <summary>
     /// Every enemy in the game.
     ///
-    /// Three states - Moving, Attacking, Dying - and no archetype-specific code anywhere.
-    /// The roster's variety comes entirely from which flow field the definition points at:
-    /// a Brute samples Breach so walls are cheap to it, a Flanker samples WeakestPoint so it
+    /// A handful of states - Moving, Raiding, Attacking, Retreating, Dying - and no archetype-specific
+    /// code anywhere. The roster's variety comes entirely from which flow field the definition points
+    /// at: a Brute samples Breach so walls are cheap to it, a Flanker samples WeakestPoint so it
     /// pools wherever the shell is thinnest, a Glutton samples Pantry and ignores people
     /// altogether. The Shambler and the Brute run the identical code path.
     ///
@@ -29,15 +29,22 @@ namespace LastOrders.Night
     /// cell. They are what the steering refuses a step into instead, and the rule is the same:
     /// whatever stopped the zombie is what it starts hitting - a blow a second, arms coming down
     /// on it - until it falls or opens. The restaurant's walls never do: a zombie at them keeps
-    /// hitting them until something kills it.
+    /// hitting them, and in an attack every blow costs the restaurant health.
+    ///
+    /// One decision is made, and only once a zombie is over the wall: whether there is something
+    /// in the yard to smash on the way to the restaurant. The attack's yard service answers it, and
+    /// stops answering once the night's cap on wrecks is reached - after that every zombie goes for
+    /// the restaurant.
     ///
     /// Dying is seen, not a blink: the body topples, lies there a moment and sinks away, and
-    /// only then is the instance free to go back to its pool (<see cref="OnFallen"/>).
+    /// only then is the instance free to go back to its pool (<see cref="OnFallen"/>). So is
+    /// leaving: when morning comes, whatever is still standing turns, shambles off and sinks into
+    /// the dark rather than vanishing.
     /// </summary>
     [RequireComponent(typeof(SteeringAgent))]
     public sealed class EnemyAgent : MonoBehaviour, IPoolable, IDefenseTarget, ISlowable
     {
-        enum State { Moving, Attacking, Dying }
+        enum State { Moving, Raiding, Attacking, Retreating, Dying }
 
         /// <summary>Seconds between blows on the compound wall. Slow enough that each one reads.</summary>
         const float BlowInterval = 1f;
@@ -49,6 +56,21 @@ namespace LastOrders.Night
 
         /// <summary>Metres a body sinks: far enough to be gone below the ground.</summary>
         const float SinkDepth = 0.8f;
+
+        /// <summary>Seconds between looks for something in the yard to smash. Cheap, and a zombie
+        /// that has only just stepped over the wall does not need to decide on the same frame.</summary>
+        const float RaidLookSeconds = 0.5f;
+
+        /// <summary>Seconds before a zombie that gave up on something in the yard looks again.
+        /// Long enough that one blocked by a wall commits to the restaurant instead of dithering.</summary>
+        const float RaidRetrySeconds = 4f;
+
+        /// <summary>Metres from an object's edge that a raider can reach it from.</summary>
+        const float RaidReach = 0.75f;
+
+        /// <summary>Seconds a retreating zombie shambles off before it sinks out of sight.</summary>
+        const float RetreatWalkSeconds = 2.6f;
+        const float RetreatSinkSeconds = 0.9f;
 
         [SerializeField] FlowFieldFollower follower;
         [SerializeField] SteeringAgent steering;
@@ -70,26 +92,62 @@ namespace LastOrders.Night
         float slowMultiplier = 1f;
         float slowUntil;
 
+        /// <summary>The yard during an attack, which hands out things to smash. Set by the spawner.</summary>
+        IOutdoorRaids raids;
+
+        /// <summary>What it is on its way to smash, or smashing, in the yard.</summary>
+        OutdoorWreck raidTarget;
+
+        PathFollower pathFollower;
+        float raidLookIn;
+        float raidGiveUpAt;
+        float raidGiveUpSeconds = 20f;
+
+        Vector3 retreatDirection;
+        float retreatLeft;
+        Vector3 baseScale = Vector3.one;
+
         /// <summary>Raised when this agent dies, with itself and its definition, so the night
         /// can tally kills and drops without walking a list of live agents.</summary>
         public event Action<EnemyAgent, EnemyDefinition> OnDied;
 
-        /// <summary>Raised once the body has fallen and sunk out of sight, after <see cref="OnDied"/>:
-        /// the moment the instance can go back to its pool.</summary>
+        /// <summary>Raised once the body has fallen and sunk out of sight - or, at morning, once it has
+        /// slunk off and sunk away - after <see cref="OnDied"/>: the moment the instance can go back
+        /// to its pool.</summary>
         public event Action<EnemyAgent> OnFallen;
 
         public EnemyDefinition Definition => definition;
 
         public bool IsAlive => state != State.Dying;
 
+        /// <summary>Turned for home as the morning comes. Off every list; nothing shoots at it.</summary>
+        public bool IsRetreating => state == State.Retreating;
+
+        /// <summary>Going for something in the yard, or smashing it.</summary>
+        public bool IsRaiding => raidTarget != null;
+
         public Vector3 Position => transform.position;
 
         public string DisplayName => definition != null ? definition.displayName : name;
+
+        /// <summary>The attack's yard. The spawner hands it over as it takes the agent from its pool;
+        /// without one the zombie goes straight for the restaurant, as it always did.</summary>
+        public IOutdoorRaids Raids
+        {
+            get => raids;
+            set => raids = value;
+        }
 
         void Awake()
         {
             if (steering == null) steering = GetComponent<SteeringAgent>();
             if (follower == null) follower = GetComponent<FlowFieldFollower>();
+
+            // Walks to one thing in the yard on its own route; the crowd's field cannot.
+            pathFollower = GetComponent<PathFollower>();
+            if (pathFollower == null) pathFollower = gameObject.AddComponent<PathFollower>();
+
+            baseScale = transform.localScale;
 
             // Stopped by every wall and let through no gate.
             if (steering != null) steering.Mover = MoverKind.Hostile;
@@ -111,8 +169,11 @@ namespace LastOrders.Night
             attackAccumulator = 0f;
             target = null;
             breaking = null;
+            raidTarget = null;
+            raidLookIn = UnityEngine.Random.Range(0f, RaidLookSeconds);
 
             transform.position = spawnPosition;
+            transform.localScale = baseScale;
             SetAnimated(true);
             EndSlow();
 
@@ -123,11 +184,20 @@ namespace LastOrders.Night
                 steering.ConfigureBody(def.moveSpeed, def.agentRadius);
             }
 
+            if (pathFollower != null) pathFollower.Stop();
+
             if (follower != null)
             {
                 follower.Field = def.FlowFieldId;
                 follower.active = true;
             }
+        }
+
+        /// <summary>How long it keeps trying to reach a raid target before giving up on it.</summary>
+        public void ConfigureRaids(IOutdoorRaids yard, float giveUpSeconds)
+        {
+            raids = yard;
+            raidGiveUpSeconds = Mathf.Max(1f, giveUpSeconds);
         }
 
         void Update()
@@ -138,11 +208,13 @@ namespace LastOrders.Night
 
             switch (state)
             {
-                case State.Moving: TickMoving(); break;
+                case State.Moving: TickMoving(Time.deltaTime); break;
+                case State.Raiding: TickRaiding(); break;
                 case State.Attacking: TickAttacking(Time.deltaTime); break;
+                case State.Retreating: TickRetreating(Time.deltaTime); break;
             }
 
-            if (definition.heatPerSecond > 0f)
+            if (definition.heatPerSecond > 0f && state != State.Retreating)
                 HeatEmitted += definition.heatPerSecond * Time.deltaTime;
         }
 
@@ -158,11 +230,15 @@ namespace LastOrders.Night
             return value;
         }
 
-        void TickMoving()
+        void TickMoving(float deltaTime)
         {
             // The only question asked each frame: is the thing in front of me something I
             // have to go through? The flow field has already decided the direction.
             if (definition.isNonCombatant) return;
+
+            // Over the wall, the yard comes first: something to smash on the way, while the
+            // night still allows it.
+            if (TryStartRaid(deltaTime)) return;
 
             DamageableStructure blocker = FindBlockingStructure();
 
@@ -173,7 +249,7 @@ namespace LastOrders.Night
                 return;
             }
 
-            // Walked into the compound wall or a shut gate.
+            // Walked into the compound wall, a shut gate or the restaurant itself.
             if (steering != null && steering.BlockedBy is IBreakable wall && wall.IsInTheWay)
             {
                 breaking = wall;
@@ -188,11 +264,18 @@ namespace LastOrders.Night
         {
             state = State.Attacking;
             if (follower != null) follower.active = false;
+            if (pathFollower != null) pathFollower.Stop();
             if (steering != null) steering.Halt();
         }
 
         void TickAttacking(float deltaTime)
         {
+            if (raidTarget != null)
+            {
+                TickSmashing(deltaTime);
+                return;
+            }
+
             if (breaking != null)
             {
                 TickBreaking(deltaTime);
@@ -233,13 +316,7 @@ namespace LastOrders.Night
                 return;
             }
 
-            Vector3 toward = breaking.ClosestPoint(transform.position) - transform.position;
-            toward.y = 0f;
-            if (toward.sqrMagnitude > 1e-4f)
-            {
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation, Quaternion.LookRotation(toward), 360f * deltaTime);
-            }
+            Face(breaking.ClosestPoint(transform.position), deltaTime);
 
             blowCooldown -= deltaTime;
             if (blowCooldown > 0f) return;
@@ -255,15 +332,127 @@ namespace LastOrders.Night
         {
             target = null;
             breaking = null;
+            EndRaid();
+
             attackAccumulator = 0f;
             state = State.Moving;
             if (follower != null) follower.active = true;
+        }
+
+        void Face(Vector3 point, float deltaTime)
+        {
+            Vector3 toward = point - transform.position;
+            toward.y = 0f;
+            if (toward.sqrMagnitude <= 1e-4f) return;
+
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation, Quaternion.LookRotation(toward), 360f * deltaTime);
         }
 
         static void Ignite(DamageableStructure structure)
         {
             var fire = structure.GetComponent<StructureFire>();
             if (fire != null) fire.Ignite();
+        }
+
+        // --- The yard ----------------------------------------------------------------------------
+
+        /// <summary>Asks the yard for something to smash, every so often. True when it has set off for it.</summary>
+        bool TryStartRaid(float deltaTime)
+        {
+            if (raids == null || pathFollower == null) return false;
+
+            raidLookIn -= deltaTime;
+            if (raidLookIn > 0f) return false;
+
+            raidLookIn = RaidLookSeconds;
+
+            if (!raids.TryAssign(this, transform.position, out OutdoorWreck found) || found == null) return false;
+
+            raidTarget = found;
+            raidGiveUpAt = Time.time + raidGiveUpSeconds;
+            state = State.Raiding;
+
+            if (follower != null) follower.active = false;
+            pathFollower.SetDestination(found.ClosestPoint(transform.position));
+            return true;
+        }
+
+        /// <summary>On its way to the thing it means to smash.</summary>
+        void TickRaiding()
+        {
+            if (raids == null || !raids.StillWanted(this, raidTarget))
+            {
+                ResumeMoving();
+                return;
+            }
+
+            // Could not get to it in time: off to the restaurant, and not straight back again.
+            if (Time.time >= raidGiveUpAt)
+            {
+                GiveUpRaid();
+                return;
+            }
+
+            Vector3 here = transform.position;
+
+            if (raidTarget.FlatDistance(here) <= RaidReach + (definition != null ? definition.agentRadius : 0.35f))
+            {
+                blowCooldown = UnityEngine.Random.Range(0.1f, 0.5f);
+                StartAttacking();
+                return;
+            }
+
+            // Walked into a wall on the way - the restaurant's, or the compound's from inside: the
+            // yard can wait, the flow field knows the way from here.
+            if (steering != null && steering.BlockedBy is IBreakable wall && wall.IsInTheWay)
+            {
+                GiveUpRaid();
+                return;
+            }
+
+            // The route ends at the nearest spot it fits, which can be short of the thing itself
+            // when it fills its cells: the last stretch is straight at it.
+            if (pathFollower.HasArrived && steering != null)
+                steering.SetDesiredDirection(raidTarget.ClosestPoint(here) - here, 0.6f);
+        }
+
+        /// <summary>Smashing something in the yard: a blow a second, like a wall, until it is a wreck
+        /// or the night's cap says the rest is the restaurant's.</summary>
+        void TickSmashing(float deltaTime)
+        {
+            if (raids == null || !raids.StillWanted(this, raidTarget))
+            {
+                ResumeMoving();
+                return;
+            }
+
+            Face(raidTarget.ClosestPoint(transform.position), deltaTime);
+
+            blowCooldown -= deltaTime;
+            if (blowCooldown > 0f) return;
+
+            blowCooldown = BlowInterval;
+
+            if (body != null) body.Pound();
+
+            if (raids.Strike(this, raidTarget, definition.structureDps * BlowInterval, transform.position))
+                ResumeMoving();
+        }
+
+        void GiveUpRaid()
+        {
+            ResumeMoving();
+            raidLookIn = RaidRetrySeconds;
+        }
+
+        void EndRaid()
+        {
+            if (raidTarget == null) return;
+
+            raids?.Release(this);
+            raidTarget = null;
+            if (pathFollower != null) pathFollower.Stop();
         }
 
         /// <summary>
@@ -297,6 +486,70 @@ namespace LastOrders.Night
             return damageable != null && damageable.IsFunctional ? damageable : null;
         }
 
+        // --- Morning --------------------------------------------------------------------------------
+
+        /// <summary>
+        /// The night is over: it stops whatever it was doing, turns its back on
+        /// <paramref name="awayFrom"/> - the restaurant - and shambles off, then sinks out of sight
+        /// and is free to go back to its pool. Nothing hits it and it hits nothing on the way.
+        /// </summary>
+        public void Retreat(Vector3 awayFrom)
+        {
+            if (state == State.Dying || state == State.Retreating) return;
+
+            EndRaid();
+            target = null;
+            breaking = null;
+            attackAccumulator = 0f;
+
+            state = State.Retreating;
+            retreatLeft = RetreatWalkSeconds * UnityEngine.Random.Range(0.8f, 1.2f);
+
+            if (follower != null) follower.active = false;
+
+            Vector3 away = transform.position - awayFrom;
+            away.y = 0f;
+            if (away.sqrMagnitude < 1e-4f) away = -transform.forward;
+
+            // Not quite straight back: a crowd leaving should fan out, not file off in a line.
+            retreatDirection = Quaternion.Euler(0f, UnityEngine.Random.Range(-25f, 25f), 0f) * away.normalized;
+        }
+
+        void TickRetreating(float deltaTime)
+        {
+            retreatLeft -= deltaTime;
+
+            if (retreatLeft > 0f)
+            {
+                if (steering != null && steering.enabled) steering.SetDesiredDirection(retreatDirection, 0.8f);
+                return;
+            }
+
+            SinkAway();
+        }
+
+        /// <summary>Gone into the dark: down into the ground and shrinking, then back to the pool.</summary>
+        void SinkAway()
+        {
+            state = State.Dying;
+
+            if (steering != null)
+            {
+                steering.Halt();
+                steering.enabled = false;
+            }
+
+            SetAnimated(false);
+            transform.DOKill();
+
+            Sequence leave = DOTween.Sequence().SetTarget(transform);
+            leave.Append(transform.DOMove(transform.position + Vector3.down * SinkDepth, RetreatSinkSeconds).SetEase(Ease.InQuad));
+            leave.Join(transform.DOScale(baseScale * 0.6f, RetreatSinkSeconds).SetEase(Ease.InQuad));
+            leave.OnComplete(() => OnFallen?.Invoke(this));
+        }
+
+        // --- Being held back and hurt ------------------------------------------------------------
+
         /// <summary>
         /// Held back by wire or pinned by a trap: walks at <paramref name="multiplier"/> of its pace
         /// until <paramref name="seconds"/> after the last time it was caught. The strongest hold
@@ -325,7 +578,7 @@ namespace LastOrders.Night
 
         public void ApplyDamage(float amount)
         {
-            if (state == State.Dying) return;
+            if (state == State.Dying || state == State.Retreating) return;
 
             health -= amount;
             if (health > 0f)
@@ -334,6 +587,7 @@ namespace LastOrders.Night
                 return;
             }
 
+            EndRaid();
             state = State.Dying;
             if (follower != null) follower.active = false;
 
@@ -390,6 +644,9 @@ namespace LastOrders.Night
             // Every reference to another pooled or scene object is dropped here. A retained
             // target is the classic leak: it keeps a destroyed structure alive and makes the
             // next occupant of this instance attack a wall that no longer exists.
+            raids?.Release(this);
+            raids = null;
+            raidTarget = null;
             target = null;
             breaking = null;
             definition = null;
@@ -400,12 +657,14 @@ namespace LastOrders.Night
             // Recalled mid-fall at dawn: the fall stops where it is, and everything it moved is
             // put back below.
             transform.DOKill();
+            transform.localScale = baseScale;
             SetAnimated(true);
 
             health = 0f;
             attackAccumulator = 0f;
             blowCooldown = 0f;
             HeatEmitted = 0f;
+            retreatLeft = 0f;
             state = State.Moving;
             EndSlow();
 
@@ -414,6 +673,7 @@ namespace LastOrders.Night
             // death then failed the integrity check.
             transform.localRotation = Quaternion.identity;
 
+            if (pathFollower != null) pathFollower.Stop();
             if (follower != null) follower.active = false;
             if (steering != null)
             {

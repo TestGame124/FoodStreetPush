@@ -123,6 +123,8 @@ namespace LastOrders.Core
             builder.RegisterInstance(composition.Compound);
             builder.RegisterInstance(composition.Repairs);
             builder.RegisterInstance(composition.Restaurant);
+            builder.RegisterInstance(composition.Outdoor);
+            builder.RegisterInstance(composition.Encounters);
             builder.RegisterInstance(composition.Machine);
             builder.RegisterInstance(composition.Context);
 

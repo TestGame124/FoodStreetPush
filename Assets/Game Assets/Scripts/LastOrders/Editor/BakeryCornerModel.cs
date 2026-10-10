@@ -4,7 +4,9 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using B = LastOrders.EditorTools.BuildingKit;
+using G = LastOrders.EditorTools.GriddleStationModel;
 using K = LastOrders.EditorTools.SoupKitchenModel;
+using T = LastOrders.EditorTools.KitchenTools;
 using Object = UnityEngine.Object;
 
 namespace LastOrders.EditorTools
@@ -23,11 +25,15 @@ namespace LastOrders.EditorTools
     /// It takes the place of the wood-fired dome oven, which read as something built out of doors:
     /// the diner is roofless only because the game is seen from above, and its kitchen is indoors.
     ///
-    /// One mesh, painted in its vertices on LastOrders/Stylized with the oven's lit windows and lamps
-    /// in an unlit glow, as <see cref="BuildingKit"/> builds. The station's earlier models and the
-    /// painted floor shadows that went with them are switched off, not deleted; the collider is
-    /// fitted to the corner, so a tap anywhere on it reaches the station. The station's components and
-    /// centre point are left alone. The build ghost (BreadStoveVisuals) shows the corner too.
+    /// One mesh, painted in its vertices on LastOrders/Stylized as <see cref="BuildingKit"/> builds.
+    /// What moves while the station bakes is its own part: the heat behind the oven windows and the
+    /// panel lamps (unlit, lit up by a <see cref="StationHeatGlow"/> with heat off the flue), the
+    /// rolling pin and the sheet of dough it rolls out, and the ball of dough being kneaded
+    /// (<see cref="KitchenToolMotion"/>s). The station's earlier models and the painted floor shadows
+    /// that went with them are switched off, not deleted; the collider is fitted to the corner, so a
+    /// tap anywhere on it reaches the station, and the centre point is set at the front of the pad.
+    /// The old build ghost (BreadStoveVisuals) shows the corner too; the shop uses its own
+    /// (<see cref="KitchenShopSetup"/>).
     ///
     /// Its front faces -Z, out into the dining room, as the station's does.
     /// </summary>
@@ -48,11 +54,12 @@ namespace LastOrders.EditorTools
         const string OldGhostModel = "Stove_Prefab";
 
         /// <summary>
-        /// Where the corner's middle stands in the station's space, on the floor (the station's origin
-        /// is 0.135 above it). Its pad then runs 2.4 m along the back wall up to the soup corner's and
-        /// comes as far forward as the soup and salad corners' pads do.
+        /// Where the corner's middle stands in the station's space. The station is placed on the build
+        /// grid like everything the shop sells, its origin the near left corner of a 3 x 2 cell
+        /// footprint at the grid's height: the pad is centred across the footprint, its back a hand
+        /// short of the footprint's back edge, and stands on the diner's floor, 0.035 up.
         /// </summary>
-        static readonly Vector3 Place = new Vector3(-0.1f, -0.135f, -0.27f);
+        internal static readonly Vector3 Place = new Vector3(1.5f, 0.035f, 0.8f);
 
         // --- Measurements (metres; front toward -Z) ------------------------------------------------
 
@@ -87,6 +94,9 @@ namespace LastOrders.EditorTools
         static readonly float[] TrayHeights = { 0.2f, 0.42f, 0.64f, 0.86f, 1.08f, 1.3f };
 
         const float BinX = 0.98f, BinZ = 0.06f, BinWidth = 0.34f, BinDepth = 0.36f, BinHeight = 0.48f;
+
+        /// <summary>The rolling pin's barrel, and the sheet of dough it rolls out on the bench.</summary>
+        const float PinRadius = 0.031f, SheetThick = 0.012f;
 
         // --- The palette ---------------------------------------------------------------------------
 
@@ -141,8 +151,8 @@ namespace LastOrders.EditorTools
                 "Last Orders",
                 "This builds the bakery corner - deck oven, baker's bench, tray rack, flour bin, tiled pad - and puts it into " +
                 "pfBreadStove in place of the wood-fired oven, which is switched off with the prototype stove and its painted " +
-                "floor shadows, not deleted.\n\nThe station's components and centre point are kept; its collider is fitted to the " +
-                "corner. The build ghost (BreadStoveVisuals) shows the corner too, its generic stove switched off.",
+                "floor shadows, not deleted.\n\nWhile the station bakes, the oven heats up, its lamps light, the pin rolls out dough " +
+                "and the dough is kneaded.\n\nThe station's components are kept; its collider and centre point are fitted to the corner.",
                 "Build", "Cancel");
 
             if (proceed) Debug.Log(Apply());
@@ -155,8 +165,15 @@ namespace LastOrders.EditorTools
 
             Material painted = B.PaintedMaterial();
             Material glow = GlowMaterial();
-            Mesh corner = Corner().Save($"{Folder}/BakeryCorner.asset", "BakeryCorner");
+            var heat = new B.Model();
+            var lamps = new B.Model();
+            Mesh corner = Corner(heat, lamps).Save($"{Folder}/BakeryCorner.asset", "BakeryCorner");
             Material[] materials = corner.subMeshCount > 1 ? new[] { painted, glow } : new[] { painted };
+            Mesh heatMesh = heat.Save($"{Folder}/BakeryCorner_OvenHeat.asset", "BakeryCorner_OvenHeat");
+            Mesh lampMesh = lamps.Save($"{Folder}/BakeryCorner_Lamps.asset", "BakeryCorner_Lamps");
+            Mesh pinMesh = T.RollingPin(PinRadius).Save($"{Folder}/BakeryCorner_RollingPin.asset", "BakeryCorner_RollingPin");
+            Mesh sheetMesh = T.DoughSheet(0.12f, 0.08f, SheetThick).Save($"{Folder}/BakeryCorner_DoughSheet.asset", "BakeryCorner_DoughSheet");
+            Mesh ballMesh = T.DoughBall(new Vector3(0.085f, 0.036f, 0.075f)).Save($"{Folder}/BakeryCorner_Dough.asset", "BakeryCorner_Dough");
 
             GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
 
@@ -178,6 +195,10 @@ namespace LastOrders.EditorTools
                 go.transform.SetParent(root.transform, false);
                 go.transform.localPosition = Place;
                 B.Show(go, corner, materials);
+                Working(go.transform, painted, glow, heatMesh, lampMesh, pinMesh, sheetMesh, ballMesh);
+
+                Transform centre = root.transform.Find("CenterPoint");
+                if (centre != null) centre.localPosition = new Vector3(Place.x, 0.5f, Place.z + PadFront);
 
                 string colliderNote = FitCollider(root);
 
@@ -234,16 +255,49 @@ namespace LastOrders.EditorTools
             return $"; collider {before} x {beforeSize} -> {collider.center} x {collider.size}";
         }
 
+        /// <summary>
+        /// What moves while the station bakes, each its own part of the corner: the heat behind the
+        /// oven windows coming up from a banked glow, the panel lamps lighting and heat rising off the
+        /// flue (a <see cref="StationHeatGlow"/>); on the bench the pin rolling out a sheet of dough with
+        /// a puff of flour at each end of a pass, and the big ball of dough being kneaded
+        /// (<see cref="KitchenToolMotion"/>s).
+        /// </summary>
+        static void Working(Transform corner, Material painted, Material glow, Mesh heatMesh, Mesh lampMesh, Mesh pinMesh, Mesh sheetMesh, Mesh ballMesh)
+        {
+            Transform heat = G.Part(corner, "OvenHeat", heatMesh, Vector3.zero, glow, ShadowCastingMode.Off);
+            Transform lamps = G.Part(corner, "Lamps", lampMesh, Vector3.zero, glow, ShadowCastingMode.Off);
+            lamps.gameObject.SetActive(false);
+
+            ParticleSystem flue = G.Steam(corner, "FlueHeat", K.SteamMaterial(), new Vector3(FlueX, FlueTop + 0.12f, FlueZ), new Vector3(0.08f, 0.01f, 0.08f),
+                                          new Vector2(0.14f, 0.22f), 20, new Color(0.92f, 0.92f, 0.92f), 0.35f);
+            corner.gameObject.AddComponent<StationHeatGlow>().Configure(new[] { heat.GetComponent<Renderer>() }, new Color(0.3f, 0.13f, 0.06f),
+                                                                       new Color(1f, 0.6f, 0.28f), new[] { lamps.gameObject }, new[] { flue }, 2.5f);
+
+            float cx = (BenchLeft + BenchRight) * 0.5f, onFlour = BenchTop + 0.004f;
+            var sheetAt = new Vector3(cx + 0.01f, onFlour, -0.03f);
+            Transform sheet = G.Part(corner, "DoughSheet", sheetMesh, sheetAt, painted, ShadowCastingMode.On);
+
+            Quaternion pinTurn = Quaternion.Euler(0f, 10f, 0f);
+            Transform pin = T.Tool(corner, "RollingPin", pinMesh, sheetAt + Vector3.up * (SheetThick + PinRadius), pinTurn, painted);
+            ParticleSystem flour = T.Puff(corner, "FlourPuff", K.SteamMaterial(), sheetAt + Vector3.up * 0.04f, new Color(0.95f, 0.93f, 0.88f), new Vector2(0.06f, 0.1f));
+            pin.gameObject.AddComponent<KitchenToolMotion>().Configure(KitchenToolMotion.Motion.Roll, 0.9f, 0.05f, pinTurn * Vector3.forward)
+               .Rolls(PinRadius).Works(sheet, 0.25f).Puffs(flour);
+
+            Transform ball = T.Tool(corner, "Dough", ballMesh, new Vector3(cx + 0.03f, onFlour, 0.13f), Quaternion.Euler(0f, 53f, 0f), painted);
+            ball.gameObject.AddComponent<KitchenToolMotion>().Configure(KitchenToolMotion.Motion.Knead, 0.8f, 0.22f, Vector3.up);
+        }
+
         // --- The corner ---------------------------------------------------------------------------
 
-        static B.Model Corner()
+        /// <summary>The corner's still mesh; the heat behind the oven windows goes into <paramref name="heat"/> and the panel lamps into <paramref name="lamps"/>, to be lit while it bakes.</summary>
+        static B.Model Corner(B.Model heat, B.Model lamps)
         {
             // A shade darker toward the floor, on everything standing on the pad but not on the tiles themselves.
             var m = new B.Model { Shade = (p, n) => p.y < PadTop + 0.01f ? 1f : Mathf.Lerp(0.84f, 1f, K.Smooth((p.y - PadTop) / 0.35f)) };
 
             Pad(m);
             Duckboard(m);
-            Oven(m);
+            Oven(m, heat, lamps);
             Bench(m);
             Rack(m);
             FlourBin(m);
@@ -295,7 +349,7 @@ namespace LastOrders.EditorTools
         // --- The oven -----------------------------------------------------------------------------
 
         /// <summary>Red enamel round two decks, each behind a steel door with a lit window, on a steel stand, a flue up from the back.</summary>
-        static void Oven(B.Model m)
+        static void Oven(B.Model m, B.Model heat, B.Model lamps)
         {
             Stand(m);
 
@@ -303,8 +357,8 @@ namespace LastOrders.EditorTools
             m.Box(Enamel, new Vector3(mid, (StandTop + OvenTop) * 0.5f, (OvenFace + OvenBack) * 0.5f),
                   new Vector3(OvenRight - OvenLeft, OvenTop - StandTop, OvenBack - OvenFace), 0.035f, 2);
 
-            Deck(m, DeckBottom, 0);
-            Deck(m, DeckBottom + DeckPitch, 1);
+            Deck(m, DeckBottom, 0, heat, lamps);
+            Deck(m, DeckBottom + DeckPitch, 1, heat, lamps);
             Crown(m);
             Flue(m);
         }
@@ -346,7 +400,7 @@ namespace LastOrders.EditorTools
         /// window the deck's stone floor, the dark of its roof, the glow of the heat and loaves baking;
         /// its block of the control panel beside it, a gauge, two knobs and a lamp.
         /// </summary>
-        static void Deck(B.Model m, float bottom, int deck)
+        static void Deck(B.Model m, float bottom, int deck, B.Model glowing, B.Model lamps)
         {
             float top = bottom + DeckHeight;
             float sill = bottom + WindowSill, head = bottom + WindowHead;
@@ -380,7 +434,7 @@ namespace LastOrders.EditorTools
             var heat = new SmoothMesh(1);
             heat.RoundedBox(0, new Vector3(windowMid, (sill + head) * 0.5f, GlowZ), new Vector3(windowWidth + 0.01f, head - sill + 0.01f, 0.004f), 0.001f,
                             Quaternion.identity, 1);
-            m.Add(heat, Color.white, B.Model.Glow);
+            glowing.Add(heat, Color.white);
 
             // Loaves baking: long ones on the lower deck, rolls on the upper, flattened front to back to fit the deck as the window shows it.
             var floor = new Vector3(0f, sill + 0.012f, insideZ);
@@ -422,7 +476,7 @@ namespace LastOrders.EditorTools
             K.Disc(m, (p, n) => Chrome, lamp, Vector3.back, 0.017f, 12);
             var light = new SmoothMesh(1);
             light.RoundedBox(0, lamp + Vector3.back * 0.006f, new Vector3(0.02f, 0.02f, 0.012f), 0.006f, Quaternion.identity, 2);
-            m.Add(light, Color.white, B.Model.Glow);
+            lamps.Add(light, Color.white);
         }
 
         /// <summary>
@@ -525,10 +579,9 @@ namespace LastOrders.EditorTools
             // The middle: flour, the dough, the pin and the scraper.
             FlourDust(m, new Vector3(cx + 0.02f, top + 0.002f, 0.17f), 0.22f, 0.27f, 5);
             float onFlour = top + 0.004f;
-            DoughBall(m, new Vector3(cx + 0.03f, onFlour, 0.13f), new Vector3(0.085f, 0.036f, 0.075f), 1);
+            // The big ball of dough, the sheet rolled out and the pin are their own parts (Working).
             DoughBall(m, new Vector3(cx - 0.12f, onFlour, 0.29f), new Vector3(0.036f, 0.022f, 0.033f), 2);
             DoughBall(m, new Vector3(cx - 0.035f, onFlour, 0.33f), new Vector3(0.034f, 0.021f, 0.032f), 3);
-            RollingPin(m, new Vector3(cx + 0.01f, onFlour + 0.032f, -0.03f), 10f);
             Scraper(m, new Vector3(cx + 0.19f, top, 0.34f), -24f);
 
             // The back: a tray of shaped rolls waiting to go in, and the dredger, a crock and a bowl of flour at the wall.
@@ -580,16 +633,6 @@ namespace LastOrders.EditorTools
                    Quaternion.Euler(0f, key * 53f, 0f), 18, 9);
         }
 
-        static void RollingPin(B.Model m, Vector3 centre, float yaw)
-        {
-            Vector3 axis = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-            m.Tube(PinWood, centre - axis * 0.14f, centre + axis * 0.14f, 0.031f, 14);
-            for (int s = -1; s <= 1; s += 2)
-            {
-                m.Tube(PinWood * 0.92f, centre + axis * (s * 0.14f), centre + axis * (s * 0.205f), 0.013f, 8);
-                K.Ball(m, (p, n) => PinWood * 0.92f, centre + axis * (s * 0.21f), Vector3.one * 0.017f, Quaternion.identity, 8, 6);
-            }
-        }
 
         /// <summary>A bench scraper lying flat: a steel blade, a walnut grip along its back edge.</summary>
         static void Scraper(B.Model m, Vector3 foot, float yaw)

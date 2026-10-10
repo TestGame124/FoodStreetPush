@@ -39,11 +39,13 @@ namespace LastOrders.EditorTools
         const string ModelName = "SaladCorner";
 
         /// <summary>
-        /// Where the corner's middle stands in the station's space, on the kitchen floor (the station
-        /// stands 0.12 above it in the level). It fills the stretch of back wall right of the soup
-        /// kitchen, where the prototype salad bar stood, its pad lined up with the soup kitchen's.
+        /// Where the corner's middle stands in the station's space. The station is placed on the build
+        /// grid like everything the shop sells, its origin the near left corner of a 3 x 2 cell
+        /// footprint at the grid's height: the pad is centred across the footprint, its back a hand
+        /// short of the footprint's back edge, and stands on the diner's floor, 0.035 up. Its front
+        /// faces -Z as the station's does, so it is not turned.
         /// </summary>
-        static readonly Vector3 Place = new Vector3(0.05f, -0.121f, 0.65f);
+        internal static readonly Vector3 Place = new Vector3(1.5f, 0.035f, 0.8f);
 
         // --- Measurements (metres; front toward -Z) ------------------------------------------------
 
@@ -184,7 +186,7 @@ namespace LastOrders.EditorTools
                 var go = new GameObject(ModelName);
                 go.transform.SetParent(root.transform, false);
                 go.transform.localPosition = Place;
-                go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                go.transform.localRotation = Quaternion.identity;
                 B.Show(go, corner, corner.subMeshCount > 1 ? new[] { painted, B.GlowMaterial() } : new[] { painted });
 
                 Transform model = go.transform;
@@ -226,6 +228,9 @@ namespace LastOrders.EditorTools
                                                                    new Vector3(BoardX - 0.08f, BoardTop + 0.004f, BoardZ - 0.09f), saladPart, serversPart,
                                                                    leaves, cruetPart, pour, streamPart);
 
+                Transform centre = root.transform.Find("CenterPoint");
+                if (centre != null) centre.localPosition = new Vector3(Place.x, 0.5f, Place.z + PadFront);
+
                 string colliderNote = FitCollider(root, model);
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -264,7 +269,6 @@ namespace LastOrders.EditorTools
             var middle = new Vector3((PadLeft + PadRight) * 0.5f, 0.6f, (PadFront + PadBack) * 0.5f);
             collider.center = root.transform.InverseTransformPoint(model.TransformPoint(middle));
 
-            // Turned half round, so the box's sides still run along the station's axes.
             collider.size = new Vector3(PadRight - PadLeft, 1.2f, PadBack - PadFront);
             return $"; collider {before} x {beforeSize} -> {collider.center} x {collider.size}";
         }

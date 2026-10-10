@@ -101,9 +101,10 @@ namespace LastOrders.Interaction
         /// </summary>
         void Report(string message)
         {
-            if (hud == null || string.IsNullOrEmpty(message)) return;
+            if (string.IsNullOrEmpty(message)) return;
 
-            hud.ShowMessage(message);
+            if (hud != null) hud.ShowMessage(message);
+            else TapFeedback.Report(message);
         }
 
         static bool IsPointerOverUi()

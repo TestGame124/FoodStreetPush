@@ -1,4 +1,5 @@
 using LastOrders.Blockout;
+using LastOrders.UI.Hud;
 using UnityEngine;
 
 namespace LastOrders.Interaction
@@ -20,6 +21,7 @@ namespace LastOrders.Interaction
     public static class TapFeedback
     {
         static CompoundHud hud;
+        static GameplayHud gameplay;
 
         /// <summary>
         /// Displays a message and reports the tap as handled.
@@ -33,8 +35,10 @@ namespace LastOrders.Interaction
         {
             if (string.IsNullOrEmpty(message)) return true;
 
-            CompoundHud target = Hud;
-            if (target != null) target.ShowMessage(message);
+            // The gameplay HUD shows it as a toast; the grey-box HUD on its objective line.
+            GameplayHud toastHud = Gameplay;
+            if (toastHud != null) toastHud.ShowMessage(message);
+            else if (Hud != null) Hud.ShowMessage(message);
 
             // Logged as well as shown. The HUD line is small and easy to miss, and a tap that
             // did something has to be distinguishable from a tap that missed - otherwise
@@ -46,7 +50,11 @@ namespace LastOrders.Interaction
 
         /// <summary>Clears the cached HUD on scene change, so a reloaded scene does not hold a
         /// reference to the previous one's canvas.</summary>
-        public static void Reset() => hud = null;
+        public static void Reset()
+        {
+            hud = null;
+            gameplay = null;
+        }
 
         /// <summary>
         /// The HUD to show messages on.
@@ -62,6 +70,15 @@ namespace LastOrders.Interaction
             {
                 if (hud == null) hud = Object.FindFirstObjectByType<CompoundHud>();
                 return hud;
+            }
+        }
+
+        static GameplayHud Gameplay
+        {
+            get
+            {
+                if (gameplay == null) gameplay = Object.FindFirstObjectByType<GameplayHud>();
+                return gameplay;
             }
         }
     }

@@ -185,6 +185,24 @@ namespace LastOrders.Jobs
         public WorkerRole Role => role;
         public Job Current => job;
 
+        /// <summary>Nothing to do this frame: no job, not out in the field, not taking cover,
+        /// not carrying anyone. Walking home to wait counts. <see cref="WorkerLife"/> fills the time.</summary>
+        public bool IsIdle => idleFrame >= Time.frameCount - 1;
+
+        /// <summary>Where this survivor waits when there is nothing to do.</summary>
+        public Vector3 HomePoint => idlePoint != null ? idlePoint.position : home;
+
+        /// <summary>
+        /// Optional, while idle: somewhere else to stand for now - a stroll, a chat with someone -
+        /// walked to at <see cref="IdlePace"/> round the diner as home is. Null waits at home.
+        /// </summary>
+        public Vector3? IdleSpot { get; set; }
+
+        /// <summary>A share of walking speed for getting to <see cref="IdleSpot"/>: a stroll, not a job.</summary>
+        public float IdlePace { get; set; } = 1f;
+
+        public float ArriveRadius => arriveRadius;
+
         /// <summary>True while standing at a job and doing it, or swinging at a zombie, as
         /// opposed to walking.</summary>
         public bool IsWorking { get; private set; }
@@ -745,8 +763,9 @@ namespace LastOrders.Jobs
             return walker.Advance(transform, moveSpeed, turnSpeed, arriveRadius, Time.deltaTime);
         }
 
-        /// <summary>Walks toward a point until within <paramref name="stopAt"/>. Returns true on arrival.</summary>
-        bool TravelTowards(Vector3 target, float stopAt)
+        /// <summary>Walks toward a point until within <paramref name="stopAt"/>, at <paramref name="pace"/>
+        /// of walking speed. Returns true on arrival.</summary>
+        bool TravelTowards(Vector3 target, float stopAt, float pace = 1f)
         {
             Vector3 flat = new Vector3(target.x, transform.position.y, target.z);
             Vector3 delta = flat - transform.position;
@@ -754,15 +773,19 @@ namespace LastOrders.Jobs
 
             if (distance <= stopAt) return true;
 
-            Vector3 step = delta / distance * moveSpeed * Time.deltaTime;
+            Vector3 step = delta / distance * moveSpeed * pace * Time.deltaTime;
             transform.position += Vector3.ClampMagnitude(step, distance - stopAt);
 
             Face(delta);
             return false;
         }
 
+        int idleFrame = -10;
+
         void Idle()
         {
+            idleFrame = Time.frameCount;
+
             // Outside a wall with nothing left to do there: back in the way they came first.
             if (beyondRoute != null)
             {
@@ -779,7 +802,8 @@ namespace LastOrders.Jobs
                 returning = false;
             }
 
-            Vector3 target = idlePoint != null ? idlePoint.position : home;
+            Vector3 target = IdleSpot ?? (idlePoint != null ? idlePoint.position : home);
+            float pace = IdleSpot.HasValue ? Mathf.Clamp(IdlePace, 0.2f, 1f) : 1f;
 
             // Home round the diner, one corner at a time. Asked afresh every frame, so it needs
             // no path of its own for the work queue's path to trample.
@@ -787,8 +811,8 @@ namespace LastOrders.Jobs
             if (shelter == null) shelter = FindFirstObjectByType<NightShelter>();
             if (shelter != null) shelter.AppendDetour(transform.position, target, idleDetour);
 
-            if (idleDetour.Count > 0) TravelTowards(idleDetour[0], 0.05f);
-            else TravelTowards(target, arriveRadius);
+            if (idleDetour.Count > 0) TravelTowards(idleDetour[0], 0.05f, pace);
+            else TravelTowards(target, arriveRadius, pace);
         }
 
         readonly List<Vector3> idleDetour = new List<Vector3>(2);

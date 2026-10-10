@@ -57,7 +57,7 @@ namespace LastOrders.EditorTools
 
         /// <summary>The kitchen strip along the back wall: the line the stove, sink and fridge stand on.
         /// The same depth the starting-area layout keeps the kitchen line at.</summary>
-        const float KitchenDepth = 3f;
+        internal const float KitchenDepth = 3f;
 
         [MenuItem("Last Orders/Restaurant/Set Up Repairs & Expansion (Current Scene)", priority = 75)]
         public static void Run()
@@ -187,7 +187,7 @@ namespace LastOrders.EditorTools
             shell.FitFloor();
             EditorUtility.SetDirty(shell);
 
-            DressWalls(back, left, right, frontLeft, frontRight);
+            DinerShellModel.DressWalls(null, back, left, right, frontLeft, frontRight);
 
             report.Append($"  Restaurant walls: back '{back.name}', left '{left.name}', right '{right.name}', " +
                           $"front '{(frontLeft != null ? frontLeft.name : "-")}' + '{(frontRight != null ? frontRight.name : "-")}'. " +
@@ -197,18 +197,18 @@ namespace LastOrders.EditorTools
             if (Object.FindObjectsByType<ParkingSlot>(FindObjectsSortMode.None).Length > 0)
                 report.Append("  The car park's bays count as in the way, so the front can only grow up to them.\n");
 
-            report.Append($"  Floor: diner checkerboard in the dining room, plain tiles {KitchenDepth:0} m deep along the " +
-                          "kitchen wall; laid again whenever a wall moves.\n");
-            report.Append("  Walls: terracotta skirting, cream, a wooden rail; banded only in height, so they stretch as the " +
-                          "building grows without the texture stretching.\n");
+            report.Append($"  Floor: wooden planks in the dining room, cream tiles {KitchenDepth:0} m deep along the " +
+                          "kitchen wall and a threshold board between; laid again whenever a wall moves.\n");
+            report.Append("  Walls: cream on a brown skirting, rounded along the top; shaped only across and up, so they " +
+                          "stretch as the building grows without anything stretching with them. (The door: 'Apply Wood & Cream Diner'.)\n");
         }
 
         /// <summary>
-        /// Gives the walls the diner's paint: a cube mesh with the same bounds as Unity's, UV'd so
-        /// the texture's bands run level round every side, and the wall material. The wall's own
-        /// transform, collider and everything that measures it are untouched.
+        /// The previous look's walls, for 'Restore Previous Diner Look': a cube mesh with the same
+        /// bounds as Unity's, UV'd so the texture's bands run level round every side, and the banded
+        /// wall material. The wall's own transform, collider and everything that measures it are untouched.
         /// </summary>
-        static void DressWalls(params Transform[] walls)
+        internal static void DressWallsPrevious(params Transform[] walls)
         {
             Mesh box = LastOrders.EditorTools.SurfaceKit.DinerWallMesh();
             Material paint = LastOrders.EditorTools.SurfaceKit.DinerWall();
@@ -262,12 +262,19 @@ namespace LastOrders.EditorTools
             if (floor == null) floor = Undo.AddComponent<RestaurantFloor>(go);
 
             Undo.RecordObject(floor, "Restaurant floor");
-            floor.Configure(FloorMaterial(DiningMaterialPath, TextureGenerator.EnsureDinerFloor(), DiningSmoothness),
-                            FloorMaterial(KitchenMaterialPath, TextureGenerator.EnsureKitchenFloor(), KitchenSmoothness),
-                            DiningTile, KitchenTile, KitchenDepth);
+            DinerShellModel.DressFloor(floor);
             EditorUtility.SetDirty(floor);
 
             return floor;
+        }
+
+        /// <summary>The previous look's floor, for 'Restore Previous Diner Look': the checkerboard and the kitchen tiles, no threshold.</summary>
+        internal static void DressFloorPrevious(RestaurantFloor floor)
+        {
+            floor.Configure(FloorMaterial(DiningMaterialPath, TextureGenerator.EnsureDinerFloor(), DiningSmoothness),
+                            FloorMaterial(KitchenMaterialPath, TextureGenerator.EnsureKitchenFloor(), KitchenSmoothness),
+                            DiningTile, KitchenTile, KitchenDepth);
+            floor.ConfigureTrim(null, 0f);
         }
 
         /// <summary>
@@ -278,11 +285,12 @@ namespace LastOrders.EditorTools
         {
             FloorMaterial(DiningMaterialPath, TextureGenerator.EnsureDinerFloor(), DiningSmoothness);
             FloorMaterial(KitchenMaterialPath, TextureGenerator.EnsureKitchenFloor(), KitchenSmoothness);
-            return "Restaurant floor: dining and kitchen tiles up to date.";
+            DinerShellModel.RestyleFloor();
+            return "Restaurant floor: dining and kitchen tiles, planks and cream tiles up to date.";
         }
 
         /// <summary>URP Lit with the generated tiles and their normal map: matte but with a little sheen, as a mopped floor has.</summary>
-        static Material FloorMaterial(string path, Texture2D tiles, float smoothness)
+        internal static Material FloorMaterial(string path, Texture2D tiles, float smoothness)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
@@ -310,7 +318,7 @@ namespace LastOrders.EditorTools
         /// Tells the five walls apart. Runs along X and runs along Z by their bounds; the kitchen
         /// wall is the X run furthest north, the front the other X runs, split at the door.
         /// </summary>
-        static bool ReadWalls(Transform root, out Transform back, out Transform left, out Transform right,
+        internal static bool ReadWalls(Transform root, out Transform back, out Transform left, out Transform right,
                               out Transform frontLeft, out Transform frontRight, out string problem)
         {
             back = left = right = frontLeft = frontRight = null;

@@ -49,6 +49,13 @@ namespace LastOrders.Debugging
 
         GameComposition Composition => scope != null ? scope.Composition : null;
 
+        /// <summary>Whether the text panel is drawn. The HUD's dev drawer flips it, as F1 does.</summary>
+        public bool ShowPanel
+        {
+            get => showPanel;
+            set => showPanel = value;
+        }
+
         readonly StringBuilder builder = new StringBuilder(512);
         GUIStyle style;
 

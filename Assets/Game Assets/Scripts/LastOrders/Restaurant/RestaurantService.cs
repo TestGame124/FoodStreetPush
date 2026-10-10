@@ -79,6 +79,26 @@ namespace LastOrders.Restaurant
         /// <summary>Blows the walls have taken since the game started.</summary>
         public int BlowsTaken { get; private set; }
 
+        /// <summary>The restaurant's health in an attack. Full at the start of every one, carried
+        /// from wave to wave, and the attack is lost the moment it reaches zero.</summary>
+        public float Health { get; private set; } = 1f;
+
+        public float MaxHealth { get; private set; } = 1f;
+
+        public float HealthFraction => MaxHealth <= 0f ? 1f : Mathf.Clamp01(Health / MaxHealth);
+
+        /// <summary>Below full: what the crew patches up in the morning.</summary>
+        public bool IsDamaged => Health < MaxHealth - 0.01f;
+
+        /// <summary>True while an attack is on: only then do blows on the walls cost health.</summary>
+        public bool IsUnderAttack { get; private set; }
+
+        /// <summary>The health changed, with the new value and the most it can be.</summary>
+        public event Action<float, float> OnHealthChanged;
+
+        /// <summary>The blow that took the last of it. Raised once per attack.</summary>
+        public event Action OnHealthDepleted;
+
         /// <summary>The walls moved: the footprint they now stand round.</summary>
         public event Action<Rect> OnFootprintChanged;
 
@@ -262,16 +282,51 @@ namespace LastOrders.Restaurant
             Mathf.Clamp(from.x, footprint.xMin, footprint.xMax), from.y,
             Mathf.Clamp(from.z, footprint.yMin, footprint.yMax));
 
-        /// <summary>A blow on the walls. It lands - the scene shows it - but they never come
-        /// down, so it is never the blow that breaks them.</summary>
+        /// <summary>
+        /// A blow on the walls. It lands - the scene shows it - but they never come down, so it is
+        /// never the blow that breaks them. During an attack it costs the restaurant health, and
+        /// the blow that takes the last of it loses the attack.
+        /// </summary>
         public bool TakeHit(float damage, Vector3 from)
         {
             if (!HasFootprint) return false;
 
             BlowsTaken++;
             OnHit?.Invoke(ClosestPoint(from));
+
+            if (!IsUnderAttack || Health <= 0f || damage <= 0f) return false;
+
+            Health = Mathf.Max(0f, Health - damage);
+            OnHealthChanged?.Invoke(Health, MaxHealth);
+
+            if (Health <= 0f) OnHealthDepleted?.Invoke();
             return false;
         }
+
+        // --- Health in an attack ----------------------------------------------------------------
+
+        /// <summary>An attack is locked in: the restaurant goes into it at full health.</summary>
+        public void BeginEncounter(float maxHealth)
+        {
+            MaxHealth = Mathf.Max(1f, maxHealth);
+            Health = MaxHealth;
+            IsUnderAttack = true;
+            OnHealthChanged?.Invoke(Health, MaxHealth);
+        }
+
+        /// <summary>The attack is over. The health stays where it ended until the crew patches it up.</summary>
+        public void EndEncounter() => IsUnderAttack = false;
+
+        /// <summary>The crew's work in the morning, a little at a time.</summary>
+        public void Restore(float amount)
+        {
+            if (amount <= 0f || !IsDamaged) return;
+
+            Health = Mathf.Min(MaxHealth, Health + amount);
+            OnHealthChanged?.Invoke(Health, MaxHealth);
+        }
+
+        public void RestoreFully() => Restore(MaxHealth);
 
         // --- Geometry -------------------------------------------------------------------------
 

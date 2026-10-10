@@ -495,6 +495,13 @@ namespace LastOrders.Defense
         }
 
         /// <summary>Puts a defense out of action, or back in it: what it stands on has fallen, or been rebuilt.</summary>
+        /// <summary>Wrecked in the yard, or put back together. Separate from being knocked over with
+        /// a bastion, so mending one never sets a defense up that is still down for the other.</summary>
+        public void SetWrecked(string id, bool value)
+        {
+            if (TryGet(id, out DefenseUnit unit)) unit.IsWrecked = value;
+        }
+
         public void SetOutOfAction(string id, bool value)
         {
             if (TryGet(id, out DefenseUnit unit)) unit.IsOutOfAction = value;
@@ -704,6 +711,7 @@ namespace LastOrders.Defense
 
             if (!unit.IsBuilt) return $"An empty site for a {definition.displayName}.";
             if (unit.IsOutOfAction) return $"The {definition.displayName} has been knocked over. Repair what it stood on to set it up again.";
+            if (unit.IsWrecked) return $"The {definition.displayName} was wrecked by zombies. A repair kit puts it back together, level and all.";
 
             WeaponDefinition weapon = unit.Weapon;
             string arms = weapon != null ? $"{weapon.displayName}, {weapon.Describe()}" : "no weapon";

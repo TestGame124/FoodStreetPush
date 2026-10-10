@@ -18,7 +18,7 @@ namespace LastOrders.EditorTools
     /// </summary>
     public static partial class CropModels
     {
-        public enum Ingredient { Lettuce, Carrot, Cheese, CannedBeans, Chicken, Egg, Milk }
+        public enum Ingredient { Lettuce, Carrot, Cheese, CannedBeans, Chicken, Egg, Milk, Potato, Onion, Fish }
 
         /// <summary>The ingredient, as its item icon shows it.</summary>
         public static SmoothMesh Stocked(Ingredient ingredient)
@@ -35,6 +35,9 @@ namespace LastOrders.EditorTools
                 case Ingredient.Chicken: Drumsticks(mesh, dice); break;
                 case Ingredient.Egg: EggNest(mesh, dice); break;
                 case Ingredient.Milk: MilkBottle(mesh, dice); break;
+                case Ingredient.Potato: Potatoes(mesh, dice); break;
+                case Ingredient.Onion: Onions(mesh, dice); break;
+                case Ingredient.Fish: WholeFish(mesh, dice); break;
             }
 
             return mesh;

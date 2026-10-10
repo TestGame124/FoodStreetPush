@@ -50,10 +50,7 @@ namespace FoodStreet.Visitors
 
         public bool IsShowing => panel != null && panel.activeSelf;
 
-        void Awake()
-        {
-            if (panel != null) panel.SetActive(false);
-        }
+        void Awake() => Hide();
 
         void Start() => Fit(backing, discSize);
 
@@ -116,6 +113,10 @@ namespace FoodStreet.Visitors
         {
             flashTimer = 0f;
             if (panel != null) panel.SetActive(false);
+
+            // The count hangs beside the panel rather than inside it, so it goes separately - or
+            // an "x3" stays floating over somebody already eating it.
+            if (amount != null) amount.gameObject.SetActive(false);
         }
 
         /// <summary>

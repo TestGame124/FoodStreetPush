@@ -22,6 +22,9 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     [SerializeField] int MaxCookRecipies;
     public Transform centerPoint;
 
+    [Tooltip("What the cooking panel calls this station when it has no placed-object type to name it - a station set down by hand in the level rather than bought.")]
+    [SerializeField] string displayName;
+
     /// <summary>
     /// What this station can cook.
     ///
@@ -60,8 +63,14 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     public void Initialize()
     {
         if (placedObjectData == null)
-            placedObjectData = GetComponent<PlacedObject_Done>().PlacedObjectTypeSO;
-        cookPanel.buildingNameText.text = placedObjectData.name;
+        {
+            var placed = GetComponent<PlacedObject_Done>();
+            if (placed != null) placedObjectData = placed.PlacedObjectTypeSO;
+        }
+
+        // A station placed by hand has no type, and reading its name threw before the tap was done.
+        string title = placedObjectData != null ? placedObjectData.name : displayName;
+        if (!string.IsNullOrEmpty(title)) cookPanel.buildingNameText.text = title;
 
        
     }

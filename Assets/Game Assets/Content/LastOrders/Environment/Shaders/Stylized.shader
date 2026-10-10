@@ -11,6 +11,8 @@
 // night.
 //
 // _BaseColor tints the lot, which is also how the building ghost shows green or red.
+//
+// The main light's cookie is applied, so the level's drifting cloud shadows pass over the props too.
 Shader "LastOrders/Stylized"
 {
     Properties
@@ -60,6 +62,7 @@ Shader "LastOrders/Stylized"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -104,7 +107,7 @@ Shader "LastOrders/Stylized"
                 half3 normalWS = normalize(input.normalWS);
                 half3 albedo = input.color.rgb * _BaseColor.rgb;
 
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS), input.positionWS, half4(1, 1, 1, 1));
 
                 // Wrapped, then eased: lit faces stay lit a long way round the form and the shade
                 // arrives as a slow gradient rather than at a line.

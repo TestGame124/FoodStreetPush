@@ -59,8 +59,16 @@ namespace LastOrders.DayCycle.States
         {
             // Requested rather than applied. The machine defers it to a safe point, so this
             // can fire from inside a minute tick without unwinding the tick.
-            machine.RequestTransition(DayPhase.Dusk);
+            machine.RequestTransition(EveningAfter(context.Time.CurrentDay));
         }
+
+        /// <summary>
+        /// Where the day goes when it runs out. An attack day goes to the warning and the night
+        /// after it; any other day ends quietly, straight into the morning's tally. Attacks come
+        /// every few in-game days, and in-game days only pass while the game is played.
+        /// </summary>
+        DayPhase EveningAfter(int day) =>
+            context.Encounters == null || context.Encounters.IsAttackDay(day) ? DayPhase.Dusk : DayPhase.Resolution;
 
         /// <summary>
         /// 11.2. Closing in the last fifteen clock-minutes cuts Heat at the cost of the
@@ -72,7 +80,7 @@ namespace LastOrders.DayCycle.States
             if (context.Time.ClockMinutesRemaining > 15f) return false;
 
             context.Heat.ApplyCloseEarly();
-            machine.RequestTransition(DayPhase.Dusk);
+            machine.RequestTransition(EveningAfter(context.Time.CurrentDay));
             return true;
         }
 

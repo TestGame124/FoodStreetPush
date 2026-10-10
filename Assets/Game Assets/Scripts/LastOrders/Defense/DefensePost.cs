@@ -400,6 +400,9 @@ namespace LastOrders.Defense
         {
             if (unit == null) return $"The {DisplayName} is not connected to the game.";
 
+            // A wreck is mended with a repair kit, not upgraded: the reply says how.
+            if (unit.IsWrecked) return composition.Defense.Describe(unit.Id);
+
             // Built and at its last level there is nothing to buy, so a line on the HUD says
             // everything the popup would.
             if (unit.IsBuilt && !unit.HasNextLevel) return composition.Defense.Describe(unit.Id);
