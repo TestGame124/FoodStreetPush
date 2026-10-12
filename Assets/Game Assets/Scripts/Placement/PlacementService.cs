@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FoodStreet.Placement
@@ -9,8 +10,28 @@ namespace FoodStreet.Placement
     /// </summary>
     public sealed class PlacementService
     {
+        /// <summary>
+        /// Fittings that stand on the grid without being placed objects - the diner's serving pass -
+        /// keyed by whoever set them. Static: they belong to the scene, not to one grid's lifetime,
+        /// and a fitting can come up before the grid does.
+        /// </summary>
+        static readonly Dictionary<object, Rect> fixtures = new Dictionary<object, Rect>();
+
         readonly GridXZ<GridBuildingSystem3D.GridObject> cells;
         public GridLayout Layout { get; }
+
+        /// <summary>
+        /// Keeps anything solid from being built over <paramref name="area"/>: a flat world rectangle,
+        /// x across and y along the world's Z. Setting the same owner again moves it; null clears it.
+        /// Floors still go under it.
+        /// </summary>
+        public static void SetFixture(object owner, Rect? area)
+        {
+            if (owner == null) return;
+
+            if (area.HasValue) fixtures[owner] = area.Value;
+            else fixtures.Remove(owner);
+        }
 
         public PlacementService(GridXZ<GridBuildingSystem3D.GridObject> cells)
         {
@@ -30,6 +51,7 @@ namespace FoodStreet.Placement
             if (!Layout.Contains(origin) || size.x > Layout.Width - origin.x || size.y > Layout.Height - origin.y)
                 return PlacementFailure.OutsideGrid;
             bool floor = type.categoryType == ObjectCategory.Floor;
+            if (!floor && OverlapsFixture(origin, size)) return PlacementFailure.Occupied;
             for (int x = origin.x; x < origin.x + size.x; x++)
                 for (int z = origin.y; z < origin.y + size.y; z++)
                 {
@@ -47,6 +69,26 @@ namespace FoodStreet.Placement
                     if (failure != PlacementFailure.None) return failure;
                 }
             return PlacementFailure.None;
+        }
+
+        /// <summary>True when the footprint's cells overlap any fitting. A hair inside the cells' edges,
+        /// so a fitting that only touches a cell's side leaves it free.</summary>
+        bool OverlapsFixture(Vector2Int origin, Vector2Int size)
+        {
+            if (fixtures.Count == 0) return false;
+
+            const float Inset = 0.02f;
+            Vector3 corner = Layout.CellToWorld(origin);
+            var footprint = new Rect(corner.x + Inset, corner.z + Inset, size.x * Layout.CellSize - Inset * 2f, size.y * Layout.CellSize - Inset * 2f);
+
+            foreach (KeyValuePair<object, Rect> fixture in fixtures)
+            {
+                // A fitting destroyed without clearing itself (a scene unloaded) stops counting.
+                if (fixture.Key is Object owner && owner == null) continue;
+                if (fixture.Value.Overlaps(footprint)) return true;
+            }
+
+            return false;
         }
 
         public PlacedObject_Done GetAt(Vector2Int cell, bool floor = false)

@@ -209,11 +209,14 @@ namespace LastOrders.UI.Hud
             int waiting = visitors != null ? visitors.WaitingToBeServed : 0;
             if (waiting > 0)
             {
-                return new HudObjective(waiting == 1 ? "A Visitor Is Waiting" : $"{waiting} Visitors Waiting",
-                                        waiting == 1
-                                            ? "Tap them to serve what they asked for."
-                                            : "Tap one to serve them what they asked for.",
-                                        HudSprites.IconServe);
+                // With waiters on the floor the kitchen is the job: they carry whatever is on the pass.
+                string ask = LastOrders.Restaurant.Waiter.OnDuty > 0
+                    ? "Cook what they asked for - the waiters bring it from the pass. Tap a visitor to serve them first."
+                    : waiting == 1
+                        ? "Tap them to serve what they asked for."
+                        : "Tap one to serve them what they asked for.";
+
+                return new HudObjective(waiting == 1 ? "A Visitor Is Waiting" : $"{waiting} Visitors Waiting", ask, HudSprites.IconServe);
             }
 
             int ready = composition.Meals.TotalReady;

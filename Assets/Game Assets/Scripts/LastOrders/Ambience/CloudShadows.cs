@@ -11,6 +11,9 @@ namespace LastOrders.Ambience
     /// extra drawn: URP's Lit and the level's Stylized, Toon and CropSprite shaders all read it. The
     /// texture tiles, and is slid along with the wind each frame. Put back as it was when this is
     /// switched off, so the level's lighting is never left with a cookie it did not author.
+    ///
+    /// From dusk to dawn it yields the cookie to the night lights (<c>LastOrders.Lighting.NightLights</c>),
+    /// which fade these clouds out of their own cookie as the lamps come on.
     /// </summary>
     [DefaultExecutionOrder(1200)] // After DayNightLighting has turned the sun for the frame.
     [DisallowMultipleComponent]
@@ -38,6 +41,49 @@ namespace LastOrders.Ambience
         float drift;
         bool applied;
 
+        /// <summary>
+        /// True while something else is drawing the sun's cookie - the night lights, from dusk to
+        /// dawn. The clouds keep drifting meanwhile and are left alone on the light, so they come
+        /// back where the wind has taken them.
+        /// </summary>
+        public bool Yielded { get; private set; }
+
+        /// <summary>The tiling shade texture, for whatever draws the cookie while the clouds have yielded.</summary>
+        public Texture Shade => clouds;
+
+        public float TileMetres => tileMetres;
+
+        /// <summary>The cookie offset the clouds have now: how far they have drifted along the sun's own right and up.</summary>
+        public Vector2 Offset
+        {
+            get
+            {
+                Transform light = sun.transform;
+                return -new Vector2(Vector3.Dot(travelled, light.right), Vector3.Dot(travelled, light.up));
+            }
+        }
+
+        /// <summary>The sun's cookie as the level had it before the clouds - what to put back if they go.</summary>
+        public void GetAuthored(out Texture cookie, out Vector2 size, out Vector2 offset)
+        {
+            cookie = authoredCookie;
+            size = authoredSize;
+            offset = authoredOffset;
+        }
+
+        /// <summary>Hands the sun's cookie over (true) or takes it back with the clouds where they have drifted to (false).</summary>
+        public void Yield(bool yield)
+        {
+            if (yield == Yielded) return;
+            Yielded = yield;
+
+            if (yield || !applied) return;
+
+            sun.cookie = clouds;
+            lightData.lightCookieSize = new Vector2(tileMetres, tileMetres);
+            Slide();
+        }
+
         void OnEnable()
         {
             if (sun == null) sun = RenderSettings.sun;
@@ -46,13 +92,17 @@ namespace LastOrders.Ambience
             lightData = sun.GetComponent<UniversalAdditionalLightData>();
             if (lightData == null) return;
 
+            applied = true;
+
+            // While yielded the light carries someone else's cookie, which is not the level's own.
+            if (Yielded) return;
+
             authoredCookie = sun.cookie;
             authoredSize = lightData.lightCookieSize;
             authoredOffset = lightData.lightCookieOffset;
 
             sun.cookie = clouds;
             lightData.lightCookieSize = new Vector2(tileMetres, tileMetres);
-            applied = true;
             Slide();
         }
 
@@ -60,6 +110,9 @@ namespace LastOrders.Ambience
         {
             if (!applied) return;
             applied = false;
+
+            // Whoever the clouds yielded to owns the light now and will put it back itself.
+            if (Yielded) return;
 
             if (sun != null) sun.cookie = authoredCookie;
             if (lightData != null)
@@ -81,7 +134,7 @@ namespace LastOrders.Ambience
             // Keep the numbers small: the pattern repeats every tile anyway.
             travelled.x = Mathf.Repeat(travelled.x, tileMetres * 64f);
             travelled.z = Mathf.Repeat(travelled.z, tileMetres * 64f);
-            Slide();
+            if (!Yielded) Slide();
         }
 
         /// <summary>Editor wiring, for the setup tool.</summary>

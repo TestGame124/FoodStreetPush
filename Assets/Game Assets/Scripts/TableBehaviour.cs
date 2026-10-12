@@ -99,7 +99,10 @@ public class TableBehaviour : MonoBehaviour
             if (chair.isBusy && chair.isSitted && chair.foodPlatePos != null &&
                 chair.foodPlatePos.childCount > 0 && zone != null)
             {
-                zone.InventoryPosition.ReturnFoodPlate(chair.foodPlatePos.GetChild(0).gameObject);
+                // A dish a waiter brought belongs to the serving pass's plates, not the storehouse's.
+                GameObject plate = chair.foodPlatePos.GetChild(0).gameObject;
+                if (plate.TryGetComponent(out LastOrders.Kitchen.PassDish dish)) dish.Recycle();
+                else zone.InventoryPosition.ReturnFoodPlate(plate);
             }
 
             chair.ResetStates();

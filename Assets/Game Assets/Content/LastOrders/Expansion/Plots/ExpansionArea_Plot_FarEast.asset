@@ -17,7 +17,7 @@ MonoBehaviour:
   shortName: Far east corner
   benefit: More room inside the walls
   unlockedBy:
-  - {fileID: 11400000, guid: bc1e655db05bbe145896e1b21699982d, type: 2}
+  - {fileID: 11400000, guid: d3b44f12af157d14abe3869946466509, type: 2}
   expandCost:
   - type: 5
     amount: 40

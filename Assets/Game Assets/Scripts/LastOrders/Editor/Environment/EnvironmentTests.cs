@@ -205,25 +205,83 @@ public class EnvironmentLayoutTests
         }
     }
 
+    /// <summary>
+    /// Just through its breach, inside the fog's first haze: far enough that a wave arrives in time
+    /// (zombies walk about a metre a second, a wave is given 75 s before the next, and 30 s more after the last).
+    /// </summary>
     [Test]
-    public void LanesSpawnCloseEnoughToTheFogForItsTongueToHideThem()
+    public void LanesSpawnJustInsideTheFenceNotTooFarToArrive()
     {
         foreach (L.Lane lane in L.Lanes)
         {
-            float inside = -L.Outside(new Vector2(lane.Spawn.x, lane.Spawn.z));
-            Assert.That(inside, Is.InRange(0f, 8f), $"{lane.Name} is {inside:0.0} m inside the clear ground");
+            var spawn = new Vector2(lane.Spawn.x, lane.Spawn.z);
+            Assert.That(L.Fence.Contains(spawn), Is.True, $"{lane.Name} spawns outside the old fence");
+            Assert.That(-L.Outside(spawn), Is.InRange(L.FenceInset, L.FenceInset + 8f), $"{lane.Name} spawns too far in from the fence");
+
+            float dx = Mathf.Max(L.Compound.xMin - spawn.x, 0f, spawn.x - L.Compound.xMax);
+            float dz = Mathf.Max(L.Compound.yMin - spawn.y, 0f, spawn.y - L.Compound.yMax);
+            float distance = Mathf.Sqrt(dx * dx + dz * dz);
+            Assert.That(distance, Is.InRange(34f, 62f), $"{lane.Name} spawns {distance:0.0} m from the walls");
         }
     }
 
     [Test]
     public void LanesAreInTierOrderStartingAtTheFront()
     {
-        Assert.That(L.Lanes.Length, Is.EqualTo(4));
+        Assert.That(L.Lanes.Length, Is.EqualTo(6));
+        Assert.That(L.Lanes.Length, Is.LessThanOrEqualTo(EdgeFogBuilder.MaxTongues), "a lane the fog cannot lay a tongue down");
         Assert.That(L.Lanes[0].Spawn.z, Is.LessThan(L.Compound.yMin), "lane 0 is the front, across the road");
-        Assert.That(OutskirtsBuilder.SectorOf(new Vector2(L.Lanes[1].Spawn.x, L.Lanes[1].Spawn.z)), Is.EqualTo(OutskirtsBuilder.Sector.West));
-        Assert.That(OutskirtsBuilder.SectorOf(new Vector2(L.Lanes[2].Spawn.x, L.Lanes[2].Spawn.z)), Is.EqualTo(OutskirtsBuilder.Sector.East));
-        Assert.That(OutskirtsBuilder.SectorOf(new Vector2(L.Lanes[3].Spawn.x, L.Lanes[3].Spawn.z)), Is.EqualTo(OutskirtsBuilder.Sector.North));
+
+        var sides = new[]
+        {
+            OutskirtsBuilder.Sector.West, OutskirtsBuilder.Sector.East, OutskirtsBuilder.Sector.North,
+            OutskirtsBuilder.Sector.West, OutskirtsBuilder.Sector.East,
+        };
+
+        for (int i = 1; i < L.Lanes.Length; i++)
+            Assert.That(OutskirtsBuilder.SectorOf(new Vector2(L.Lanes[i].Spawn.x, L.Lanes[i].Spawn.z)), Is.EqualTo(sides[i - 1]), L.Lanes[i].Name);
+
+        // The two past the compound's north corners come in north of its wall, into the ring's corners.
+        Assert.That(L.Lanes[4].WallEnd.z, Is.GreaterThan(L.Compound.yMax));
+        Assert.That(L.Lanes[5].WallEnd.z, Is.GreaterThan(L.Compound.yMax));
+        Assert.That(L.Lanes[4].WallEnd.z, Is.LessThan(PerimeterStripLayout.RingBounds.yMax));
     }
+
+    [Test]
+    public void EveryLaneComesThroughABreachInTheFenceAndTheRoadThroughAGap()
+    {
+        Rect fence = L.Fence;
+        L.Breach[] breaches = L.Breaches;
+
+        foreach (L.Lane lane in L.Lanes)
+        {
+            // Where its trail crosses the fence line.
+            var a = new Vector2(lane.TrailStart.x, lane.TrailStart.z);
+            var b = new Vector2(lane.WallEnd.x, lane.WallEnd.z);
+            Assert.That(fence.Contains(a), Is.False, $"{lane.Name}'s trail starts inside the fence");
+            Assert.That(fence.Contains(b), Is.True, $"{lane.Name}'s trail never comes in through the fence");
+
+            Vector2 crossing = a;
+            for (int i = 0; i <= 400 && !fence.Contains(crossing); i++) crossing = Vector2.Lerp(a, b, i / 400f);
+
+            bool through = false;
+            foreach (L.Breach breach in breaches)
+                if (breach.Lane && Vector2.Distance(breach.At, crossing) < breach.HalfWidth - L.TrailHalfWidth) through = true;
+
+            Assert.That(through, Is.True, $"{lane.Name}'s trail runs into the fence rather than through a breach");
+        }
+
+        foreach (float x in new[] { fence.xMin, fence.xMax })
+        {
+            var at = new Vector2(x, ZoneLayout.RoadCentreZ);
+            bool gap = false;
+            foreach (L.Breach breach in breaches)
+                if (!breach.Lane && Vector2.Distance(breach.At, at) < 0.01f && breach.HalfWidth > ZoneLayout.RoadWidth * 0.5f + 1f) gap = true;
+
+            Assert.That(gap, Is.True, $"the road runs into the fence at x {x:0}");
+        }
+    }
+
 
     [Test]
     public void TownPatchesLieOnStreetsAndOffTheRoad()

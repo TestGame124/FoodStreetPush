@@ -81,6 +81,9 @@ namespace FoodStreet.Visitors
         /// <summary>Visitors on the map, riding, walking, seated or leaving.</summary>
         public int ActiveVisitors => active.Count;
 
+        /// <summary>Everyone on the map, for the waiters to look over. Read, never kept.</summary>
+        public IReadOnlyList<Visitor> Active => active;
+
         /// <summary>How many are sitting with an order nobody has filled. The number the player
         /// is being asked to act on.</summary>
         public int WaitingToBeServed

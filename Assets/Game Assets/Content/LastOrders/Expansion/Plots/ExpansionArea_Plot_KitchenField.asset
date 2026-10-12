@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3b910a2f0648544eb6aeb4ad23f6e59, type: 3}
+  m_Name: ExpansionArea_Plot_KitchenField
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.ExpansionAreaDefinition
+  id: plot_kitchen_field
+  displayName: Kitchen field
+  shortName: Kitchen field
+  benefit: More room inside the walls
+  unlockedBy:
+  - {fileID: 11400000, guid: e3a1dc42d60cdb54d8d70a1304783b62, type: 2}
+  expandCost:
+  - type: 5
+    amount: 53
+  - type: 1
+    amount: 33
+  requiredLevel: 7
+  expandSeconds: 25
+  claimReward:
+    experience: 8
+    resources:
+    - type: 5
+      amount: 12

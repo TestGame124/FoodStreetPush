@@ -352,7 +352,7 @@ namespace LastOrders.EditorTools
                     foreach (Rect b in blocked)
                         if (Inflate(b, 1.2f).Contains(p)) return false;
                     return true;
-                }, ref rng, maxPoints: 90);
+                }, ref rng, maxPoints: 120);
 
             int i = 0;
             foreach (Vector2 p in points)

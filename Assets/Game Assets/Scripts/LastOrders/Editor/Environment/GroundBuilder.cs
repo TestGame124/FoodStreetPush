@@ -30,9 +30,13 @@ namespace LastOrders.EditorTools
         /// <summary>Metres one copy of the coarse variation - the lit and shaded patches - covers.</summary>
         public const float VariationTile = 64f;
 
+        /// <summary>Metres past the camera's pan limits the plane reaches: what the view takes in from its furthest pivot.</summary>
+        const float PlaneBeyondCamera = 30f;
+
         public static string Build(Scene scene, Transform parent)
         {
             MeshRenderer plane = FindPlane(scene);
+            string grown = plane != null ? FitPlane(plane) : null;
             Material grass = GrassFor(plane, out Vector3 uFit, out Vector3 vFit);
 
             string report;
@@ -40,7 +44,7 @@ namespace LastOrders.EditorTools
             {
                 Undo.RecordObject(plane, "Grass");
                 plane.sharedMaterial = grass;
-                report = $"Ground: generated grass on '{PlanePath}', one tile per {GrassTile:0} m, variation per {VariationTile:0} m";
+                report = $"Ground: generated grass on '{PlanePath}'{grown}, one tile per {GrassTile:0} m, variation per {VariationTile:0} m";
             }
             else
             {
@@ -105,6 +109,34 @@ namespace LastOrders.EditorTools
                 m.SetFloat("_EnvironmentReflections", 0f);
                 m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             });
+        }
+
+        /// <summary>
+        /// Stretches the level's ground plane - the collider every tap on the ground hits - over all the
+        /// ground the camera can show. Only ever grows it, keeping its height; its mesh is untouched.
+        /// </summary>
+        static string FitPlane(MeshRenderer plane)
+        {
+            Rect cover = NeighborhoodBuilder.Inflate(L.CameraBounds, PlaneBeyondCamera);
+            Bounds world = plane.bounds;
+            if (world.min.x <= cover.xMin && world.max.x >= cover.xMax && world.min.z <= cover.yMin && world.max.z >= cover.yMax)
+                return null;
+
+            var filter = plane.GetComponent<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null) return null;
+
+            Rect grown = Rect.MinMaxRect(Mathf.Min(world.min.x, cover.xMin), Mathf.Min(world.min.z, cover.yMin),
+                                         Mathf.Max(world.max.x, cover.xMax), Mathf.Max(world.max.z, cover.yMax));
+
+            Transform t = plane.transform;
+            Bounds local = filter.sharedMesh.bounds;
+            Vector3 parentScale = t.parent != null ? t.parent.lossyScale : Vector3.one;
+
+            Undo.RecordObject(t, "Ground");
+            t.localScale = new Vector3(grown.width / (local.size.x * parentScale.x), t.localScale.y, grown.height / (local.size.z * parentScale.z));
+            t.position = new Vector3(grown.center.x, t.position.y, grown.center.y) - t.rotation * Vector3.Scale(local.center, t.lossyScale);
+
+            return $" (stretched to X {grown.xMin:0}..{grown.xMax:0}, Z {grown.yMin:0}..{grown.yMax:0})";
         }
 
         static MeshRenderer FindPlane(Scene scene)

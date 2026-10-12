@@ -30,16 +30,25 @@ namespace LastOrders.EditorTools
     /// alone; the claimed plot is walled ground of its own out past the ring, reached from a gate in
     /// the safe zone's wall straight across from its own.
     ///
-    /// Eight plots, a band one plot deep on the three sides away from the road: two west of the
-    /// compound, two north of it beside the courtyard, two east, and a corner plot at each end of
-    /// the north side that opens once the plot beside it is claimed. The splits between plots run
-    /// down the night's three approach trails, so a trail runs between two plots rather than across
-    /// one, and every plot can be filled. Each plot faces a gate in the safe zone's wall, and is
-    /// staked out with twine until it is claimed.
+    /// Three rings of plots on the three sides away from the road (none on the road side: that is the
+    /// customers'), every plot touching the ones round it. The first ring - two plots west of the
+    /// compound, two north beside the courtyard, two east - faces gates in the safe zone's wall
+    /// across the ring; its corner plots and every plot further out open from the plot in front of
+    /// them, through a gate in that plot's wall, so the land is taken ring by ring. Outer plots are
+    /// bigger, dearer and need a higher level. The splits between plots run down the night's lanes,
+    /// so each trail runs between two plots rather than across one. Every plot is staked out with
+    /// twine until it is claimed.
     ///
-    /// Two claimed plots side by side have no wall between them, and a plot claimed beside one that
-    /// is already the restaurant's does not raise one: each wall section knows the land beyond it
-    /// (<see cref="ExpansionNeighbours"/>) and stands only while that land is not claimed too.
+    /// Claimed land joins the restaurant's: a first-ring plot walls in the stretch of defense ring
+    /// in front of it too (<see cref="Walled"/>), its walls running across the ring to the safe
+    /// zone's, so it is inside the same walls - reached through the safe zone's gate, with the
+    /// defenses in that stretch of ring behind it. Two claimed plots side by side have no wall
+    /// between them, and a plot claimed beside one that is already the restaurant's does not raise
+    /// one: each wall section knows the land beyond it (<see cref="ExpansionNeighbours"/>) and stands
+    /// only while that land is not claimed too. So the claimed land grows out as one piece.
+    ///
+    /// The courtyard (<see cref="ExpansionSceneSetup"/>) is in the layout as an outside plot: plots
+    /// open from it through gates its own setup leaves in its wall (<see cref="GatesInto"/>).
     ///
     /// Re-running rebuilds every plot from this layout - hand edits to them are lost - removes the
     /// world edge's loose props from the ground the plots cover, and lays the compound walls again.
@@ -111,8 +120,17 @@ namespace LastOrders.EditorTools
             /// </summary>
             public float Gate;
 
-            /// <summary>The plot that has to be claimed first; null for one facing the compound.</summary>
+            /// <summary>
+            /// The plot that has to be claimed first, and is walked through to reach this one - its gate
+            /// is in that plot's wall; null for one facing the compound.
+            /// </summary>
             public string UnlockedBy;
+
+            /// <summary>Laid out by another setup (the courtyard): routes and gates pass through it, but nothing here builds it.</summary>
+            public bool External;
+
+            /// <summary>0 for the ring next to the defense ring, 1 and 2 further out: what it costs and needs.</summary>
+            public int Ring;
 
             public int Level;
             public int Wood;
@@ -123,11 +141,35 @@ namespace LastOrders.EditorTools
             public Kind[] Obstacles;
         }
 
+        /// <summary>The courtyard's id, as a plot other plots open from.</summary>
+        public const string CourtyardId = "courtyard";
+
+        /// <summary>How deep each ring of plots is, out from the one inside it: the first as deep as it always was.</summary>
+        public static readonly float[] RingDepth = { Depth, 16f, 18f };
+
+        /// <summary>The north rows' depths past the courtyard's back edge, for the second and third rings.</summary>
+        const float NorthRowB = 16f, NorthRowC = 18f;
+
+        // What each kind of land is mostly covered in.
+        static readonly Kind[] Scrapyard = { Kind.ScrapHeap, Kind.CarWreck, Kind.ScrapHeap, Kind.Rubble, Kind.Barricade, Kind.ScrapHeap, Kind.Thicket };
+        static readonly Kind[] CarLot = { Kind.CarWreck, Kind.CarWreck, Kind.ScrapHeap, Kind.CarWreck, Kind.Rubble, Kind.Barricade, Kind.Thicket };
+        static readonly Kind[] Allotments = { Kind.Thicket, Kind.Stump, Kind.Barricade, Kind.Thicket, Kind.Rubble, Kind.Boulders, Kind.Thicket };
+        static readonly Kind[] BuildersYard = { Kind.Rubble, Kind.Barricade, Kind.Rubble, Kind.ScrapHeap, Kind.Boulders, Kind.Rubble, Kind.CarWreck };
+        static readonly Kind[] Brambles = { Kind.Thicket, Kind.Thicket, Kind.Stump, Kind.Thicket, Kind.Boulders, Kind.Thicket, Kind.FallenTree };
+        static readonly Kind[] Woodlot = { Kind.FallenTree, Kind.Stump, Kind.FallenTree, Kind.Thicket, Kind.Stump, Kind.FallenTree, Kind.Boulders, Kind.Thicket };
+        static readonly Kind[] Orchard = { Kind.FallenTree, Kind.Stump, Kind.Stump, Kind.Thicket, Kind.FallenTree, Kind.Boulders, Kind.Thicket };
+        static readonly Kind[] Meadow = { Kind.Boulders, Kind.Thicket, Kind.Stump, Kind.FallenTree, Kind.Thicket, Kind.Rubble, Kind.Boulders };
+        static readonly Kind[] Quarry = { Kind.Boulders, Kind.Boulders, Kind.Rubble, Kind.Boulders, Kind.Thicket, Kind.Rubble, Kind.Stump };
+        static readonly Kind[] Woods = { Kind.FallenTree, Kind.FallenTree, Kind.Stump, Kind.Thicket, Kind.FallenTree, Kind.Stump, Kind.Boulders, Kind.Thicket };
+        static readonly Kind[] Garage = { Kind.CarWreck, Kind.Barricade, Kind.ScrapHeap, Kind.Rubble, Kind.CarWreck, Kind.Thicket, Kind.Rubble };
+
         /// <summary>
         /// The plots, measured from the compound's walls and the courtyard, across the defense ring
-        /// from the walls. Gate positions were picked to open onto clear ground inside the compound:
-        /// between the shelters and the north-west tower, north of the hospital tent, clear of the
-        /// corner towers and the car park.
+        /// from the walls, split down the lanes. Gate positions on the first ring were picked to open
+        /// onto clear ground inside the compound: between the shelters and the north-west tower, north
+        /// of the hospital tent, clear of the corner towers and the car park. Further out a gate
+        /// stands in the middle of the stretch a plot shares with the one it opens from. The courtyard
+        /// is in the list, <see cref="Plot.External"/>.
         /// </summary>
         public static List<Plot> Layout(Rect compound, Rect courtyard)
         {
@@ -139,38 +181,101 @@ namespace LastOrders.EditorTools
 
             float top = courtyard.height > 1f ? courtyard.yMax : northIn + 12.3f;
             float yardWest = courtyard.width > 1f ? courtyard.xMin : 21.5f;
+            float yardEast = courtyard.width > 1f ? courtyard.xMax : eastIn;
 
-            // Down the trails, so each runs between two plots.
-            float westSplit = Mathf.Clamp(L.WestLaneZ, south + 6f, north - 6f);
-            float eastSplit = Mathf.Clamp(L.EastLaneZ, south + 6f, north - 6f);
-            float northSplit = Mathf.Clamp(L.NorthLaneX, westIn + 6f, yardWest - 6f);
+            // Where the plots split: down the lanes, so their trails run along the lines between plots.
+            float w1Lo = L.WestLaneZ, w1Hi = L.WestLaneZ;
+            float w2Lo = L.NorthWestLaneZ, w2Hi = L.NorthWestLaneZ;
+            float e1Lo = L.EastLaneZ, e1Hi = L.EastLaneZ;
+            float e2Lo = L.NorthEastLaneZ, e2Hi = L.NorthEastLaneZ;
+            float nLo = L.NorthLaneX, nHi = L.NorthLaneX;
 
-            // The west and east plots run up past the ring's corners to meet the north row, and the
-            // north row runs out over them to the corner plots, so the plots make one band round it.
+            // Columns out from the ring, west and east; rows out past the courtyard, north.
+            float wA = westIn - RingDepth[0], wB = wA - RingDepth[1], wC = wB - RingDepth[2];
+            float eA = eastIn + RingDepth[0], eB = eA + RingDepth[1], eC = eB + RingDepth[2];
+            float nB = top + NorthRowB, nC = nB + NorthRowC;
+
+            // Where the north rows split over the courtyard.
+            float yardSplit = Mathf.Round((nHi + yardEast) * 0.5f * 10f) * 0.1f;
+
             var plots = new List<Plot>
             {
-                Make("plot_west", "West", "West lot", Rect.MinMaxRect(westIn - Depth, westSplit, westIn, northIn), Side.East, 30.5f, null,
-                     2, 20, 10, 15f, 4, 6, Kind.CarWreck, Kind.ScrapHeap, Kind.Thicket, Kind.Rubble, Kind.Boulders, Kind.Stump),
-                Make("plot_north_west", "NorthWest", "North-west field", Rect.MinMaxRect(westIn, northIn, northSplit, top), Side.South, -1.5f, null,
-                     2, 20, 10, 15f, 4, 6, Kind.FallenTree, Kind.Boulders, Kind.Thicket, Kind.Stump, Kind.Boulders, Kind.Thicket),
-                Make("plot_north", "North", "North field", Rect.MinMaxRect(northSplit, northIn, yardWest, top), Side.South, 19.5f, null,
-                     3, 25, 15, 15f, 4, 6, Kind.FallenTree, Kind.Stump, Kind.Thicket, Kind.Boulders),
-                Make("plot_east", "East", "East lot", Rect.MinMaxRect(eastIn, eastSplit, eastIn + Depth, northIn), Side.West, 27.5f, null,
-                     3, 25, 15, 15f, 4, 6, Kind.CarWreck, Kind.Barricade, Kind.ScrapHeap, Kind.Thicket, Kind.Stump, Kind.Boulders),
-                Make("plot_south_west", "SouthWest", "South-west lot", Rect.MinMaxRect(westIn - Depth, south, westIn, westSplit), Side.East, 11.5f, null,
-                     4, 30, 20, 18f, 5, 8, Kind.Barricade, Kind.CarWreck, Kind.Rubble, Kind.ScrapHeap, Kind.Thicket),
-                Make("plot_south_east", "SouthEast", "South-east lot", Rect.MinMaxRect(eastIn, south, eastIn + Depth, eastSplit), Side.West, 8f, null,
-                     4, 30, 20, 18f, 5, 8, Kind.CarWreck, Kind.Rubble, Kind.ScrapHeap, Kind.Barricade, Kind.Thicket),
-                Make("plot_far_west", "FarWest", "Far west corner", Rect.MinMaxRect(westIn - Depth, northIn, westIn, top), Side.South,
-                     westIn - Depth * 0.5f, "plot_west", 5, 40, 25, 20f, 6, 10,
+                // --- The first ring: facing the compound across the defense ring ---------------------
+
+                Make("plot_south_west", "SouthWest", "South-west lot", Rect.MinMaxRect(wA, south, westIn, w1Lo), Side.East, 11.5f, null, 0,
+                     Kind.Barricade, Kind.CarWreck, Kind.Rubble, Kind.ScrapHeap, Kind.Thicket),
+                Make("plot_west", "West", "West lot", Rect.MinMaxRect(wA, w1Hi, westIn, w2Lo), Side.East, 30.5f, null, 0,
+                     Kind.CarWreck, Kind.ScrapHeap, Kind.Thicket, Kind.Rubble, Kind.Boulders, Kind.Stump),
+                Make("plot_north_west", "NorthWest", "North-west field", Rect.MinMaxRect(westIn, northIn, nLo, top), Side.South, -1.5f, null, 0,
+                     Kind.FallenTree, Kind.Boulders, Kind.Thicket, Kind.Stump, Kind.Boulders, Kind.Thicket),
+                Make("plot_north", "North", "North field", Rect.MinMaxRect(nHi, northIn, yardWest, top), Side.South, 19.5f, null, 0,
+                     Kind.FallenTree, Kind.Stump, Kind.Thicket, Kind.Boulders),
+                new Plot
+                {
+                    Id = CourtyardId, Name = "Courtyard", DisplayName = "Courtyard", ShortName = "Courtyard", External = true,
+                    Land = Rect.MinMaxRect(yardWest, northIn, yardEast, top), Front = Side.South, Gate = ExpansionSceneSetup.GapCentreX,
+                    Obstacles = CourtyardObstacles,
+                },
+                Make("plot_east", "East", "East lot", Rect.MinMaxRect(eastIn, e1Hi, eA, e2Lo), Side.West, 27.5f, null, 0,
+                     Kind.CarWreck, Kind.Barricade, Kind.ScrapHeap, Kind.Thicket, Kind.Stump, Kind.Boulders),
+                Make("plot_south_east", "SouthEast", "South-east lot", Rect.MinMaxRect(eastIn, south, eA, e1Lo), Side.West, 8f, null, 0,
+                     Kind.CarWreck, Kind.Rubble, Kind.ScrapHeap, Kind.Barricade, Kind.Thicket),
+
+                // The corners past the north-west and north-east corridors, opened from beside them.
+                Make("plot_far_west", "FarWest", "Far west corner", Rect.MinMaxRect(wA, w2Hi, westIn, top), Side.East, 0f, "plot_north_west", 0,
                      Kind.FallenTree, Kind.Boulders, Kind.Thicket, Kind.Stump, Kind.Rubble),
-                Make("plot_far_east", "FarEast", "Far east corner", Rect.MinMaxRect(eastIn, northIn, eastIn + Depth, top), Side.South,
-                     eastIn + Depth * 0.5f, "plot_east", 5, 40, 25, 20f, 6, 10,
+                Make("plot_far_east", "FarEast", "Far east corner", Rect.MinMaxRect(eastIn, e2Hi, eA, top), Side.West, 0f, CourtyardId, 0,
                      Kind.CarWreck, Kind.FallenTree, Kind.Boulders, Kind.Thicket, Kind.ScrapHeap),
+
+                // --- West, out toward the suburbs -----------------------------------------------------
+
+                Make("plot_west_scrapyard", "WestScrapyard", "West scrapyard", Rect.MinMaxRect(wB, south, wA, w1Lo), Side.East, 0f, "plot_south_west", 1, Scrapyard),
+                Make("plot_west_car_lot", "WestCarLot", "Old car lot", Rect.MinMaxRect(wC, south, wB, w1Lo), Side.East, 0f, "plot_west_scrapyard", 2, CarLot),
+                Make("plot_west_allotments", "WestAllotments", "West allotments", Rect.MinMaxRect(wB, w1Hi, wA, w2Lo), Side.East, 0f, "plot_west", 1, Allotments),
+                Make("plot_west_builders_yard", "WestBuildersYard", "Builders' yard", Rect.MinMaxRect(wC, w1Hi, wB, w2Lo), Side.East, 0f,
+                     "plot_west_allotments", 2, BuildersYard),
+
+                // The north-west corner, out from the far west corner.
+                Make("plot_west_brambles", "WestBrambles", "Bramble patch", Rect.MinMaxRect(wB, w2Hi, wA, top), Side.East, 0f, "plot_far_west", 1, Brambles),
+                Make("plot_west_woodlot", "WestWoodlot", "West woodlot", Rect.MinMaxRect(wC, w2Hi, wB, nB), Side.East, 0f, "plot_west_brambles", 2, Woodlot),
+                Make("plot_west_orchard", "WestOrchard", "Old orchard", Rect.MinMaxRect(wA, top, westIn, nB), Side.South, 0f, "plot_far_west", 1, Orchard),
+                Make("plot_west_meadow", "WestMeadow", "Hay meadow", Rect.MinMaxRect(wB, top, wA, nB), Side.South, 0f, "plot_west_brambles", 1, Meadow),
+                Make("plot_north_west_woods", "NorthWestWoods", "North-west woods", Rect.MinMaxRect(wB, nB, westIn, nC), Side.South, 0f,
+                     "plot_west_orchard", 2, Woods),
+                Make("plot_west_quarry", "WestQuarry", "Stone quarry", Rect.MinMaxRect(wC, nB, wB, nC), Side.South, 0f, "plot_west_woodlot", 2, Quarry),
+
+                // --- North, out toward the trees -------------------------------------------------------
+
+                Make("plot_back_paddock", "BackPaddock", "Back paddock", Rect.MinMaxRect(westIn, top, nLo, nB), Side.South, 0f, "plot_north_west", 1, Meadow),
+                Make("plot_kitchen_field", "KitchenField", "Kitchen field", Rect.MinMaxRect(nHi, top, yardSplit, nB), Side.South, 0f, "plot_north", 1, Allotments),
+                Make("plot_yard_orchard", "YardOrchard", "Courtyard orchard", Rect.MinMaxRect(yardSplit, top, eastIn, nB), Side.South, 0f, CourtyardId, 1, Orchard),
+                Make("plot_pine_stand", "PineStand", "Pine stand", Rect.MinMaxRect(westIn, nB, nLo, nC), Side.South, 0f, "plot_back_paddock", 2, Woods),
+                Make("plot_forest_edge", "ForestEdge", "Forest edge", Rect.MinMaxRect(nHi, nB, yardSplit, nC), Side.South, 0f, "plot_kitchen_field", 2, Woodlot),
+                Make("plot_deadfall", "Deadfall", "Deadfall", Rect.MinMaxRect(yardSplit, nB, eastIn, nC), Side.South, 0f, "plot_yard_orchard", 2, Woods),
+
+                // --- East, out toward the suburbs ------------------------------------------------------
+
+                Make("plot_east_garage", "EastGarage", "Burnt-out garage", Rect.MinMaxRect(eA, south, eB, e1Lo), Side.West, 0f, "plot_south_east", 1, Garage),
+                Make("plot_east_wreckers", "EastWreckers", "Wreckers' yard", Rect.MinMaxRect(eB, south, eC, e1Lo), Side.West, 0f, "plot_east_garage", 2, CarLot),
+                Make("plot_east_allotments", "EastAllotments", "East allotments", Rect.MinMaxRect(eA, e1Hi, eB, e2Lo), Side.West, 0f, "plot_east", 1, Allotments),
+                Make("plot_east_rubble", "EastRubble", "Rubble field", Rect.MinMaxRect(eB, e1Hi, eC, e2Lo), Side.West, 0f, "plot_east_allotments", 2, BuildersYard),
+
+                // The north-east corner, out from the far east corner.
+                Make("plot_east_brambles", "EastBrambles", "East brambles", Rect.MinMaxRect(eA, e2Hi, eB, top), Side.West, 0f, "plot_far_east", 1, Brambles),
+                Make("plot_east_woodlot", "EastWoodlot", "East woodlot", Rect.MinMaxRect(eB, e2Hi, eC, nB), Side.West, 0f, "plot_east_brambles", 2, Woodlot),
+                Make("plot_east_orchard", "EastOrchard", "Pear orchard", Rect.MinMaxRect(eastIn, top, eA, nB), Side.South, 0f, "plot_far_east", 1, Orchard),
+                Make("plot_east_meadow", "EastMeadow", "East meadow", Rect.MinMaxRect(eA, top, eB, nB), Side.South, 0f, "plot_east_brambles", 1, Meadow),
+                Make("plot_north_east_woods", "NorthEastWoods", "North-east woods", Rect.MinMaxRect(eastIn, nB, eB, nC), Side.South, 0f,
+                     "plot_east_orchard", 2, Woods),
+                Make("plot_east_boulders", "EastBoulders", "Boulder field", Rect.MinMaxRect(eB, nB, eC, nC), Side.South, 0f, "plot_east_woodlot", 2, Quarry),
             };
 
+            var byId = new Dictionary<string, Plot>();
+            foreach (Plot plot in plots) byId[plot.Id] = plot;
+
             // A gate stays well inside the side it is on, whatever the walls have done - and for a plot
-            // facing the compound, well inside the stretch of compound wall across from it too.
+            // facing the compound, well inside the stretch of compound wall across from it too. One
+            // opened from another plot stands in the middle of the stretch the two share.
             foreach (Plot plot in plots)
             {
                 var (_, _, from, to) = SideLine(plot.Land, plot.Front);
@@ -182,6 +287,13 @@ namespace LastOrders.EditorTools
                     low = Mathf.Max(low, Mathf.Min(wallFrom, wallTo) + GateWidth);
                     high = Mathf.Min(high, Mathf.Max(wallFrom, wallTo) - GateWidth);
                 }
+                else if (byId.TryGetValue(plot.UnlockedBy, out Plot via))
+                {
+                    var (_, _, viaFrom, viaTo) = SideLine(via.Land, Opposite(plot.Front));
+                    low = Mathf.Max(low, Mathf.Min(viaFrom, viaTo) + GateWidth);
+                    high = Mathf.Min(high, Mathf.Max(viaFrom, viaTo) - GateWidth);
+                    plot.Gate = Mathf.Round((low + high) * 0.5f * 10f) * 0.1f;
+                }
 
                 plot.Gate = Mathf.Clamp(plot.Gate, low, high);
             }
@@ -189,14 +301,118 @@ namespace LastOrders.EditorTools
             return plots;
         }
 
-        static Plot Make(string id, string name, string displayName, Rect land, Side front, float gate, string unlockedBy,
-                         int level, int wood, int scrap, float seconds, int claimXp, int claimWood, params Kind[] obstacles) =>
-            new Plot
+        /// <summary>
+        /// A plot and what claiming it takes. The first ring's prices are its own; further out a plot
+        /// is priced by its ring and its size. They are written only on the run that creates its asset.
+        /// </summary>
+        static Plot Make(string id, string name, string displayName, Rect land, Side front, float gate, string unlockedBy, int ring,
+                         params Kind[] obstacles)
+        {
+            var plot = new Plot
             {
                 Id = id, Name = name, DisplayName = displayName, ShortName = displayName, Land = land, Front = front, Gate = gate,
-                UnlockedBy = unlockedBy, Level = level, Wood = wood, Scrap = scrap, Seconds = seconds, ClaimExperience = claimXp,
-                ClaimWood = claimWood, Obstacles = obstacles,
+                UnlockedBy = unlockedBy, Ring = ring,
             };
+
+            float area = land.width * land.height;
+
+            if (ring == 0)
+            {
+                // As the first eight were priced: the near pair cheapest, the corners dearest.
+                bool corner = unlockedBy != null;
+                bool near = id == "plot_west" || id == "plot_north_west";
+                bool south = id == "plot_south_west" || id == "plot_south_east";
+                plot.Level = corner ? 5 : south ? 4 : near ? 2 : 3;
+                plot.Wood = corner ? 40 : south ? 30 : near ? 20 : 25;
+                plot.Scrap = corner ? 25 : south ? 20 : near ? 10 : 15;
+                plot.Seconds = corner ? 20f : south ? 18f : 15f;
+                plot.ClaimExperience = corner ? 6 : south ? 5 : 4;
+                plot.ClaimWood = corner ? 10 : south ? 8 : 6;
+                plot.Obstacles = obstacles;
+                return plot;
+            }
+
+            // Every 100 m2 over the ring's usual size adds to the price.
+            float size = Mathf.Max(0f, area - 250f) / 100f;
+            plot.Level = ring == 1 ? 6 + (area > 300f ? 1 : 0) : 9 + (area > 450f ? 1 : 0);
+            plot.Wood = Mathf.RoundToInt((ring == 1 ? 50f : 80f) + size * 4f);
+            plot.Scrap = Mathf.RoundToInt((ring == 1 ? 30f : 50f) + size * 3f);
+            plot.Seconds = ring == 1 ? 25f : 30f;
+            plot.ClaimExperience = ring == 1 ? 8 : 12;
+            plot.ClaimWood = ring == 1 ? 12 : 18;
+
+            // Bigger land, more to clear: about one obstacle per 45 m2, between five and nine.
+            int count = Mathf.Clamp(Mathf.RoundToInt(area / 45f), 5, 9);
+            plot.Obstacles = new Kind[count];
+            int start = (DeterministicRandom.StableHash(id) & 0x7FFFFFFF) % obstacles.Length;
+            for (int i = 0; i < count; i++) plot.Obstacles[i] = obstacles[(start + i) % obstacles.Length];
+            return plot;
+        }
+
+        /// <summary>
+        /// The gates other plots open from <paramref name="id"/> by, on each side of its land: for a plot
+        /// laid out elsewhere (the courtyard), whose own setup has to leave room for them in its wall.
+        /// </summary>
+        public static List<(Side side, float along)> GatesInto(string id, Rect compound, Rect courtyard)
+        {
+            var gates = new List<(Side, float)>();
+            foreach (Plot plot in Layout(compound, courtyard))
+                if (plot.UnlockedBy == id) gates.Add((Opposite(plot.Front), plot.Gate));
+            return gates;
+        }
+
+        /// <summary>The plots the setup builds: every one in the layout but those laid out elsewhere.</summary>
+        static List<Plot> Built(List<Plot> plots) => plots.FindAll(p => !p.External);
+
+        /// <summary>
+        /// The ground a plot's wall goes round once it is claimed. For a plot facing the compound,
+        /// its land and the stretch of defense ring in front of it, out to the safe zone's wall: the
+        /// plot's sides run on across the ring to meet that wall, so the claimed land is inside the
+        /// same walls as the restaurant, reached through the safe zone's gate. Any other plot walls in
+        /// just its own land.
+        /// </summary>
+        public static Rect Walled(Plot plot, Rect compound)
+        {
+            if (plot.UnlockedBy != null) return plot.Land;
+
+            Rect r = plot.Land;
+            switch (plot.Front)
+            {
+                case Side.South: r.yMin = compound.yMax; break;
+                case Side.North: r.yMax = compound.yMin; break;
+                case Side.West: r.xMin = compound.xMax; break;
+                default: r.xMax = compound.xMin; break;
+            }
+
+            return r;
+        }
+
+        /// <summary>
+        /// Where the walls of claimed land meet the safe zone's from across the defense ring: the
+        /// ends of each first-ring plot's front, carried onto the compound's wall line - including the
+        /// courtyard's. Nothing built on the wall or its strip should stand on one of these.
+        /// </summary>
+        public static List<Vector2> RingCrossings(Rect compound, Rect courtyard)
+        {
+            var points = new List<Vector2>();
+            foreach (Plot plot in Layout(compound, courtyard))
+            {
+                if (plot.UnlockedBy != null) continue;
+
+                (bool alongX, float line, float from, float to) = SideLine(Walled(plot, compound), plot.Front);
+                var (_, _, wallFrom, wallTo) = SideLine(compound, Opposite(plot.Front));
+                float low = Mathf.Min(wallFrom, wallTo), high = Mathf.Max(wallFrom, wallTo);
+
+                foreach (float end in new[] { from, to })
+                    if (end > low + 0.3f && end < high - 0.3f) points.Add(OnSide(alongX, line, end));
+            }
+
+            return points;
+        }
+
+        /// <summary><see cref="RingCrossings(Rect, Rect)"/> for the compound and courtyard as they stand in <paramref name="scene"/>.</summary>
+        public static List<Vector2> RingCrossings(Scene scene) =>
+            TryMeasureCompound(scene, out Rect compound) ? RingCrossings(compound, MeasureCourtyard(scene)) : new List<Vector2>();
 
         // --- Sides --------------------------------------------------------------------------------
 
@@ -331,8 +547,9 @@ namespace LastOrders.EditorTools
             bool proceed = EditorUtility.DisplayDialog(
                 "Last Orders",
                 $"This edits '{scene.name}' in place:\n\n" +
-                $"- Lays out eight plots of land round the compound, {PerimeterStripLayout.Ring:0} m out past the defense ring, each covered in obstacles to clear\n" +
-                "- Puts a gate in the compound wall facing each plot and stakes the plots out\n" +
+                $"- Lays out {RingDepth.Length} rings of land plots round the compound, from {PerimeterStripLayout.Ring:0} m out past the defense ring, each covered in obstacles to clear\n" +
+                "- Keeps a corridor open through them for each of the night's lanes\n" +
+                "- Puts a gate in the compound wall facing each plot of the first ring, opens the rest from the plot in front, and stakes them all out\n" +
                 "- Removes the world edge's loose props from the ground the plots cover\n" +
                 "- Lays the compound walls again; a claimed plot gets a wall of its own and the compound's stays\n\n" +
                 "Plots made by an earlier run are rebuilt from scratch.",
@@ -388,16 +605,21 @@ namespace LastOrders.EditorTools
             // Entered through the gate in its south wall, across the ring from the compound's yard gate.
             var plot = new Plot
             {
-                Id = "courtyard", Name = "Courtyard", DisplayName = "Courtyard", ShortName = "Courtyard", Land = yard,
+                Id = CourtyardId, Name = "Courtyard", DisplayName = "Courtyard", ShortName = "Courtyard", Land = yard,
                 Front = Side.South, Gate = ExpansionSceneSetup.GapCentreX, Obstacles = CourtyardObstacles,
             };
 
             // Behind the old barrier row across the yard, clear of its feet.
             float frontClear = CourtyardModels.RowFromFront + 0.9f;
 
+            // Clear of the ways through to the plots opened from it, too.
+            List<Plot> plots = TryMeasureCompound(scene, out Rect compound) ? Layout(compound, yard) : new List<Plot>();
+            plots.RemoveAll(p => p.Id == CourtyardId);
+            plots.Add(plot);
+
             (Vector2 _, Vector2 after) = GateSteps(plot);
             var rng = new DeterministicRandom(Seed + 7);
-            int placed = PlaceObstacles(scope, area, plot, new List<Plot> { plot }, DebrisTypes(), Trails(), new Dictionary<Kind, int>(),
+            int placed = PlaceObstacles(scope, area, plot, plots, DebrisTypes(), Trails(), new Dictionary<Kind, int>(),
                                         after, frontClear, ref rng, out int wanted);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -430,9 +652,12 @@ namespace LastOrders.EditorTools
 
             Dictionary<Kind, DebrisDefinition> types = DebrisTypes();
             var definitions = new Dictionary<string, ExpansionAreaDefinition>();
-            foreach (Plot plot in plots) definitions[plot.Id] = AreaDefinition(plot);
+            foreach (Plot plot in Built(plots)) definitions[plot.Id] = AreaDefinition(plot);
 
-            foreach (Plot plot in plots)
+            ExpansionAreaDefinition yard = ExpansionContentGenerator.LoadCourtyard();
+            if (yard != null) definitions[CourtyardId] = yard;
+
+            foreach (Plot plot in Built(plots))
             {
                 ExpansionAreaDefinition definition = definitions[plot.Id];
                 definition.unlockedBy = plot.UnlockedBy != null && definitions.TryGetValue(plot.UnlockedBy, out ExpansionAreaDefinition gate)
@@ -455,13 +680,32 @@ namespace LastOrders.EditorTools
             var rng = new DeterministicRandom(Seed);
             var variants = new Dictionary<Kind, int>();
 
+            // Plots an earlier layout had that this one does not: gone, walls and all.
+            var keep = new HashSet<string>();
+            foreach (Plot plot in Built(plots)) keep.Add($"Area_Plot_{plot.Name}");
+
+            var stale = new List<GameObject>();
+            foreach (Transform child in areasRoot)
+                if (child.name.StartsWith("Area_Plot_") && !keep.Contains(child.name)) stale.Add(child.gameObject);
+            foreach (GameObject go in stale)
+            {
+                report.Append($"  {go.name} is no longer in the layout; removed.\n");
+                Undo.DestroyObjectImmediate(go);
+            }
+
+            int built = 0;
             for (int i = 0; i < plots.Count; i++)
             {
                 Plot plot = plots[i];
+                if (plot.External) continue;
+
                 string line = BuildPlot(scope, areasRoot, plot, i, plots, byId, compound, definitions[plot.Id], types, template, dust,
                                         trails, variants, ref rng);
                 report.Append($"  {line}\n");
+                built++;
             }
+
+            report.Append($"  {built} plots in {RingDepth.Length} rings, each touching the next; the first ring's walls reach across the defense ring to the compound's.\n");
 
             // --- What was there, and the walls ---------------------------------------------------------
 
@@ -518,7 +762,7 @@ namespace LastOrders.EditorTools
             Transform locked = K.Group("LockedUntilClaimed", area);
             var lockedVisuals = new List<GameObject> { BuildStakes(locked, plot, index, plots, trails) };
 
-            ExpansionBuildPlan plan = BuildBoundary(area, plot, plots, template, out int sections);
+            ExpansionBuildPlan plan = BuildBoundary(area, plot, plots, compound, template, out int sections);
 
             Transform claimed = K.Group("ShownWhenClaimed", area);
             claimed.gameObject.SetActive(false);
@@ -559,25 +803,38 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
-        /// The plot's new wall, in sections in the order they go up: along the side to one end of the
-        /// front, across the far side, back along the other, then across the front with its gate. A
-        /// plot opened from another raises nothing along its front - that wall is the other plot's,
-        /// with this plot's gate in it.
+        /// The plot's new wall round <see cref="Walled"/>, in sections in the order they go up: along
+        /// the side to one end of the front, across the far side, back along the other, then across
+        /// the front. Along its front a plot raises nothing where a wall already stands: a first-ring
+        /// plot's front is the safe zone's own wall, with its gate in it, and only any stretch past the
+        /// ends of that wall is built; a plot opened from another has that plot's wall there, with
+        /// this plot's gate in it, and builds only along any of its front that reaches past it.
         /// </summary>
-        static ExpansionBuildPlan BuildBoundary(Transform area, Plot plot, List<Plot> plots, GameObject template, out int sections)
+        static ExpansionBuildPlan BuildBoundary(Transform area, Plot plot, List<Plot> plots, Rect compound, GameObject template,
+                                                out int sections)
         {
             Transform root = K.Group("NewBoundary", area);
             root.position = Vector3.zero;
 
             var pieces = new List<Transform>();
-            int sides = plot.UnlockedBy == null ? 4 : 3;
+            Plot via = plot.UnlockedBy != null ? plots.Find(p => p.Id == plot.UnlockedBy) : null;
+            Rect walled = Walled(plot, compound);
 
-            for (int k = 1; k <= sides; k++)
+            for (int k = 1; k <= 4; k++)
             {
                 var side = (Side)(((int)plot.Front + k) % 4);
-                (bool alongX, float line, float from, float to) = SideLine(plot.Land, side);
+                (bool alongX, float line, float from, float to) = SideLine(walled, side);
 
-                foreach ((float a, float b) in Without(from, to, GatesIn(plot, side, plots)))
+                List<(float, float)> runs = Without(from, to, GatesIn(plot, side, plots));
+                if (side == plot.Front)
+                {
+                    // What already stands along it: the compound's wall, or the wall of the plot it opens from.
+                    Rect there = via != null ? Walled(via, compound) : compound;
+                    var (_, _, thereFrom, thereTo) = SideLine(there, Opposite(side));
+                    runs = Outside(runs, Mathf.Min(thereFrom, thereTo), Mathf.Max(thereFrom, thereTo));
+                }
+
+                foreach ((float a, float b) in runs)
                 {
                     float length = Mathf.Abs(b - a);
                     int count = Mathf.Max(1, Mathf.CeilToInt(length / SectionLength - 0.05f));
@@ -628,6 +885,32 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
+        /// The parts of each run that lie outside <paramref name="low"/>..<paramref name="high"/>, each
+        /// kept in its run's direction; slivers too short for a section are dropped.
+        /// </summary>
+        static List<(float, float)> Outside(List<(float, float)> runs, float low, float high)
+        {
+            var parts = new List<(float, float)>();
+            foreach ((float a, float b) in runs)
+            {
+                float lo = Mathf.Min(a, b), hi = Mathf.Max(a, b);
+                var pieces = new List<(float, float)>();
+                if (Mathf.Min(hi, low) - lo > 0.3f) pieces.Add((lo, Mathf.Min(hi, low)));
+                if (hi - Mathf.Max(lo, high) > 0.3f) pieces.Add((Mathf.Max(lo, high), hi));
+
+                if (a > b)
+                {
+                    pieces.Reverse();
+                    for (int i = 0; i < pieces.Count; i++) pieces[i] = (pieces[i].Item2, pieces[i].Item1);
+                }
+
+                parts.AddRange(pieces);
+            }
+
+            return parts;
+        }
+
+        /// <summary>
         /// A boundary piece from <paramref name="from"/> to <paramref name="to"/> along a line: a copy of the
         /// compound's own boundary cube - same height, thickness and look - which the wall setup lays a
         /// proper wall along.
@@ -675,8 +958,9 @@ namespace LastOrders.EditorTools
             for (int k = 1; k <= 4; k++)
             {
                 var side = (Side)(((int)plot.Front + k) % 4);
+                // Staked once: by whichever of the two comes first - but the courtyard has its own border, no stakes.
                 Plot beyond = Beyond(plot, side, plots);
-                if (beyond != null && plots.IndexOf(beyond) < index) continue;
+                if (beyond != null && !beyond.External && plots.IndexOf(beyond) < index) continue;
 
                 (bool alongX, float line, float from, float to) = SideLine(plot.Land, side);
                 List<float> gates = GatesIn(plot, side, plots);
@@ -1073,7 +1357,7 @@ namespace LastOrders.EditorTools
         // --- Measuring ----------------------------------------------------------------------------
 
         /// <summary>The compound as its boundary pieces stand.</summary>
-        static bool TryMeasureCompound(Scene scene, out Rect compound)
+        internal static bool TryMeasureCompound(Scene scene, out Rect compound)
         {
             compound = default;
             GameObject boundary = GameObject.Find("Restaurant/Zone/OuterBoundries");
@@ -1103,15 +1387,21 @@ namespace LastOrders.EditorTools
             return any && compound.width > 10f && compound.height > 10f;
         }
 
-        /// <summary>The courtyard's land, from the wall its expansion builds. Empty when there is none.</summary>
-        static Rect MeasureCourtyard(Scene scene)
+        /// <summary>
+        /// The courtyard's land, from the wall its expansion builds - less the stretch of defense ring
+        /// that wall takes in in front of it, which is not land to clear. Empty when there is none.
+        /// </summary>
+        internal static Rect MeasureCourtyard(Scene scene)
         {
             foreach (ExpansionArea area in Object.FindObjectsByType<ExpansionArea>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (area.gameObject.scene != scene || area.name != "Area_Courtyard") continue;
 
                 var plan = new SerializedObject(area).FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan;
-                if (plan != null && ExpansionNeighbours.TryLand(plan, out Rect land)) return land;
+                if (plan == null || !ExpansionNeighbours.TryLand(plan, out Rect land)) continue;
+
+                land.yMin = Mathf.Max(land.yMin, PerimeterStripLayout.NorthLine + PerimeterStripLayout.Ring);
+                return land;
             }
 
             return default;
@@ -1122,10 +1412,7 @@ namespace LastOrders.EditorTools
         {
             var trails = new List<(Vector2 a, Vector2 b)>();
             foreach (L.Lane lane in L.Lanes)
-            {
-                Vector3 from = lane.Name.EndsWith("North") ? new Vector3(lane.Spawn.x, 0f, L.ClearMaxZ + 2f) : lane.TrailStart;
-                trails.Add((new Vector2(from.x, from.z), new Vector2(lane.WallEnd.x, lane.WallEnd.z)));
-            }
+                trails.Add((new Vector2(lane.TrailStart.x, lane.TrailStart.z), new Vector2(lane.WallEnd.x, lane.WallEnd.z)));
 
             return trails;
         }

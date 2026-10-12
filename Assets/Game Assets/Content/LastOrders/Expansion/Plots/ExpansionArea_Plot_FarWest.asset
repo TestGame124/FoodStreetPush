@@ -17,7 +17,7 @@ MonoBehaviour:
   shortName: Far west corner
   benefit: More room inside the walls
   unlockedBy:
-  - {fileID: 11400000, guid: f2c6d95c036ffbd4298ec3003513e125, type: 2}
+  - {fileID: 11400000, guid: 82411459ef0542843907b5a574daa631, type: 2}
   expandCost:
   - type: 5
     amount: 40

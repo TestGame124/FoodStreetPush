@@ -206,5 +206,25 @@ public class PlacementRegressionTests
         command.Undo(context);
         Assert.AreEqual(Vector2Int.one, target.Origin);
     }
+    [Test] public void FixtureBlocksSolidsOverItButNotFloorsOrNeighbours()
+    {
+        var owner = new object();
+        // Cells are 0.5 m from (-4, -3): this covers cells x 2-3, z 2 exactly.
+        PlacementService.SetFixture(owner, Rect.MinMaxRect(-3f, -2f, -2f, -1.5f));
+        try
+        {
+            Assert.AreEqual(PlacementFailure.Occupied, service.Validate(Type(), new Vector2Int(2, 2), PlacedObjectTypeSO.Dir.Down));
+            Assert.AreEqual(PlacementFailure.Occupied, service.Validate(Type(2, 2), new Vector2Int(1, 1), PlacedObjectTypeSO.Dir.Down));
+            Assert.AreEqual(PlacementFailure.None, service.Validate(Type(1, 1, true), new Vector2Int(2, 2), PlacedObjectTypeSO.Dir.Down));
+            Assert.AreEqual(PlacementFailure.None, service.Validate(Type(), new Vector2Int(4, 2), PlacedObjectTypeSO.Dir.Down), "only touches the fixture's side");
+            Assert.AreEqual(PlacementFailure.None, service.Validate(Type(), new Vector2Int(2, 3), PlacedObjectTypeSO.Dir.Down), "only touches the fixture's side");
+        }
+        finally
+        {
+            PlacementService.SetFixture(owner, null);
+        }
+
+        Assert.AreEqual(PlacementFailure.None, service.Validate(Type(), new Vector2Int(2, 2), PlacedObjectTypeSO.Dir.Down));
+    }
 }
 #endif

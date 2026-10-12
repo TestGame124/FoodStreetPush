@@ -57,6 +57,7 @@ namespace LastOrders.EditorTools
                 $"This edits '{scope.gameObject.scene.name}' in place (seed {seed}):\n\n" +
                 "- Builds the world edge: trees to the north, abandoned suburbs west, east and south, fog round it all\n" +
                 "- Scatters small obstacles over the open ground round the compound, grouped by side\n" +
+                "- Runs the old perimeter fence round the edge, broken open where each lane comes through\n" +
                 "- Puts generated grass on the ground plane (Geometry/Ground keeps its mesh and collider)\n" +
                 "- Adds the survivors' checkpoint on the road west, where the customers come from\n" +
                 "- Moves the night's spawn lanes to the edges, with trails to the walls\n" +
@@ -118,6 +119,10 @@ namespace LastOrders.EditorTools
             OutskirtsBuilder.Result ring = OutskirtsBuilder.Build(K.Group("Outskirts", root), ringKeepOut,
                                                                   new List<Rect> { L.NavGrid }, ref ringRng);
             report.Append($"  Open ground: {ring.Obstacles} obstacles ({Join(ring.PerSector)}), {ring.Patches} ground patches.\n");
+
+            var fenceRng = new DeterministicRandom(seed ^ DeterministicRandom.StableHash("fence"));
+            PerimeterFenceBuilder.Result fence = PerimeterFenceBuilder.Build(K.Group("PerimeterFence", root), ref fenceRng);
+            report.Append($"  Old perimeter fence: {fence.Modules} modules, broken open in {fence.Breaches} places where the night comes through.\n");
 
             // --- The checkpoint and the fog -------------------------------------------------------------------
 
@@ -280,6 +285,10 @@ namespace LastOrders.EditorTools
             SerializedProperty lanes = so.FindProperty("laneOverrides");
             lanes.arraySize = L.Lanes.Length;
 
+            // A group fans out across its lane only as far as its corridor allows.
+            SerializedProperty spread = so.FindProperty("laneSpread");
+            if (spread != null) spread.floatValue = L.LaneSpread;
+
             for (int i = 0; i < L.Lanes.Length; i++)
             {
                 Transform point = spawner.transform.Find(L.Lanes[i].Name);
@@ -298,7 +307,7 @@ namespace LastOrders.EditorTools
             }
 
             so.ApplyModifiedProperties();
-            return $"Night lanes: {string.Join(", ", System.Array.ConvertAll(L.Lanes, l => $"{l.Name} {l.Spawn}"))}.";
+            return $"Night lanes: {string.Join(", ", System.Array.ConvertAll(L.Lanes, l => $"{l.Name} {l.Spawn}"))}, spread {L.LaneSpread:0.#} m.";
         }
 
         static string SetTownPatches()
@@ -369,12 +378,17 @@ namespace LastOrders.EditorTools
             if (oldDrive != null)
             {
                 int index = oldDrive.GetSiblingIndex();
+                bool active = oldDrive.gameObject.activeSelf;
                 Undo.DestroyObjectImmediate(oldDrive.gameObject);
 
+                // Left switched off if it was: the car park (Build Car Park) lays its own drive.
                 GameObject slab = SurfaceKit.Slab(drive, "Drive", ZoneLayout.Drive, 0.045f, 0.04f, SurfaceKit.Asphalt());
                 slab.transform.SetSiblingIndex(index);
+                slab.SetActive(active);
                 Undo.RegisterCreatedObjectUndo(slab, "Lay drive");
             }
+
+            CarParkModel.RelayDriveToGate(visitors.transform);
 
             Transform stop = visitors.transform.Find("ShuttleStop");
             if (stop != null)

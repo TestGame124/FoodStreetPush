@@ -107,10 +107,25 @@ namespace LastOrders.EditorTools
             var wanted = new HashSet<string>();
             int built = 0;
 
+            // Where claimed land's walls will come across the ring to meet the wall: no slot there.
+            List<Vector2> crossings = LandPlotSetup.RingCrossings(scene);
+
             foreach (L.Side side in L.Strips)
             {
                 List<Vector2> gates = Gates(walls, side);
-                List<L.Slot> slots = L.Slots(side, gates);
+
+                var cuts = new List<Vector2>(gates);
+                foreach (Vector2 p in crossings)
+                {
+                    var at = new Vector3(p.x, 0f, p.y);
+                    if (Mathf.Abs(side.OutOf(at)) > 0.3f) continue;
+
+                    float along = side.AlongOf(at);
+                    if (along >= side.From && along <= side.To) cuts.Add(new Vector2(along - L.WallHalf, along + L.WallHalf));
+                }
+
+                cuts.Sort((a, b) => a.x.CompareTo(b.x));
+                List<L.Slot> slots = L.Slots(side, cuts);
 
                 Mesh mesh = PerimeterStripModel.Build(side, gates, slots).Save($"{GroundFolder}/Strip_{side.Name}.asset", $"Strip_{side.Name}");
                 Transform strip = Group(ground, $"Strip_{side.Name}");

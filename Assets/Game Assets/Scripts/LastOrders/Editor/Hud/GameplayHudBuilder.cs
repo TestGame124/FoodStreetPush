@@ -26,6 +26,7 @@ namespace LastOrders.EditorTools.Hud
     public static class GameplayHudBuilder
     {
         const string RootName = "GameplayHUD";
+        const string AlertsName = "ApproachAlerts";
         const int SortingOrder = -10;
         const float Margin = 28f;
 
@@ -50,16 +51,26 @@ namespace LastOrders.EditorTools.Hud
         [MenuItem("Last Orders/UI/Restore Previous HUD (Current Scene)", priority = 202)]
         static void RestoreFromMenu() => Debug.Log($"[Last Orders] {RestorePrevious()}");
 
-        public static string Build()
+        [MenuItem("Last Orders/UI/Add Approach Alerts (Current Scene)", priority = 203)]
+        static void AddAlertsFromMenu() => Debug.Log($"[Last Orders] {AddApproachAlerts()}");
+
+        static void LoadSkin()
         {
             skin = AssetDatabase.LoadAssetAtPath<HudSkin>(HudArt.SkinPath);
-            if (skin == null || skin.sprites.Length == 0)
+
+            // Missing, or baked before the newest sprite was added: bake again. Every sprite keeps its id.
+            if (skin == null || !System.Array.Exists(skin.sprites, s => s != null && s.name == HudSprites.AlertPointer))
             {
                 HudArt.Bake();
                 skin = AssetDatabase.LoadAssetAtPath<HudSkin>(HudArt.SkinPath);
             }
 
             skin.Rebuild();
+        }
+
+        public static string Build()
+        {
+            LoadSkin();
 
             GameLifetimeScope scope = Object.FindFirstObjectByType<GameLifetimeScope>();
 
@@ -88,6 +99,10 @@ namespace LastOrders.EditorTools.Hud
             safe.gameObject.AddComponent<HudSafeArea>();
             hud.groups.everything = safe.gameObject.AddComponent<CanvasGroup>();
 
+            // Under every card: the alerts slide out from under the cards, but one gliding past behind
+            // a card on its way along the edge should not draw over it.
+            RectTransform alerts = Fill(AlertsName, safe);
+
             BuildTopLeft(hud, safe);
             BuildTopCenter(hud, safe);
             BuildTopRight(hud, safe, scope);
@@ -100,6 +115,7 @@ namespace LastOrders.EditorTools.Hud
             hud.toastRoot.SetAsLastSibling();
 
             BuildResult(hud, safe);
+            BuildApproachAlerts(hud, alerts, scope);
 
             WireLegacyPanels(hud);
             List<GameObject> replaced = SwitchOffOldHud(previous);
@@ -689,6 +705,96 @@ namespace LastOrders.EditorTools.Hud
 
             hud.banner = root.gameObject.AddComponent<HudBanner>();
             hud.banner.Configure(group, body, ribbon, title, subtitle);
+        }
+
+        // --- Approach alerts: where the zombies are coming from ---------------------------------------
+
+        /// <summary>Adds - or builds again - only the approach alerts, on the gameplay HUD already in the scene.</summary>
+        public static string AddApproachAlerts()
+        {
+            GameplayHud hud = Object.FindFirstObjectByType<GameplayHud>(FindObjectsInactive.Include);
+            if (hud == null || hud.groups.everything == null)
+                return "No gameplay HUD in the open scene: run 'Build Gameplay HUD' (it includes the alerts).";
+
+            LoadSkin();
+
+            var safe = (RectTransform)hud.groups.everything.transform;
+            Transform old = safe.Find(AlertsName);
+            if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+
+            RectTransform layer = Fill(AlertsName, safe);
+            layer.SetAsFirstSibling();
+            Undo.RegisterCreatedObjectUndo(layer.gameObject, "Add Approach Alerts");
+
+            ApproachAlerts alerts = BuildApproachAlerts(hud, layer, Object.FindFirstObjectByType<GameLifetimeScope>());
+            EditorSceneManager.MarkSceneDirty(hud.gameObject.scene);
+
+            return $"Approach alerts {(old != null ? "rebuilt" : "added")} on '{hud.name}', keeping clear of " +
+                   $"{alerts.keepClear.Length} HUD cards. Scene left unsaved.";
+        }
+
+        /// <summary>The alerts layer, its one switched-off alert the rest are copied from, and the cards they keep clear of.</summary>
+        static ApproachAlerts BuildApproachAlerts(GameplayHud hud, RectTransform layer, GameLifetimeScope scope)
+        {
+            var alerts = layer.gameObject.AddComponent<ApproachAlerts>();
+            alerts.Configure(scope, skin, AlertTemplate(layer));
+
+            var clear = new List<RectTransform>();
+
+            void Keep(Component c)
+            {
+                if (c != null) clear.Add((RectTransform)c.transform);
+            }
+
+            Keep(hud.groups.topLeft);
+            Keep(hud.day.card);
+            Keep(hud.health.group);
+            Keep(hud.groups.topRight);
+            Keep(hud.objective.panel);
+            Keep(hud.actions.shop);
+            Keep(hud.actions.repair);
+            Keep(hud.actions.phase);
+            Keep(hud.actions.orders);
+            alerts.keepClear = clear.ToArray();
+
+            EditorUtility.SetDirty(alerts);
+            return alerts;
+        }
+
+        /// <summary>
+        /// One alert: a glow, the beak (square and centred on the badge, so turning it swings the tip round
+        /// the rim), the round badge with its "!", and a dark tag for how many and from where.
+        /// </summary>
+        static ApproachAlertMarker AlertTemplate(RectTransform layer)
+        {
+            var middle = new Vector2(0.5f, 0.5f);
+            RectTransform Centred(string name, Transform parent, Vector2 at, Vector2 size) => Node(name, parent, middle, middle, middle, at, size);
+
+            RectTransform root = Centred("AlertTemplate", layer, Vector2.zero, new Vector2(160f, 160f));
+            var marker = root.gameObject.AddComponent<ApproachAlertMarker>();
+            marker.group = root.gameObject.AddComponent<CanvasGroup>();
+
+            marker.body = Centred("Body", root, Vector2.zero, new Vector2(160f, 160f));
+            RectTransform pop = Centred("Pop", marker.body, Vector2.zero, new Vector2(160f, 160f));
+            marker.motion = Motion(pop, pressable: false);
+
+            marker.glow = Paint(Centred("Glow", pop, Vector2.zero, new Vector2(230f, 230f)), HudSprites.Glow, HudPalette.Red.WithAlpha(0.4f));
+
+            marker.pointer = Centred("Pointer", pop, Vector2.zero, new Vector2(160f, 160f));
+            marker.pointerImage = Paint(marker.pointer, HudSprites.AlertPointer, HudPalette.Red);
+
+            RectTransform badge = Centred("Badge", pop, Vector2.zero, new Vector2(96f, 96f));
+            marker.badge = Paint(badge, HudSprites.RoundRed, Color.white, raycast: true);
+            marker.button = MakeButton(badge, marker.badge);
+            marker.glyph = Paint(Centred("Glyph", badge, new Vector2(0f, 4f), new Vector2(54f, 54f)), HudSprites.GlyphAlert, Color.white);
+
+            marker.tag = Centred("Tag", pop, new Vector2(0f, -70f), new Vector2(128f, 38f));
+            Paint(marker.tag, HudSprites.Glass, Color.white, 72f / 38f);
+            marker.label = Label(Fill("Label", marker.tag, 6f, 2f, 6f, 0f), "3  WEST", Face.Display, 23f, Color.white,
+                                 TextAlignmentOptions.Center, Style.Outline);
+
+            root.gameObject.SetActive(false);
+            return marker;
         }
 
         // --- The morning card -------------------------------------------------------------------------

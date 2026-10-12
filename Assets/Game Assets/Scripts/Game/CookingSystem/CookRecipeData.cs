@@ -63,7 +63,18 @@ public class CookRecipeData
 
             Item newItem = new(ItemController.GetItem(results.item.type), results.item.itemsAmount);
 
-            results.item.itemDataSO.GenerateItem(ItemController.instance.itemReceiver, newItem, manager.transform.position + offset, InventorySystem.instance);
+            // A dish goes out onto the serving pass for the waiters, its plate hopping from the
+            // station to the counter, rather than flying off to the storehouse as an icon. Into the
+            // inventory either way: the pass is a view of it.
+            if (LastOrders.Kitchen.ServingPassBoard.Receives(newItem.type))
+            {
+                LastOrders.Kitchen.ServingPassBoard.Instance.Incoming(newItem.type, PassOrigin(manager));
+                InventorySystem.instance.AddItem(newItem);
+            }
+            else
+            {
+                results.item.itemDataSO.GenerateItem(ItemController.instance.itemReceiver, newItem, manager.transform.position + offset, InventorySystem.instance);
+            }
 
             servings++;
         }
@@ -82,5 +93,13 @@ public class CookRecipeData
     public void FinishRecipe()
     {
         timer = 0;
+    }
+
+    /// <summary>Where a finished dish leaves the station: its front, where the cook works, at counter height.</summary>
+    static Vector3 PassOrigin(CookeryStation station)
+    {
+        Vector3 front = station.centerPoint != null ? station.centerPoint.position : station.transform.position;
+        front.y = station.transform.position.y + 0.95f;
+        return front;
     }
 }

@@ -45,9 +45,12 @@ Shader "LastOrders/SoftParticle"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_fog
+            // The sun's cookie: cloud shade by day, the night lights in the safe zone after dark.
+            #pragma multi_compile_vertex _ _LIGHT_COOKIES
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "MainLightCookieVertex.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -91,6 +94,7 @@ Shader "LastOrders/SoftParticle"
                 output.colour = input.colour * _BaseColor;
 
                 Light sun = GetMainLight();
+                sun.color *= MainLightCookieVertex(positionWS);
                 half3 scene = min(sun.color * 0.6 + SampleSH(half3(0.0, 1.0, 0.0)) * 0.4, 1.15);
                 output.light = lerp(half3(1.0, 1.0, 1.0), scene, _Lit);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);

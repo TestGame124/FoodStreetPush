@@ -963,6 +963,7 @@ namespace LastOrders.EditorTools
                     var renderer = lamp.GetComponent<Renderer>();
                     if (lampMaterial != null) renderer.sharedMaterial = lampMaterial;
                     lamps.Add(renderer);
+                    NightLightsSetup.GateLamp(lamp);
                 }
 
                 standing = K.Group("Standing", visual);
@@ -996,6 +997,7 @@ namespace LastOrders.EditorTools
                     var renderer = lamp.GetComponent<Renderer>();
                     renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     lamps.Add(renderer);
+                    NightLightsSetup.GateLamp(lamp);
                 }
 
                 // Two leaves meeting in the middle, a hair apart.
@@ -1093,6 +1095,9 @@ namespace LastOrders.EditorTools
             go.transform.position = new Vector3(area.center.x, 0f, area.center.y);
 
             go.AddComponent<CompoundZone>().Configure(scope, area, tiedTo);
+
+            // Lit at night once it counts as inside.
+            NightLightsSetup.Yard(go);
         }
 
         // --- Plumbing ------------------------------------------------------------------------------

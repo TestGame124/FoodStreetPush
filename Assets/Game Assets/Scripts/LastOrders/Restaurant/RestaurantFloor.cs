@@ -47,6 +47,9 @@ namespace LastOrders.Restaurant
 
         Mesh mesh;
 
+        /// <summary>How deep the kitchen strip along the back wall is: where its tiles meet the dining room's floor.</summary>
+        public float KitchenDepth => kitchenDepth;
+
         /// <summary>Editor wiring, for the setup tool.</summary>
         public void Configure(Material diningMaterial, Material kitchenMaterial, float diningMetres, float kitchenMetres,
                               float kitchenStripDepth)

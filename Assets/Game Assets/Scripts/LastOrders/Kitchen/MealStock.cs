@@ -87,6 +87,7 @@ namespace LastOrders.Kitchen
             BuildDishIndex();
 
             if (dishIndex != null && dishIndex.TryGetValue(dish, out ItemDataSO data)) return data;
+            if (cookedHere.TryGetValue(dish, out data) && data != null) return data;
 
             return ItemController.GetItem(dish);
         }
@@ -96,10 +97,27 @@ namespace LastOrders.Kitchen
         {
             BuildDishIndex();
 
-            // Permissive when the database is missing: a level with no item database is a
-            // grey-box whose pass only ever holds what its own stove put there, and refusing
-            // everything would leave every customer waiting forever.
-            return dishIndex == null || dishIndex.ContainsKey(type);
+            if (cookedHere.ContainsKey(type)) return true;
+
+            // Permissive when the database is missing and no station has said what it makes: a
+            // level with no item database is a grey-box whose pass only ever holds what its own
+            // stove put there, and refusing everything would leave every customer waiting forever.
+            return dishIndex == null ? cookedHere.Count == 0 : dishIndex.ContainsKey(type);
+        }
+
+        /// <summary>
+        /// What the level's own stations cook, registered as each comes up. The item database's
+        /// recipe list is the first answer to "is this a meal", but a database that lists no
+        /// recipes - Main Level_Apocalypse's - left every dish reading as an ingredient: nothing
+        /// counted as on the pass and the meal count stayed at nought. Anything a station in the
+        /// level can make is a meal.
+        /// </summary>
+        static readonly Dictionary<ItemType, ItemDataSO> cookedHere = new Dictionary<ItemType, ItemDataSO>();
+
+        /// <summary>A station in the level cooks <paramref name="dish"/>.</summary>
+        public static void RegisterCooked(ItemType dish, ItemDataSO data)
+        {
+            if (data != null || !cookedHere.ContainsKey(dish)) cookedHere[dish] = data;
         }
 
         static void BuildDishIndex()

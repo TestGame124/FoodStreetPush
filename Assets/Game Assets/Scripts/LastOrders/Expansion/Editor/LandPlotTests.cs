@@ -35,13 +35,42 @@ public class LandPlotTests
         owned.Clear();
     }
 
-    static List<Plot> Plots() => LandPlotSetup.Layout(Compound, Courtyard);
+    /// <summary>The layout, the courtyard included as the plot others open from.</summary>
+    static List<Plot> Layout() => LandPlotSetup.Layout(Compound, Courtyard);
+
+    /// <summary>The plots the setup builds: all but the courtyard, which is laid out on its own.</summary>
+    static List<Plot> Plots() => Layout().FindAll(p => !p.External);
+
+    static Dictionary<string, Plot> ById(List<Plot> plots)
+    {
+        var byId = new Dictionary<string, Plot>();
+        foreach (Plot plot in plots) byId[plot.Id] = plot;
+        return byId;
+    }
 
     static float Overlap(Rect a, Rect b) =>
         Mathf.Max(0f, Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin)) *
         Mathf.Max(0f, Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin));
 
     // --- The layout ------------------------------------------------------------------------
+
+    [Test]
+    public void ThereIsLandToClaimInEveryRing()
+    {
+        List<Plot> plots = Plots();
+        Assert.GreaterOrEqual(plots.Count, 30, "The world should have plenty of land to claim.");
+
+        for (int ring = 0; ring < LandPlotSetup.RingDepth.Length; ring++)
+            Assert.IsTrue(plots.Exists(p => p.Ring == ring), $"Ring {ring} has no plots.");
+
+        var ids = new HashSet<string>();
+        var names = new HashSet<string>();
+        foreach (Plot plot in plots)
+        {
+            Assert.IsTrue(ids.Add(plot.Id), $"Two plots are called {plot.Id}.");
+            Assert.IsTrue(names.Add(plot.Name), $"Two plots share the asset name {plot.Name}.");
+        }
+    }
 
     [Test]
     public void PlotsNeverOverlapEachOtherTheCompoundOrTheCourtyard()
@@ -88,9 +117,8 @@ public class LandPlotTests
     [Test]
     public void EveryPlotIsEnteredFromLandAlreadyTheRestaurants()
     {
-        List<Plot> plots = Plots();
-        var byId = new Dictionary<string, Plot>();
-        foreach (Plot plot in plots) byId[plot.Id] = plot;
+        List<Plot> plots = Layout();
+        Dictionary<string, Plot> byId = ById(plots);
 
         foreach (Plot plot in plots)
         {
@@ -113,15 +141,21 @@ public class LandPlotTests
 
             Assert.IsTrue(byId.ContainsKey(plot.UnlockedBy), $"{plot.Id} opens from a plot that does not exist.");
             Assert.IsTrue(byId[plot.UnlockedBy].Land.Contains(before), $"{plot.Id}'s gate does not open from {plot.UnlockedBy}.");
+
+            // A stretch of wall in common, the gate well inside it.
+            Rect via = byId[plot.UnlockedBy].Land;
+            var (_, _, from, to) = LandPlotSetup.SideLine(plot.Land, plot.Front);
+            var (_, _, viaFrom, viaTo) = LandPlotSetup.SideLine(via, LandPlotSetup.Opposite(plot.Front));
+            float shared = Mathf.Min(Mathf.Max(from, to), Mathf.Max(viaFrom, viaTo)) - Mathf.Max(Mathf.Min(from, to), Mathf.Min(viaFrom, viaTo));
+            Assert.GreaterOrEqual(shared, 6f, $"{plot.Id} hardly touches {plot.UnlockedBy}, the plot it opens from.");
         }
     }
 
     [Test]
-    public void EveryRouteRunsFromInsideTheCompoundToInsideItsPlot()
+    public void EveryRouteRunsFromInsideTheCompoundToInsideItsPlotThroughEachGateOnTheWay()
     {
-        List<Plot> plots = Plots();
-        var byId = new Dictionary<string, Plot>();
-        foreach (Plot plot in plots) byId[plot.Id] = plot;
+        List<Plot> plots = Layout();
+        Dictionary<string, Plot> byId = ById(plots);
 
         foreach (Plot plot in plots)
         {
@@ -129,7 +163,148 @@ public class LandPlotTests
 
             Assert.IsTrue(Compound.Contains(steps[0]), $"{plot.Id}'s route does not start inside the compound.");
             Assert.IsTrue(plot.Land.Contains(steps[steps.Count - 1]), $"{plot.Id}'s route does not end on its land.");
-            Assert.AreEqual(plot.UnlockedBy == null ? 4 : 6, steps.Count, $"{plot.Id}'s route misses a gate.");
+
+            // Two steps through the compound's gate, then two through each plot's on the way.
+            int depth = 0;
+            var chain = new List<Plot>();
+            for (Plot p = plot; p != null; p = p.UnlockedBy != null ? byId[p.UnlockedBy] : null)
+            {
+                chain.Insert(0, p);
+                Assert.Less(++depth, 10, $"{plot.Id}'s chain of plots goes round in a circle.");
+            }
+
+            Assert.AreEqual(2 + 2 * depth, steps.Count, $"{plot.Id}'s route misses a gate.");
+
+            // Every walk between gates is across land the restaurant already holds: inside one plot.
+            for (int i = 1; i < chain.Count; i++)
+            {
+                Vector2 a = steps[2 * i + 1], b = steps[2 * i + 2];
+                Rect through = chain[i - 1].Land;
+                Assert.IsTrue(through.Contains(a) && through.Contains(b), $"{plot.Id}'s route leaves {chain[i - 1].Id} between its gates.");
+            }
+        }
+    }
+
+    /// <summary>Claimed, a plot facing the compound walls in the ring in front of it and meets the compound's wall: one walled place.</summary>
+    [Test]
+    public void ClaimedLandJoinsTheRestaurants()
+    {
+        foreach (Plot plot in Layout())
+        {
+            if (plot.UnlockedBy != null) continue;
+
+            Rect walled = LandPlotSetup.Walled(plot, Compound);
+            var (_, line, from, to) = LandPlotSetup.SideLine(walled, plot.Front);
+            var (_, wallLine, wallFrom, wallTo) = LandPlotSetup.SideLine(Compound, LandPlotSetup.Opposite(plot.Front));
+
+            Assert.AreEqual(wallLine, line, 0.01f, $"{plot.Id}'s walls stop short of the compound's.");
+            float shared = Mathf.Min(Mathf.Max(from, to), Mathf.Max(wallFrom, wallTo)) - Mathf.Max(Mathf.Min(from, to), Mathf.Min(wallFrom, wallTo));
+            Assert.GreaterOrEqual(shared, 6f, $"{plot.Id} hardly meets the compound's wall.");
+            Assert.IsTrue(walled.Contains(plot.Land.center), $"{plot.Id}'s walls leave its own land out.");
+        }
+    }
+
+    /// <summary>No gaps between the plots: every one shares a stretch of wall with another, so claimed land grows out as one piece.</summary>
+    [Test]
+    public void EveryPlotTouchesItsNeighbours()
+    {
+        List<Plot> plots = Layout();
+        foreach (Plot plot in plots)
+        {
+            int neighbours = 0;
+            foreach (Plot other in plots)
+            {
+                if (other == plot) continue;
+
+                Rect a = plot.Land, b = other.Land;
+                float acrossX = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin);
+                float acrossZ = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin);
+                bool sideBySide = (Mathf.Abs(acrossX) < 0.01f && acrossZ > 3f) || (Mathf.Abs(acrossZ) < 0.01f && acrossX > 3f);
+                if (sideBySide) neighbours++;
+            }
+
+            Assert.GreaterOrEqual(neighbours, 2, $"{plot.Id} stands apart from the rest of the land.");
+        }
+    }
+
+    /// <summary>Where claimed land's walls cross the ring to the compound's, nothing on the wall or in the ring is in the way.</summary>
+    [Test]
+    public void WallsAcrossTheRingMissTheGunSitesPadsAndGates()
+    {
+        List<Vector2> crossings = LandPlotSetup.RingCrossings(Compound, Courtyard);
+        Assert.IsNotEmpty(crossings);
+
+        foreach (Vector2 p in crossings)
+        {
+            foreach (PerimeterStripLayout.WallMount mount in PerimeterStripLayout.Mounts)
+            {
+                var at = new Vector2(mount.Position.x, mount.Position.z);
+                if (Mathf.Abs(mount.Side.OutOf(new Vector3(p.x, 0f, p.y))) > 0.3f) continue;
+                Assert.Greater(Vector2.Distance(at, p), mount.Bastion.Length * 0.5f + PerimeterStripLayout.WallHalf + 0.2f,
+                               $"A claimed plot's wall would cross the ring through {mount.Id}'s bastion.");
+            }
+
+            foreach (PerimeterStripLayout.RingPad pad in PerimeterStripLayout.RingPads)
+            {
+                // The wall runs straight out from p across the ring; the pad's square must miss it.
+                var at = new Vector2(pad.Position.x, pad.Position.z);
+                if (Mathf.Abs(pad.Side.OutOf(new Vector3(p.x, 0f, p.y))) > 0.3f) continue;
+                float along = Mathf.Abs(pad.Side.AlongOf(pad.Position) - pad.Side.AlongOf(new Vector3(p.x, 0f, p.y)));
+                Assert.Greater(along, PerimeterStripLayout.RingPadSize * 0.5f + PerimeterStripLayout.WallHalf + 0.2f,
+                               $"A claimed plot's wall would cross the ring through {pad.Id}.");
+            }
+
+            foreach (Plot plot in Layout())
+            {
+                if (plot.UnlockedBy != null) continue;
+                Vector2 gate = LandPlotSetup.CompoundGatePoint(plot, Compound);
+                Assert.Greater(Vector2.Distance(gate, p), 1.5f + PerimeterStripLayout.WallHalf, $"A wall across the ring stands in {plot.Id}'s gate.");
+            }
+        }
+    }
+
+    [Test]
+    public void TheNightNeverSpawnsOnLandToClaim()
+    {
+        foreach (L.Lane lane in L.Lanes)
+        {
+            Vector2 inward = lane.Inward;
+            var across = new Vector2(-inward.y, inward.x);
+            var spawn = new Vector2(lane.Spawn.x, lane.Spawn.z);
+
+            foreach (Plot plot in Layout())
+                for (float t = -L.LaneSpread; t <= L.LaneSpread; t += 0.5f)
+                    Assert.IsFalse(plot.Land.Contains(spawn + across * t), $"{lane.Name} can spawn on {plot.Id}.");
+        }
+    }
+
+    [Test]
+    public void ThePlotsStayInsideTheOldFenceWithRoomToWalkRound()
+    {
+        Rect inside = NeighborhoodBuilder.Inflate(L.Fence, -5f);
+        foreach (Plot plot in Plots())
+        {
+            Assert.IsTrue(inside.Contains(plot.Land.min) && inside.Contains(plot.Land.max), $"{plot.Id} runs up to the fence or past it.");
+            Assert.GreaterOrEqual(Mathf.Min(plot.Land.width, plot.Land.height), 9f, $"{plot.Id} is too narrow to hold anything.");
+        }
+    }
+
+    [Test]
+    public void OuterPlotsCostMoreAndNeedAHigherLevel()
+    {
+        List<Plot> plots = Plots();
+        Dictionary<string, Plot> byId = ById(Layout());
+
+        foreach (Plot plot in plots)
+        {
+            if (plot.UnlockedBy == null || !byId.TryGetValue(plot.UnlockedBy, out Plot via) || via.External) continue;
+
+            Assert.GreaterOrEqual(plot.Ring, via.Ring, $"{plot.Id} is nearer in than {via.Id}, the plot it opens from.");
+            if (plot.Ring > via.Ring)
+            {
+                Assert.Greater(plot.Level, via.Level, $"{plot.Id} needs no higher level than {via.Id}.");
+                Assert.Greater(plot.Wood + plot.Scrap, via.Wood + via.Scrap, $"{plot.Id} costs no more than {via.Id}.");
+            }
         }
     }
 
@@ -188,8 +363,7 @@ public class LandPlotTests
 
         foreach (L.Lane lane in L.Lanes)
         {
-            Vector3 from = lane.Name.EndsWith("North") ? new Vector3(lane.Spawn.x, 0f, L.ClearMaxZ + 2f) : lane.TrailStart;
-            var a = new Vector2(from.x, from.z);
+            var a = new Vector2(lane.TrailStart.x, lane.TrailStart.z);
             var b = new Vector2(lane.WallEnd.x, lane.WallEnd.z);
 
             foreach (Plot plot in plots)

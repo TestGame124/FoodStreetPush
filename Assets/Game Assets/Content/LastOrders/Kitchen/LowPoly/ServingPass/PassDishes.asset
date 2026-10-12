@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccdb88705de51f143a719aa406cbb22d, type: 3}
+  m_Name: PassDishes
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Kitchen.PassDishSet
+  dishes:
+  - item: 10
+    mesh: {fileID: 4300000, guid: 79b47922493e6e7408beb31f22499405, type: 2}
+  - item: 11
+    mesh: {fileID: 4300000, guid: 77567798326aecd4d86c9d5066f2dddc, type: 2}
+  - item: 12
+    mesh: {fileID: 4300000, guid: 858c8d8ed2dba8f4bb3b460a8d8ce320, type: 2}
+  - item: 13
+    mesh: {fileID: 4300000, guid: b08dd1a877fd4694f97a3c419577e33f, type: 2}
+  - item: 14
+    mesh: {fileID: 4300000, guid: ca50f2d1c72f1734bb973b0720a08c36, type: 2}
+  - item: 15
+    mesh: {fileID: 4300000, guid: cefe42bcbe5472148a2e740003554011, type: 2}
+  - item: 16
+    mesh: {fileID: 4300000, guid: a8c4c665535b8d14ba4e79d9b50728c3, type: 2}
+  - item: 17
+    mesh: {fileID: 4300000, guid: 86fb33ce01a699742aee2780b9c98aac, type: 2}
+  - item: 18
+    mesh: {fileID: 4300000, guid: 57177f8c1c416ac43aa97e0f495f4ed3, type: 2}
+  - item: 21
+    mesh: {fileID: 4300000, guid: 10b5e0075fa0e1d4ab6eb12f43c20674, type: 2}
+  - item: 22
+    mesh: {fileID: 4300000, guid: 70775b62e35fbb34a91720de78ab4df1, type: 2}
+  - item: 26
+    mesh: {fileID: 4300000, guid: ef2dade35e9722f4a8cc0fbe63f2c97f, type: 2}
+  - item: 27
+    mesh: {fileID: 4300000, guid: 8772387f6f901a543b15ccfa375153c3, type: 2}
+  - item: 28
+    mesh: {fileID: 4300000, guid: 2b85b9526fc086a4eab61f56ee40ec7b, type: 2}
+  - item: 29
+    mesh: {fileID: 4300000, guid: 623573be02aa8fb48be3630f72415a82, type: 2}
+  - item: 30
+    mesh: {fileID: 4300000, guid: 510860b2862ca724e8cb5218eeba35b0, type: 2}
+  - item: 31
+    mesh: {fileID: 4300000, guid: f2f89dd31b8a5ca47b4dce42c4d8916b, type: 2}
+  covered: {fileID: 4300000, guid: 647c5699bd9656048981cfebc7e32ea9, type: 2}
+  material: {fileID: 2100000, guid: 3b89cbc2290c75646904a8ce82363a3f, type: 2}

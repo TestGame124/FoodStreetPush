@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FoodStreet.Navigation;
 using LastOrders.Core;
 using LastOrders.Data;
@@ -49,6 +50,10 @@ namespace LastOrders.Night
 
         GameComposition composition;
         NightState night;
+
+        // Which lane each zombie out tonight came up, for the HUD's approach alerts. Pooled agents
+        // are written over when they come out again, and dropped when they go back.
+        readonly Dictionary<EnemyAgent, int> laneOf = new Dictionary<EnemyAgent, int>();
 
         void Start()
         {
@@ -108,6 +113,16 @@ namespace LastOrders.Night
 
             composition.Encounters.LaneCount = authored;
             composition.Encounters.LaneNames = names;
+        }
+
+        /// <summary>Where a lane's zombies come in: the breach they appear at.</summary>
+        public Vector3 LanePoint(int lane) => LanePosition(lane);
+
+        /// <summary>The lane <paramref name="agent"/> came up, if this spawner sent it.</summary>
+        public bool TryGetLane(EnemyAgent agent, out int lane)
+        {
+            lane = -1;
+            return agent != null && laneOf.TryGetValue(agent, out lane);
         }
 
         /// <summary>Morning: whatever is still standing turns its back on the restaurant and goes.</summary>
@@ -178,6 +193,7 @@ namespace LastOrders.Night
             agent.ConfigureRaids(composition.Outdoor,
                                  composition.Encounters != null ? composition.Encounters.Tuning.raidGiveUpSeconds : 20f);
 
+            laneOf[agent] = lane;
             night.Register(agent);
 
             // Released back to the pool once the body has fallen and sunk, rather than destroyed.
@@ -189,6 +205,7 @@ namespace LastOrders.Night
         void HandleFallen(EnemyAgent agent)
         {
             agent.OnFallen -= HandleFallen;
+            laneOf.Remove(agent);
             composition.Pools.Return(agent);
         }
 

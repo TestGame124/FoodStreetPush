@@ -26,6 +26,12 @@ namespace LastOrders.EditorTools
         /// <summary>Above the ground stains (0-9) and the light pools, below the drifting mist.</summary>
         public const int FogSortingOrder = 100;
 
+        /// <summary>How many lanes the EdgeFog shader lays a tongue down (_Tongue0 to _Tongue7).</summary>
+        public const int MaxTongues = 8;
+
+        /// <summary>Half the width of the strip of fog mesh laid down a corridor for its tongue: the tongue and a margin.</summary>
+        const float StripHalfWidth = 6f;
+
         public static int Build(Transform root, ref DeterministicRandom rng)
         {
             ContentGenerator.EnsureFolder(E.GeneratedFolder);
@@ -94,7 +100,7 @@ namespace LastOrders.EditorTools
             m.SetFloat("_TongueWidth", 4.5f);
             m.SetFloat("_TongueStrength", layer.TongueStrength);
 
-            for (int i = 0; i < 4; i++) m.SetVector($"_Tongue{i}", i < L.Lanes.Length ? Tongue(L.Lanes[i]) : Vector4.zero);
+            for (int i = 0; i < MaxTongues; i++) m.SetVector($"_Tongue{i}", i < L.Lanes.Length ? Tongue(L.Lanes[i]) : Vector4.zero);
 
             Vector3 c = L.Checkpoint;
             m.SetVector("_Pocket", new Vector4(c.x, c.z, L.CheckpointFogRadius, L.CheckpointFogKept));
@@ -183,7 +189,11 @@ namespace LastOrders.EditorTools
 
         // --- Assets ------------------------------------------------------------------------------------
 
-        /// <summary>A flat frame: the world plus its overhang outside, the clear ground (less an inset) as the hole.</summary>
+        /// <summary>
+        /// A flat frame: the world plus its overhang outside, the clear ground (less an inset) as the
+        /// hole - and a strip from the hole's edge down each lane that spawns deeper in than that, so
+        /// its tongue carries on to where the zombies appear. The play area between costs nothing.
+        /// </summary>
         static Mesh RingMesh()
         {
             Rect outer = NeighborhoodBuilder.Inflate(L.World, L.FogOverhang);
@@ -193,8 +203,7 @@ namespace LastOrders.EditorTools
             bool created = mesh == null;
             if (created) mesh = new Mesh { name = "EdgeFog_Ring" };
 
-            mesh.Clear();
-            mesh.vertices = new[]
+            var vertices = new System.Collections.Generic.List<Vector3>
             {
                 new Vector3(outer.xMin, 0f, outer.yMin), new Vector3(outer.xMax, 0f, outer.yMin),
                 new Vector3(outer.xMax, 0f, outer.yMax), new Vector3(outer.xMin, 0f, outer.yMax),
@@ -203,7 +212,7 @@ namespace LastOrders.EditorTools
             };
 
             // Four quads between the outer and inner rectangles, wound to face up.
-            mesh.triangles = new[]
+            var triangles = new System.Collections.Generic.List<int>
             {
                 0, 4, 1, 1, 4, 5,
                 1, 5, 2, 2, 5, 6,
@@ -211,13 +220,48 @@ namespace LastOrders.EditorTools
                 3, 7, 0, 0, 7, 4,
             };
 
-            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            foreach (L.Lane lane in L.Lanes)
+            {
+                Vector4 tongue = Tongue(lane);
+                var tip = new Vector2(tongue.z, tongue.w);
+                if (inner.Contains(tip) == false) continue;
+
+                // From where the lane crosses into the hole to a little past the tongue's tip.
+                Vector2 inward = lane.Inward;
+                var spawn = new Vector2(lane.Spawn.x, lane.Spawn.z);
+                Vector2 from = Entry(inner, spawn, inward), to = tip + inward * 2f;
+                Vector2 across = new Vector2(-inward.y, inward.x) * StripHalfWidth;
+
+                int b = vertices.Count;
+                vertices.Add(new Vector3(from.x - across.x, 0f, from.y - across.y));
+                vertices.Add(new Vector3(from.x + across.x, 0f, from.y + across.y));
+                vertices.Add(new Vector3(to.x + across.x, 0f, to.y + across.y));
+                vertices.Add(new Vector3(to.x - across.x, 0f, to.y - across.y));
+
+                // Either winding: Cull Off, and the normal is set by hand.
+                triangles.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
+            }
+
+            mesh.Clear();
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+
+            var normals = new Vector3[vertices.Count];
+            for (int i = 0; i < normals.Length; i++) normals[i] = Vector3.up;
+            mesh.normals = normals;
             mesh.RecalculateBounds();
 
             if (created) AssetDatabase.CreateAsset(mesh, MeshPath);
             else EditorUtility.SetDirty(mesh);
 
             return mesh;
+        }
+
+        /// <summary>Where a line walked from outside the rectangle along <paramref name="inward"/> to <paramref name="p"/> crosses into it.</summary>
+        static Vector2 Entry(Rect r, Vector2 p, Vector2 inward)
+        {
+            if (Mathf.Abs(inward.x) > Mathf.Abs(inward.y)) return new Vector2(inward.x > 0f ? r.xMin : r.xMax, p.y);
+            return new Vector2(p.x, inward.y > 0f ? r.yMin : r.yMax);
         }
 
         /// <summary>

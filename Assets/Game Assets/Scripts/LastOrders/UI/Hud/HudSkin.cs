@@ -37,6 +37,7 @@ namespace LastOrders.UI.Hud
         public const string Chip = "chip";
         public const string Segment = "segment";
         public const string White = "white";
+        public const string AlertPointer = "alert_pointer";
 
         public const string IconCoin = "icon_coin";
         public const string IconGem = "icon_gem";

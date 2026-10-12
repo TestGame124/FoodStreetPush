@@ -20,11 +20,11 @@ namespace LastOrders.EditorTools
     /// </summary>
     internal static class AmbientLifeSetup
     {
-        /// <summary>Where the birds may land: the clear ground round the compound, inside the suburbs and forest.</summary>
-        static readonly Rect LandingArea = new Rect(-44f, -40f, 128f, 116f);
+        /// <summary>Where the birds may land: the clear ground round the compound, inside the old fence.</summary>
+        static Rect LandingArea => NeighborhoodBuilder.Inflate(EnvironmentLayout.Fence, -2f);
 
         /// <summary>Where they fly off to at dusk: deep in the forest to the north.</summary>
-        static readonly Vector3 Roost = new Vector3(18f, 22f, 118f);
+        static Vector3 Roost => new Vector3(18f, 22f, EnvironmentLayout.ClearMaxZ + 16f);
 
         const float TreeBend = 0.32f;
         const float LeafFlutter = 0.02f;
@@ -43,10 +43,12 @@ namespace LastOrders.EditorTools
         /// <summary>The fires: what is burning, found by name, and roughly where, in case it has moved.</summary>
         static readonly (string name, Vector3 near)[] Fires =
         {
-            ("Obstacle_CarWreck_C", new Vector3(-22.2f, 0f, 7.6f)),
-            ("SM_Prop_Truck_Rusted_01", new Vector3(48.4f, 0f, -62.7f)),
-            ("Lot_033", new Vector3(114.2f, 0f, 40.7f)),
-            ("Lot_042", new Vector3(90.8f, 0f, 71.7f)),
+            // Re-picked for the bigger world laid out on 2026-10-12 (seed 20260930): a wreck on the
+            // south-west lot, a ute across the road from the gate, and two fallen-in houses.
+            ("Obstacle_CarWreck_A", new Vector3(-22.2f, 0f, 6.6f)),
+            ("SM_Prop_Ute_Wreck_01", new Vector3(-1.8f, 0f, -22.1f)),
+            ("Lot_031", new Vector3(-5f, 0f, -77.2f)),
+            ("Lot_050", new Vector3(117.9f, 0f, 52.1f)),
         };
 
         [MenuItem("Last Orders/Ambience/Set Up Ambient Life (Current Scene)", priority = 100)]
@@ -88,16 +90,24 @@ namespace LastOrders.EditorTools
 
             var plumes = new List<ParticleSystem>();
             var fuel = new List<Renderer>();
+            var missing = new List<string>();
             foreach ((string name, Vector3 near) in Fires)
             {
+                // Nothing there to burn - the world was laid out again - and no smoke out of bare grass.
                 Renderer burning = Burning(name, near);
+                if (burning == null)
+                {
+                    missing.Add(name);
+                    continue;
+                }
+
                 // Out of the top of the wreck, not inside it, where the body would hide the glow and the smoke's foot.
-                Vector3 at = burning != null
-                    ? new Vector3(burning.bounds.center.x, burning.bounds.max.y * 0.85f, burning.bounds.center.z)
-                    : near + Vector3.up * 0.5f;
+                var at = new Vector3(burning.bounds.center.x, burning.bounds.max.y * 0.85f, burning.bounds.center.z);
                 plumes.Add(AmbienceEffects.Smoke(root.transform, "Smoke_" + name, at));
                 fuel.Add(burning);
             }
+
+            if (missing.Count > 0) report.Add($"WARNING: nothing found to burn for {string.Join(", ", missing)}; no smoke there.");
 
             root.AddComponent<AmbientDrift>().Configure(AmbienceEffects.Pollen(root.transform), AmbienceEffects.Leaves(root.transform, ground),
                                                        plumes.ToArray(), fuel.ToArray());

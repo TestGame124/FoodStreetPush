@@ -17,8 +17,8 @@ namespace LastOrders.EditorTools
     /// side of the compound it is on, so a later expansion can take one side's obstacles over as
     /// debris to clear, the way the courtyard's were.
     ///
-    /// The ground gets drier and more worn toward the edges, and the four approach trails are worn
-    /// into it: the paths the night walks in on, visible by day.
+    /// The ground gets drier and more worn toward the edges, and the night's approach trails are
+    /// worn into it: the paths it walks in on, visible by day. Nothing stands across the old fence's line.
     /// </summary>
     public static class OutskirtsBuilder
     {
@@ -85,8 +85,7 @@ namespace LastOrders.EditorTools
             foreach (L.Lane lane in L.Lanes)
             {
                 // In the trees the forest lays its own winding part; out here it is straight.
-                Vector3 from = lane.Name.EndsWith("North") ? new Vector3(lane.Spawn.x, 0f, L.ClearMaxZ + 2f) : lane.TrailStart;
-                var a = new Vector2(from.x, from.z);
+                var a = new Vector2(lane.TrailStart.x, lane.TrailStart.z);
                 var b = new Vector2(lane.WallEnd.x, lane.WallEnd.z);
                 trailSegments.Add((a, b));
 
@@ -100,12 +99,17 @@ namespace LastOrders.EditorTools
                 return false;
             }
 
+            // The old fence runs round inside the edge; nothing stands across its line.
+            Rect fence = L.Fence;
+            bool OnFenceLine(Vector2 p, float margin) =>
+                NeighborhoodBuilder.Inflate(fence, margin).Contains(p) && !NeighborhoodBuilder.Inflate(fence, -margin).Contains(p);
+
             // --- Worn ground ----------------------------------------------------------------------------------
 
             var patches = PoissonScatter.Sample(clear, 7f, 13f,
                 p => Mathf.Lerp(13f, 7f, EdgeCloseness(p)),
                 p => !InAny(keepOut, p, 0.5f) && !OnRoad(p, -0.5f) && PoissonScatter.Noise(p, 0.05f, 7) > 0.34f,
-                ref rng, maxPoints: 160);
+                ref rng, maxPoints: 220);
 
             foreach (Vector2 p in patches)
             {
@@ -128,12 +132,12 @@ namespace LastOrders.EditorTools
                 p =>
                 {
                     if (InAny(keepOut, p, 3f) || InAny(noStanding, p, 1.5f)) return false;
-                    if (OnRoad(p, 2.5f) || OnTrail(p, L.TrailClearance)) return false;
+                    if (OnRoad(p, 2.5f) || OnTrail(p, L.TrailClearance) || OnFenceLine(p, 3f)) return false;
                     if (Vector2.Distance(p, new Vector2(L.DinerSign.x, L.DinerSign.z)) < 4f) return false;
 
                     // The first few metres off the walls stay open, and the rest has clearings in it.
                     return PoissonScatter.Noise(p, 0.07f, 3) > 0.32f;
-                }, ref rng, maxPoints: 150);
+                }, ref rng, maxPoints: 200);
 
             var counters = new Dictionary<Sector, int>();
             foreach (Vector2 p in spots)

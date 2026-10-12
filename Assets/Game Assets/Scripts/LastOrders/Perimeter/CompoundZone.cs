@@ -28,6 +28,9 @@ namespace LastOrders.Perimeter
 
         public Rect Area => area;
 
+        /// <summary>True while this ground counts as inside: switched on, and claimed if it is tied to a claim.</summary>
+        public bool IsPresent => isActiveAndEnabled && (presentWhile == null || presentWhile.activeInHierarchy);
+
         void Start()
         {
             if (scope == null) scope = FindFirstObjectByType<GameLifetimeScope>();
@@ -39,7 +42,7 @@ namespace LastOrders.Perimeter
 
         void Update()
         {
-            bool should = isActiveAndEnabled && (presentWhile == null || presentWhile.activeInHierarchy);
+            bool should = IsPresent;
             if (should != registered) SetRegistered(should);
         }
 

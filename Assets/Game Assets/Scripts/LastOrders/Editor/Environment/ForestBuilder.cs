@@ -59,7 +59,7 @@ namespace LastOrders.EditorTools
             var litter = PoissonScatter.Sample(band, 5f, 9f,
                 p => Mathf.Lerp(9f, 5f, Depth01(p)),
                 p => L.Outside(p) > -3f && L.Outside(p) < L.ContentDepth + 2f,
-                ref rng, maxPoints: 190);
+                ref rng, maxPoints: 240);
 
             foreach (Vector2 p in litter)
             {
@@ -95,7 +95,7 @@ namespace LastOrders.EditorTools
 
                     // Small clearings, so the wood has glades in it rather than even stipple.
                     return PoissonScatter.Noise(p, 0.07f, 91) > 0.24f;
-                }, ref rng, maxPoints: 520);
+                }, ref rng, maxPoints: 650);
 
             int index = 0;
             foreach (Vector2 p in points)
@@ -135,7 +135,7 @@ namespace LastOrders.EditorTools
             var growth = PoissonScatter.Sample(band, 3.5f, 6f,
                 p => Mathf.Lerp(6f, 3.5f, Depth01(p)),
                 p => L.Outside(p) > -3f && L.Outside(p) < L.ContentDepth * 0.8f && !NearTrail(p, 1.8f),
-                ref rng, maxPoints: 240);
+                ref rng, maxPoints: 300);
 
             foreach (Vector2 p in growth)
             {
@@ -158,12 +158,13 @@ namespace LastOrders.EditorTools
 
         /// <summary>
         /// A winding path from deep in the trees to where the night's zombies step out of them, then
-        /// dead straight: past the spawn they walk a straight line, and the path has to be where they walk.
+        /// dead straight: out on the open ground they walk a straight line down their corridor, and
+        /// the worn dirt there (<see cref="OutskirtsBuilder"/>) has to be where they walk.
         /// </summary>
         static void BuildTrail(List<Vector2> points, L.Lane lane, ref DeterministicRandom rng)
         {
             var mouth = new Vector2(lane.Mouth.x, lane.Mouth.z);
-            var spawn = new Vector2(lane.Spawn.x, lane.Spawn.z);
+            var spawn = new Vector2(lane.TrailStart.x, lane.TrailStart.z);
 
             float length = Vector2.Distance(mouth, spawn);
             Vector2 dir = (spawn - mouth) / length;

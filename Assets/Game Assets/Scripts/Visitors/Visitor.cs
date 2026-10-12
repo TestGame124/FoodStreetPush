@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using LastOrders.Interaction;
+using LastOrders.Kitchen;
 using LastOrders.Medical;
+using LastOrders.Restaurant;
 using UnityEngine;
 
 namespace FoodStreet.Visitors
@@ -131,6 +133,9 @@ namespace FoodStreet.Visitors
         float eatRemaining;
         bool lastAffordable;
 
+        /// <summary>Whoever is bringing their order, while somebody is.</summary>
+        object waiter;
+
         /// <summary>Set for the night: a visitor who finishes eating stays at the table rather
         /// than walking out into the dark.</summary>
         bool holdDeparture;
@@ -163,6 +168,18 @@ namespace FoodStreet.Visitors
         /// <summary>True while they are at the table with an unfilled order. The one state the
         /// player can act on, and the one the HUD counts.</summary>
         public bool IsWaitingToBeServed => Stage == VisitorStage.Seated && seating == Seating.Settled && !order.IsEmpty;
+
+        /// <summary>A waiter has taken their order on and is bringing it.</summary>
+        public bool HasWaiter => waiter != null;
+
+        /// <summary>The player tapped them: the next free waiter comes to them first.</summary>
+        public bool ServiceRequested { get; private set; }
+
+        /// <summary>When they sat down to order, for serving the longest-waiting first.</summary>
+        public float WaitingSince { get; private set; }
+
+        /// <summary>Which way the table is from their chair: a dish set in front of them faces back along it.</summary>
+        public Vector3 TableForward => seat.SitForward;
 
         /// <summary>Frozen at the table because zombies are inside the walls.</summary>
         public bool IsAlarmed => alarmed;
@@ -204,6 +221,8 @@ namespace FoodStreet.Visitors
 
             eatRemaining = 0f;
             plate = null;
+            waiter = null;
+            ServiceRequested = false;
 
             seating = Seating.None;
             chairPulled = false;
@@ -321,6 +340,7 @@ namespace FoodStreet.Visitors
         void Settle()
         {
             seating = Seating.Settled;
+            WaitingSince = Time.time;
 
             TableBehaviour.Chair chair = seat.Chair;
             if (chair != null) chair.isSitted = true;
@@ -741,6 +761,23 @@ namespace FoodStreet.Visitors
             InventorySystem inventory = InventorySystem.instance;
             if (inventory == null) return "No inventory in this scene, so nobody can be served.";
 
+            // With waiters on the floor, the tap calls one over rather than conjuring the plate: the
+            // dish comes off the pass in their hands.
+            ServingPassBoard pass = ServingPassBoard.Instance;
+            if (Waiter.OnDuty > 0 && pass != null)
+            {
+                if (HasWaiter) return $"{DisplayName}'s {label} is on its way.";
+
+                if (pass.Available(order.Item) < order.Amount)
+                {
+                    bubble?.FlashShort();
+                    return $"{DisplayName} wants {order.Amount} {label}. The pass has {pass.Available(order.Item)} ready.";
+                }
+
+                ServiceRequested = true;
+                return $"A waiter will bring {DisplayName} {order.Amount} {label}.";
+            }
+
             if (!inventory.TryConsume(order.Item, order.Amount))
             {
                 int held = inventory.ItemCount(order.Item);
@@ -753,10 +790,86 @@ namespace FoodStreet.Visitors
             return $"Served {DisplayName}: {order.Amount} {label}.";
         }
 
+        // --- The waiter ------------------------------------------------------------------
+
+        /// <summary>
+        /// A waiter takes their order on. Only one at a time, and only while they are waiting for it;
+        /// false if somebody else already has it.
+        /// </summary>
+        public bool ClaimWaiter(object by)
+        {
+            if (by == null || waiter != null || !IsWaitingToBeServed) return false;
+
+            waiter = by;
+            return true;
+        }
+
+        /// <summary>True while <paramref name="by"/> is the one bringing their order.</summary>
+        public bool IsServedBy(object by) => by != null && waiter == by;
+
+        /// <summary>The waiter gives up on them - the dish went elsewhere - and another may come.</summary>
+        public void ReleaseWaiter(object by)
+        {
+            if (waiter == by) waiter = null;
+        }
+
+        /// <summary>
+        /// Where a waiter coming from <paramref name="from"/> stands to set their dish down: beside their
+        /// chair, at the side of the table, on the waiter's side.
+        /// </summary>
+        public Vector3 ServicePoint(Vector3 from) => seat.SidePoint(from);
+
+        /// <summary>The middle of the table's edge in front of them, at the top's height.</summary>
+        public Vector3 TableEdge => SeatIsMeasured ? seat.Seating.EdgePoint(seat.Index) : seat.SitPoint + seat.SitForward * 0.4f;
+
+        /// <summary>
+        /// Where <paramref name="dish"/> will stand when it is set in front of them - on the table top,
+        /// all of it on it - and which way it will face. Asked before it is put down, so the waiter can
+        /// set it exactly there.
+        /// </summary>
+        public Pose PlateLanding(GameObject dish)
+        {
+            Transform at = seat.PlatePoint;
+            Quaternion facing = Quaternion.LookRotation(seat.SitForward, Vector3.up);
+            if (at == null || dish == null) return new Pose(dish != null ? dish.transform.position : transform.position, facing);
+
+            Transform t = dish.transform;
+            t.GetPositionAndRotation(out Vector3 wasAt, out Quaternion wasTurned);
+
+            t.SetPositionAndRotation(at.position, facing);
+            if (SeatIsMeasured) SetOnTable(dish);
+            var landing = new Pose(t.position, facing);
+
+            t.SetPositionAndRotation(wasAt, wasTurned);
+            return landing;
+        }
+
+        /// <summary>
+        /// A waiter sets their order in front of them: <paramref name="dish"/> is already where
+        /// <see cref="PlateLanding"/> said. The meal starts, and is paid for, as a tap-served one is.
+        /// </summary>
+        public void ServeBrought(GameObject dish)
+        {
+            bubble?.Hide();
+
+            plate = dish;
+            Transform at = seat.PlatePoint;
+            if (plate != null && at != null) plate.transform.SetParent(at, worldPositionStays: true);
+
+            BeginEating();
+        }
+
         void Serve()
         {
             bubble?.Hide();
             ShowPlate();
+            BeginEating();
+        }
+
+        void BeginEating()
+        {
+            waiter = null;
+            ServiceRequested = false;
 
             TableBehaviour.Chair chair = seat.Chair;
             if (chair != null) chair.foodServed = true;
@@ -814,6 +927,14 @@ namespace FoodStreet.Visitors
         void ReturnPlate()
         {
             if (plate == null) return;
+
+            // A dish a waiter brought goes back to the pass's own plates.
+            if (plate.TryGetComponent(out PassDish dish))
+            {
+                dish.PopOut();
+                plate = null;
+                return;
+            }
 
             InventoryObject pool = PlatePool();
             if (pool != null) pool.ReturnFoodPlate(plate);

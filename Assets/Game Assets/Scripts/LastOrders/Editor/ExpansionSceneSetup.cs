@@ -595,10 +595,10 @@ namespace LastOrders.EditorTools
         const float SectionLength = 2.5f;
 
         /// <summary>
-        /// The yard's new boundary: a wall all the way round it, cut into sections in the order they
-        /// go up - out along the west side, across the north, back down the east, then along the
-        /// side facing the compound either side of the yard's gate. Built in the compound wall's own
-        /// look and switched off; the expansion raises them.
+        /// The yard's new boundary, cut into sections in the order they go up - out along the west
+        /// side, across the north, back down the east - running on across the defense ring to the
+        /// compound's north wall, whose yard gate is the way in. Built in the compound wall's own look
+        /// and switched off; the expansion raises them.
         /// </summary>
         static ExpansionBuildPlan BuildNewBoundary(Transform areaRoot, out int sections)
         {
@@ -611,13 +611,30 @@ namespace LastOrders.EditorTools
             // The compound's own wall is the pattern: same material, height and thickness.
             GameObject template = GameObject.Find("Restaurant/Zone/OuterBoundries/Cube (5)");
 
+            // Gates out to the plots that open from the yard, wherever the land plots' layout puts them.
+            var gates = new Dictionary<LandPlotSetup.Side, List<float>>();
+            if (LandPlotSetup.TryMeasureCompound(areaRoot.gameObject.scene, out Rect compound))
+            {
+                foreach ((LandPlotSetup.Side side, float along) in LandPlotSetup.GatesInto(LandPlotSetup.CourtyardId, compound, Yard))
+                {
+                    if (!gates.TryGetValue(side, out List<float> list)) gates[side] = list = new List<float>();
+                    list.Add(along);
+                }
+            }
+
+            List<float> On(LandPlotSetup.Side side) => gates.TryGetValue(side, out List<float> list) ? list : new List<float>();
+
             var pieces = new List<Transform>();
 
-            AddRun(pieces, root, template, alongX: false, line: Yard.xMin, from: Yard.yMin, to: Yard.yMax);
-            AddRun(pieces, root, template, alongX: true, line: Yard.yMax, from: Yard.xMin, to: Yard.xMax);
-            AddRun(pieces, root, template, alongX: false, line: Yard.xMax, from: Yard.yMax, to: Yard.yMin);
-            AddRun(pieces, root, template, alongX: true, line: Yard.yMin, from: Yard.xMax, to: GapToX);
-            AddRun(pieces, root, template, alongX: true, line: Yard.yMin, from: GapFromX, to: Yard.xMin);
+            // Round the yard and the stretch of defense ring in front of it, back to the compound's
+            // north wall: claimed, the yard is inside the same walls as the restaurant, through the
+            // yard gate in that wall. Past the compound's north-east corner the yard's east wall comes
+            // all the way down and turns along the line of the north wall to meet it.
+            float east = MeasureEastWall();
+            AddRun(pieces, root, template, alongX: false, line: Yard.xMin, from: NorthWall, to: Yard.yMax, On(LandPlotSetup.Side.West));
+            AddRun(pieces, root, template, alongX: true, line: Yard.yMax, from: Yard.xMin, to: Yard.xMax, On(LandPlotSetup.Side.North));
+            AddRun(pieces, root, template, alongX: false, line: Yard.xMax, from: Yard.yMax, to: NorthWall, On(LandPlotSetup.Side.East));
+            if (Yard.xMax - east > 0.3f) AddRun(pieces, root, template, alongX: true, line: NorthWall, from: Yard.xMax, to: east);
 
             foreach (Transform piece in pieces) piece.gameObject.SetActive(false);
 
@@ -627,6 +644,27 @@ namespace LastOrders.EditorTools
 
             sections = pieces.Count;
             return plan;
+        }
+
+        /// <summary>Width of a gate left in the yard's wall for a plot beyond it, as the plots' own.</summary>
+        const float PlotGateWidth = 3f;
+
+        /// <summary>One side of the boundary walked from <paramref name="from"/> to <paramref name="to"/>, with a gate's width left out at each of <paramref name="gates"/>.</summary>
+        static void AddRun(List<Transform> pieces, Transform parent, GameObject template, bool alongX,
+                           float line, float from, float to, List<float> gates)
+        {
+            float direction = Mathf.Sign(to - from);
+            gates.Sort((a, b) => (direction * a).CompareTo(direction * b));
+
+            float cursor = from;
+            foreach (float gate in gates)
+            {
+                float near = gate - direction * PlotGateWidth * 0.5f, far = gate + direction * PlotGateWidth * 0.5f;
+                if ((near - cursor) * direction > 0.3f) AddRun(pieces, parent, template, alongX, line, cursor, near);
+                cursor = far;
+            }
+
+            if ((to - cursor) * direction > 0.3f) AddRun(pieces, parent, template, alongX, line, cursor, to);
         }
 
         /// <summary>One side of the boundary, in sections, walked from <paramref name="from"/> to <paramref name="to"/>.</summary>
@@ -707,11 +745,23 @@ namespace LastOrders.EditorTools
         /// </summary>
         static float CarryOut(Transform areaRoot)
         {
-            var area = areaRoot.GetComponent<ExpansionArea>();
-            var plan = area != null ? new SerializedObject(area).FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan : null;
-            if (plan == null || !ExpansionNeighbours.TryLand(plan, out Rect before)) return 0f;
+            // Where the yard's front stood: just short of the step in through its gate. Its wall is no
+            // measure - that runs on across the ring to the compound's.
+            float front;
+            Transform inside = areaRoot.Find("Route/YardGateInside");
+            if (inside != null)
+            {
+                front = inside.position.z - GateStep;
+            }
+            else
+            {
+                var area = areaRoot.GetComponent<ExpansionArea>();
+                var plan = area != null ? new SerializedObject(area).FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan : null;
+                if (plan == null || !ExpansionNeighbours.TryLand(plan, out Rect before)) return 0f;
+                front = before.yMin;
+            }
 
-            var shift = new Vector3(0f, 0f, Yard.yMin - before.yMin);
+            var shift = new Vector3(0f, 0f, Yard.yMin - front);
             if (Mathf.Abs(shift.z) < 0.01f) return 0f;
 
             foreach (string part in new[] { "Debris", "Zombies", "LockedUntilClaimed/BarrierRow" })

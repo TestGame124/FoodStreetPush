@@ -69,6 +69,9 @@ public class CameraPanZoomRig : MonoBehaviour
         }
     }
 
+    /// <summary>Glides the camera over to frame a ground point, at the pan's own pace.</summary>
+    public void PanTo(Vector3 point) => targetPivot = ClampToBounds(point);
+
     void Awake()
     {
         vcam = GetComponent<CinemachineCamera>();

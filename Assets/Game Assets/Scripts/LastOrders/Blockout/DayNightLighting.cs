@@ -30,8 +30,12 @@ namespace LastOrders.Blockout
 
         [Header("Night")]
         [SerializeField] Color nightColour = new Color(0.44f, 0.54f, 0.78f);
-        [SerializeField] float nightIntensity = 0.22f;
-        [SerializeField] Vector3 nightAngles = new Vector3(14f, 200f, 0f);
+        [SerializeField] float nightIntensity = 0.13f;
+
+        // High and from the camera's side. The night lights (LastOrders.Lighting.NightLights) are
+        // carried by this light's cookie, so a low moon would smear every lamp's pool along the
+        // ground and leave the faces toward the camera unlit.
+        [SerializeField] Vector3 nightAngles = new Vector3(60f, 0f, 0f);
         [SerializeField] Color nightAmbient = new Color(0.12f, 0.14f, 0.22f);
 
         [Header("Edge fog")]

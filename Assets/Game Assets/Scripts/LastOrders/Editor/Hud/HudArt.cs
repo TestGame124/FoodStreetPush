@@ -298,6 +298,7 @@ namespace LastOrders.EditorTools.Hud
             Surface(HudSprites.Chip, 48, 48, new Vector4(23, 23, 23, 23), DrawChip);
             Surface(HudSprites.Segment, 32, 32, new Vector4(11, 11, 11, 11), p => p.Fill(Box(2, 2, 30, 30, 9), Color.white));
             Surface(HudSprites.White, 16, 16, Vector4.zero, p => p.Fill(Box(0, 0, 16, 16), Color.white), inset: 4);
+            Surface(HudSprites.AlertPointer, 160, 160, Vector4.zero, DrawAlertPointer);
 
             // Icons: the 100-unit design space, outlined and shadowed like the item icons.
             Icon(HudSprites.IconCoin, DrawCoin);
@@ -458,6 +459,21 @@ namespace LastOrders.EditorTools.Hud
             p.Fill(Grow(band, 3f), HudPalette.Outline);
             p.Gradient(band, 10, Color.white, 82, new Color(0.84f, 0.84f, 0.84f));
             p.Fill(Box(56, 16, 264, 40, 10), new Color(1f, 1f, 1f, 0.28f), band);
+        }
+
+        /// <summary>
+        /// The beak an approach alert points with: a rounded wedge from under its badge out past the
+        /// rim, tip up, white so it takes the alert's colour. Square and centred on the badge, so
+        /// turning the image swings the beak round the badge. The shadow has no offset, because the
+        /// beak turns and a cast shadow would turn with it.
+        /// </summary>
+        static void DrawAlertPointer(HudPainter p)
+        {
+            Sdf beak = Grow(Poly(80, 16, 100, 60, 60, 60), 6f);
+            p.Shadow(Grow(beak, 4f), new Color(0.10f, 0.06f, 0.03f, 0.32f), 4f, Vector2.zero);
+            p.Fill(Grow(beak, 4f), HudPalette.Outline);
+            p.Gradient(beak, 10, Color.white, 66, new Color(0.80f, 0.80f, 0.80f));
+            p.Fill(Edge(Grow(beak, -3f), 1.6f), new Color(1f, 1f, 1f, 0.5f), Above(40));
         }
 
         static void DrawChip(HudPainter p)

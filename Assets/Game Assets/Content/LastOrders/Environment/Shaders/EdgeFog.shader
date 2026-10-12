@@ -31,6 +31,10 @@ Shader "LastOrders/EdgeFog"
         _Tongue1 ("Tongue 1 (from xz, to xz)", Vector) = (0, 0, 0, 0)
         _Tongue2 ("Tongue 2 (from xz, to xz)", Vector) = (0, 0, 0, 0)
         _Tongue3 ("Tongue 3 (from xz, to xz)", Vector) = (0, 0, 0, 0)
+        _Tongue4 ("Tongue 4 (from xz, to xz)", Vector) = (0, 0, 0, 0)
+        _Tongue5 ("Tongue 5 (from xz, to xz)", Vector) = (0, 0, 0, 0)
+        _Tongue6 ("Tongue 6 (from xz, to xz)", Vector) = (0, 0, 0, 0)
+        _Tongue7 ("Tongue 7 (from xz, to xz)", Vector) = (0, 0, 0, 0)
         _TongueWidth ("Tongue half width", Float) = 4
         _TongueStrength ("Tongue strength", Range(0, 1)) = 0.6
         _Pocket ("Pocket (x, z, radius, fog kept)", Vector) = (0, 0, 0, 1)
@@ -79,6 +83,10 @@ Shader "LastOrders/EdgeFog"
                 float4 _Tongue1;
                 float4 _Tongue2;
                 float4 _Tongue3;
+                float4 _Tongue4;
+                float4 _Tongue5;
+                float4 _Tongue6;
+                float4 _Tongue7;
                 float _TongueWidth;
                 half _TongueStrength;
                 float4 _Pocket;
@@ -137,8 +145,8 @@ Shader "LastOrders/EdgeFog"
 
                 float fog = smoothstep(_FogStart, _FogEnd, outside);
 
-                float tongues = max(max(Tongue(p, _Tongue0), Tongue(p, _Tongue1)),
-                                    max(Tongue(p, _Tongue2), Tongue(p, _Tongue3)));
+                float tongues = max(max(max(Tongue(p, _Tongue0), Tongue(p, _Tongue1)), max(Tongue(p, _Tongue2), Tongue(p, _Tongue3))),
+                                    max(max(Tongue(p, _Tongue4), Tongue(p, _Tongue5)), max(Tongue(p, _Tongue6), Tongue(p, _Tongue7))));
                 fog = max(fog, tongues * _TongueStrength);
 
                 // The checkpoint's pocket: thinner, never clear.

@@ -258,9 +258,10 @@ namespace LastOrders.EditorTools
             new WallMount("wall_west_north", West, 19f, true),
 
             // Past the north-west gate's pillar; over the storehouse; either side of the field gate; short of the north-east tower.
+            // The yard's clear of x 21.5, where the north field's and the courtyard's walls come across the ring once claimed.
             new WallMount("wall_north_west", North, 3.5f, false),
             new WallMount("wall_north_mid", North, 13f, true),
-            new WallMount("wall_north_yard", North, 22.4f, false),
+            new WallMount("wall_north_yard", North, 23.6f, false),
             new WallMount("wall_north_east", North, 38.5f, true),
 
             // East: along runs south, so these are at z 2.6 and z 19.
@@ -306,9 +307,9 @@ namespace LastOrders.EditorTools
             new RingPad("ring_west_mid", West, 16f),
             new RingPad("ring_west_north", West, 24f),
 
-            // Gates at x -1.5, 18.5 and the yard's at 30.5; the trail at x 12.
+            // Gates at x -1.5, 18.5 and the yard's at 30.5; the trail at x 7, the north-west lane along the ring from x -12.
             new RingPad("ring_north_west", North, -6f),
-            new RingPad("ring_north_mid", North, 7.5f),
+            new RingPad("ring_north_mid", North, 13.5f),
             new RingPad("ring_north_field", North, 24.5f),
             new RingPad("ring_north_yard", North, 38f),
 

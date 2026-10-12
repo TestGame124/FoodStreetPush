@@ -67,7 +67,9 @@ namespace LastOrders.EditorTools
             var so = new SerializedObject(area);
 
             var plan = so.FindProperty("buildPlan").objectReferenceValue as ExpansionBuildPlan;
-            if (plan != null && ExpansionNeighbours.TryLand(plan, out Rect yard)) front = yard.yMin;
+            // The yard's wall runs on across the defense ring to the compound's; the yard itself starts past the ring.
+            if (plan != null && ExpansionNeighbours.TryLand(plan, out Rect yard))
+                front = Mathf.Max(yard.yMin, PerimeterStripLayout.NorthLine + PerimeterStripLayout.Ring);
             var locked = new List<GameObject>();
             var unlocked = new List<GameObject>();
 

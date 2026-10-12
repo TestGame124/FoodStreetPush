@@ -129,6 +129,8 @@ Material:
     - _Surface: 0
     - _Threshold: 0.05
     - _UVSec: 0
+    - _WindBend: 0
+    - _WindFlutter: 0
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:

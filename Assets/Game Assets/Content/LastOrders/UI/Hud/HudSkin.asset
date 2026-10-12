@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: HudSkin
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.UI.Hud.HudSkin
   sprites:
+  - {fileID: 1427709195, guid: 43b9ea225fa0d5147aeb41410ca72c3b, type: 3}
   - {fileID: 256736457, guid: 43b9ea225fa0d5147aeb41410ca72c3b, type: 3}
   - {fileID: 810076863, guid: 43b9ea225fa0d5147aeb41410ca72c3b, type: 3}
   - {fileID: -1540213087, guid: 43b9ea225fa0d5147aeb41410ca72c3b, type: 3}

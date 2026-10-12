@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3b910a2f0648544eb6aeb4ad23f6e59, type: 3}
+  m_Name: ExpansionArea_Plot_WestBrambles
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.ExpansionAreaDefinition
+  id: plot_west_brambles
+  displayName: Bramble patch
+  shortName: Bramble patch
+  benefit: More room inside the walls
+  unlockedBy:
+  - {fileID: 11400000, guid: 98fe61c50cdce8e499e576a5112dc640, type: 2}
+  expandCost:
+  - type: 5
+    amount: 50
+  - type: 1
+    amount: 30
+  requiredLevel: 6
+  expandSeconds: 25
+  claimReward:
+    experience: 8
+    resources:
+    - type: 5
+      amount: 12

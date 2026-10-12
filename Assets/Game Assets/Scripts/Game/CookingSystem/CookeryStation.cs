@@ -39,6 +39,10 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
         foreach (CookingRecipe recipe in recipies)
         {
             OrderSystem.AddAvailableItems(recipe.Results.item);
+
+            // What this station makes is a meal: it goes out on the pass and customers can be served it.
+            if (recipe != null && recipe.Results.item != null)
+                LastOrders.Kitchen.MealStock.RegisterCooked(recipe.Results.item.type, recipe.Results.item.itemDataSO);
         }
 
     }
