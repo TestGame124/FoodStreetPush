@@ -9,8 +9,11 @@ public class DoorBehaviour : MonoBehaviour
 
     [SerializeField] Transform door; 
 
+    // Trigger messages reach disabled behaviours too; switched off, the door is someone else's to swing.
     private void OnTriggerEnter(Collider other)
     {
+        if (!isActiveAndEnabled) return;
+
         if (other.CompareTag("Visitor"))
         {
             OpenDoor();
@@ -19,6 +22,8 @@ public class DoorBehaviour : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (!isActiveAndEnabled) return;
+
         if (other.CompareTag("Visitor"))
         {
             CloseDoor();

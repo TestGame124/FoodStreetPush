@@ -11,7 +11,8 @@ namespace LastOrders.Night
     /// legs swinging, rolling onto each foot, bobbing up between steps, arms flapping out in front,
     /// whatever is loose on top swinging back against the roll. Standing, it sways. A hit squashes
     /// it flat and it boings back up wobbling; a blow on a wall swings both arms up and brings them
-    /// down. Googly pupils rattle about on a spring. Every number comes from a
+    /// down. Googly pupils rattle about on a spring. Killed, it squashes, keels over onto its side
+    /// with a bounce, arms and sausage flopping, and lies there. Every number comes from a
     /// <see cref="ZombieGaitProfile"/>; every part is optional.
     ///
     /// Pooled like every enemy, so it starts clean each time it is enabled.
@@ -46,15 +47,45 @@ namespace LastOrders.Night
         float sinceHit = float.MaxValue, sinceBlow = float.MaxValue;
         bool captured;
 
+        /// <summary>Seconds since the killing blow; below zero while alive.</summary>
+        float sinceDeath = -1f;
+
+        /// <summary>Which way it keels over: 1 onto its left side, -1 onto its right.</summary>
+        float fallSide = 1f;
+
+        /// <summary>Seconds from the killing blow until it lies still.</summary>
+        const float DeathSeconds = 0.95f;
+
+        /// <summary>Metres the figure is lifted as it goes over, so it lies on its side rather than half in the ground.</summary>
+        const float LyingLift = 0.2f;
+
         /// <summary>Metres per second over the last few frames.</summary>
         public float Speed => speed;
 
-        public void Pound() => sinceBlow = 0f;
+        public void Pound()
+        {
+            if (sinceDeath < 0f) sinceBlow = 0f;
+        }
 
         public void Hurt(float amount)
         {
+            if (sinceDeath >= 0f) return;
+
             sinceHit = 0f;
             Kick(gait != null ? gait.googlyKick * 2f : 1f);
+        }
+
+        /// <summary>Squashes, keels over onto its side with a bounce, and lies there.</summary>
+        public float Die()
+        {
+            if (gait == null || model == null) return 0f;
+            if (sinceDeath >= 0f) return DeathSeconds;
+
+            sinceDeath = 0f;
+            sinceHit = 0f;
+            fallSide = Random.value < 0.5f ? 1f : -1f;
+            Kick(gait.googlyKick * 3f);
+            return DeathSeconds;
         }
 
         void Awake() => Capture();
@@ -95,6 +126,7 @@ namespace LastOrders.Night
             moving = 0f;
             sinceHit = float.MaxValue;
             sinceBlow = float.MaxValue;
+            sinceDeath = -1f;
 
             // Out of step with each other, so a crowd of them does not waddle as one.
             phase = Random.value * Mathf.PI * 2f;
@@ -129,8 +161,67 @@ namespace LastOrders.Night
             if (sinceHit < float.MaxValue) sinceHit += dt;
             if (sinceBlow < float.MaxValue) sinceBlow += dt;
 
+            if (sinceDeath >= 0f)
+            {
+                float was = sinceDeath;
+                sinceDeath += dt;
+
+                // The thud on the ground knocks the eyes about once more.
+                if (was < 0.42f && sinceDeath >= 0.42f) Kick(gait.googlyKick * 2.5f);
+
+                Fallen(dt);
+                return;
+            }
+
             Pose(dt);
         }
+
+        /// <summary>
+        /// Dying: squashed by the blow for a moment, then over onto its side - quick at first, a
+        /// bounce where it lands - arms flung up and flopping down, the sausage lolling out of the bun.
+        /// </summary>
+        void Fallen(float dt)
+        {
+            float t = sinceDeath;
+
+            // Over by 0.42 s, a bounce up off the ground and down again by 0.7 s.
+            float over = t < 0.42f ? EaseIn(Mathf.Clamp01((t - 0.08f) / 0.34f)) : 1f;
+            float bounce = t > 0.42f && t < 0.7f ? Mathf.Sin((t - 0.42f) / 0.28f * Mathf.PI) * 0.12f : 0f;
+            float roll = (over - bounce) * 86f * fallSide;
+
+            // Squashed by the blow, stretched as it goes over, flattened where it lands, settling.
+            float squash = t < 0.1f ? -0.22f * Mathf.Sin(t / 0.1f * Mathf.PI * 0.5f)
+                         : t < 0.42f ? Mathf.Lerp(-0.22f, 0.08f, (t - 0.1f) / 0.32f)
+                         : 0.08f - 0.24f * Mathf.Exp(-(t - 0.42f) * 9f) * Mathf.Cos((t - 0.42f) * 22f);
+            squash = Mathf.Clamp(squash, -0.3f, 0.2f);
+
+            if (model != null)
+            {
+                model.localPosition = modelPosition + Vector3.up * (LyingLift * Mathf.Abs(Mathf.Sin(roll * Mathf.Deg2Rad)));
+                model.localRotation = modelRotation * Quaternion.Euler(-8f * over, 0f, roll);
+
+                float wide = 1f - squash * 0.5f;
+                model.localScale = Vector3.Scale(modelScale, new Vector3(wide, 1f + squash, wide));
+            }
+
+            // The arms fly up as it goes and flop back down after the bounce.
+            float flail = t < 0.42f ? Mathf.Sin(Mathf.Clamp01(t / 0.42f) * Mathf.PI * 0.5f)
+                                    : Mathf.Lerp(1f, 0.35f, Mathf.Clamp01((t - 0.42f) / 0.4f));
+            if (armLeft != null) armLeft.localRotation = armLeftRotation * Quaternion.Euler(-70f * flail, 0f, 25f * flail);
+            if (armRight != null) armRight.localRotation = armRightRotation * Quaternion.Euler(-55f * flail, 0f, -30f * flail);
+
+            float kick = Mathf.Sin(Mathf.Clamp01(t / 0.6f) * Mathf.PI) * 28f;
+            if (legLeft != null) legLeft.localRotation = legLeftRotation * Quaternion.Euler(kick, 0f, 0f);
+            if (legRight != null) legRight.localRotation = legRightRotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
+
+            // The sausage keeps going over a little further than the bun, and wobbles back.
+            float loll = 18f * over + 14f * Mathf.Exp(-Mathf.Max(0f, t - 0.42f) * 6f) * Mathf.Sin(Mathf.Max(0f, t - 0.42f) * 18f);
+            if (top != null) top.localRotation = topRotation * Quaternion.Euler(0f, 0f, loll * fallSide);
+
+            Rattle(roll * 0.2f, dt);
+        }
+
+        static float EaseIn(float t) => t * t * (2.2f - 1.2f * t);
 
         void Pose(float dt)
         {

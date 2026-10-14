@@ -3,6 +3,7 @@ using LastOrders.Core;
 using LastOrders.Defense;
 using LastOrders.Interaction;
 using LastOrders.Jobs;
+using LastOrders.Night;
 using UnityEngine;
 
 namespace LastOrders.Field
@@ -57,6 +58,9 @@ namespace LastOrders.Field
         float pause;
         float attackCooldown;
 
+        /// <summary>What draws it: swings, flinches and falls are its to show.</summary>
+        IEnemyBody body;
+
         public string ZombieId => zombieId;
         public string AreaId => areaId;
         public Vector3 Position => transform.position;
@@ -75,6 +79,9 @@ namespace LastOrders.Field
             areaId = area;
             tuning = numbers;
             health = Mathf.Max(1f, numbers.Health);
+
+            // TryGetComponent, not GetComponent: a missing interface can come back as Unity's fake null.
+            body = TryGetComponent(out IEnemyBody found) ? found : null;
 
             PickWanderTarget();
             pause = Random.Range(0f, tuning.WanderPause.y);
@@ -125,9 +132,16 @@ namespace LastOrders.Field
 
             attackCooldown = tuning.AttackInterval;
 
-            // A lunge: the only sign of the swing there is, with no attack clip in the project.
-            transform.DOKill(true);
-            transform.DOPunchPosition(offset.normalized * 0.3f, 0.3f, 1, 0f);
+            // The body swings at them; a body with nothing to show it with lunges instead.
+            if (body != null)
+            {
+                body.Pound();
+            }
+            else
+            {
+                transform.DOKill(true);
+                transform.DOPunchPosition(offset.normalized * 0.3f, 0.3f, 1, 0f);
+            }
 
             field.DamageWorker(target, tuning.Damage);
         }
@@ -201,6 +215,7 @@ namespace LastOrders.Field
 
             health = Mathf.Max(0f, health - amount);
             if (health <= 0f) Die();
+            else body?.Hurt(amount);
         }
 
         /// <summary>A defense's shot. Goes through the field service, so a kill is on record.</summary>
@@ -215,6 +230,12 @@ namespace LastOrders.Field
         {
             if (dying) return;
 
+            if (body != null)
+            {
+                body.Hurt(1f);
+                return;
+            }
+
             transform.DOKill(true);
             transform.DOPunchScale(Vector3.one * 0.12f, 0.2f, 6, 0.5f);
         }
@@ -228,10 +249,12 @@ namespace LastOrders.Field
 
             transform.DOKill(true);
 
-            Vector3 fallen = transform.eulerAngles + new Vector3(-90f, 0f, 0f);
+            // Its own fall when the body has one; otherwise toppled onto its back.
+            float falling = body != null ? body.Die() : 0f;
 
             Sequence fall = DOTween.Sequence().SetTarget(transform);
-            fall.Append(transform.DORotate(fallen, 0.45f).SetEase(Ease.InQuad));
+            if (falling > 0f) fall.AppendInterval(falling);
+            else fall.Append(transform.DORotate(transform.eulerAngles + new Vector3(-90f, 0f, 0f), 0.45f).SetEase(Ease.InQuad));
             fall.AppendInterval(0.9f);
             fall.Append(transform.DOMove(transform.position + Vector3.down * 0.8f, 1.2f).SetEase(Ease.InQuad));
             fall.OnComplete(() => gameObject.SetActive(false));

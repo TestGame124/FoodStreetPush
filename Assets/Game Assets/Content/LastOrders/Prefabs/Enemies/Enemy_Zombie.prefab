@@ -227,6 +227,8 @@ MonoBehaviour:
   - {fileID: 8190182574990080335}
   - {fileID: 1420513737061161100}
   - {fileID: 7118183578838984312}
+  moveDamping: 0.12
+  flinchGap: 0.2
   clipSpeed: 1.6
   minimumClipRate: 0.45
   armReach: 0.85
@@ -559,7 +561,7 @@ Animator:
   m_GameObject: {fileID: 3737347633392780734}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: b6f3faec25bb9dc429b63d7e5cd7eae1, type: 3}
-  m_Controller: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+  m_Controller: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -631,7 +633,7 @@ PrefabInstance:
     - target: {fileID: 5866666021909216657, guid: fa1f8e1fcf1a482458e25f296316079a, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+      objectReference: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
     - target: {fileID: 5866666021909216657, guid: fa1f8e1fcf1a482458e25f296316079a, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0
@@ -701,7 +703,7 @@ PrefabInstance:
     - target: {fileID: 95672999797837872, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+      objectReference: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
     - target: {fileID: 95672999797837872, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0

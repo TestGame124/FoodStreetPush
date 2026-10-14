@@ -14,8 +14,8 @@ namespace LastOrders.EditorTools
     /// <summary>
     /// The diner's shell in wood and cream: a floor of warm varnished planks with big cream tiles
     /// along the kitchen wall and a dark board across the threshold between them; low cream walls,
-    /// rounded along the top, on a brown skirting; and a red door with a porthole in a chunky
-    /// cream arch.
+    /// rounded along the top, on a brown skirting; and a pair of red swing doors with portholes in a
+    /// chunky cream arch.
     ///
     /// The walls keep their transforms, colliders and bounds - the expansion stretches them, the nav
     /// grid and the night read them - only their mesh and material change. Each gets a mesh made for
@@ -24,9 +24,11 @@ namespace LastOrders.EditorTools
     /// across the wall and up it, never along it, so the walls stretch as the building grows without
     /// anything stretching with them.
     ///
-    /// The door is a new frame and leaf put into pfDoor beside the old one, which is switched off.
-    /// The leaf hangs on the left jamb: DoorBehaviour turns it to 90 to close it and to 0 to open it,
-    /// so it swings in as a visitor walks up.
+    /// The doors are a new frame and two leaves put into pfDoor beside the old door, which is switched
+    /// off. The doorway is widened for them - the two front pieces end further from its middle - and
+    /// a leaf hangs on each jamb. <see cref="SwingDoors"/> swings them, either way, for whoever walks
+    /// through; the old DoorBehaviour is switched off. (The single leaf this used to fit is kept,
+    /// switched off.)
     ///
     /// Everything is written as new assets; the checkerboard, the banded wall texture and the old
     /// door stay where they were, and 'Restore Previous Diner Look' puts them back.
@@ -34,8 +36,8 @@ namespace LastOrders.EditorTools
     public static class DinerShellModel
     {
         const string WallFolder = B.Folder + "/DinerWalls";
-        const string FrameMeshPath = B.Folder + "/DinerDoor_Frame.asset";
-        const string LeafMeshPath = B.Folder + "/DinerDoor_Leaf.asset";
+        const string DoubleFrameMeshPath = B.Folder + "/DinerDoor_DoubleFrame.asset";
+        const string SwingLeafMeshPath = B.Folder + "/DinerDoor_SwingLeaf.asset";
         const string PaintedMaterialPath = B.Folder + "/Building_" + EnvKit.Style + ".mat";
 
         const string MaterialFolder = "Assets/Game Assets/Content/LastOrders/Materials/" + EnvKit.Style;
@@ -62,6 +64,9 @@ namespace LastOrders.EditorTools
         static readonly Color Skirting = B.Hex("74503C");
         static readonly Color DoorRed = B.Hex("7A443B");
         static readonly Color Chrome = B.Hex("ADABA4");
+
+        /// <summary>The kick plates: brushed steel, a shade under the chrome so the two read apart.</summary>
+        static readonly Color Steel = B.Hex("8F8E89");
         static readonly Color Glass = B.Hex("7FAAB6");
         static readonly Color GlassGlint = B.Hex("CFE3E6");
         static readonly Color Sill = B.Hex("5A3F2E");
@@ -105,8 +110,17 @@ namespace LastOrders.EditorTools
         /// <summary>Steps round the leaf's outline, a multiple of six (see <see cref="RoundTopRect"/>): the faces and the edge share them, so they meet without a crack.</summary>
         const int LeafSteps = 96;
 
-        /// <summary>The hinge's axis, in from the left jamb's face, so the open leaf clears it.</summary>
+        /// <summary>The hinge's axis, in from the jamb's face, so the open leaf clears it.</summary>
         const float HingeInset = 0.03f;
+
+        /// <summary>The doorway's width for the pair of doors: wide enough that each leaf is a door, not a shutter.</summary>
+        const float DoubleDoorway = 1.7f;
+
+        /// <summary>The gap between the two leaves where they meet in the middle.</summary>
+        const float MeetGap = 0.012f;
+
+        /// <summary>The meeting edge's top corner: all but square.</summary>
+        const float MeetCorner = 0.04f;
 
         const float PortholeHeight = 1.42f;
         const float PortholeRadius = 0.125f;
@@ -122,7 +136,7 @@ namespace LastOrders.EditorTools
                 "This dresses the restaurant in the open scene:\n\n" +
                 "- Floor: wooden planks in the dining room, cream tiles along the kitchen wall, a dark threshold board\n" +
                 "- Walls: cream, rounded along the top, on a brown skirting\n" +
-                "- Door: a red door with a porthole in a cream arch (the old door is switched off)\n\n" +
+                "- Door: a pair of red swing doors with portholes in a cream arch, the doorway widened for them (the old door is switched off)\n\n" +
                 "Nothing is deleted - 'Restore Previous Diner Look' puts the old look back. The scene is left unsaved.",
                 "Apply", "Cancel");
 
@@ -135,6 +149,39 @@ namespace LastOrders.EditorTools
             if (EditorUtility.DisplayDialog("Last Orders", "Put the checkerboard floor, the banded walls and the old door back? " +
                                             "The scene is left unsaved.", "Restore", "Cancel"))
                 Debug.Log(Restore(save: false));
+        }
+
+        [MenuItem("Last Orders/Restaurant/Fit Diner Double Doors (Current Scene)", priority = 78)]
+        public static void RunDoors()
+        {
+            bool proceed = EditorUtility.DisplayDialog(
+                "Last Orders",
+                "This fits a pair of red swing doors in the restaurant's doorway, widening it to " +
+                $"{DoubleDoorway:0.#} m. They open either way for visitors, workers and waiters, and rattle when " +
+                "zombies hit the door.\n\nThe old door and the single leaf are switched off, not deleted. " +
+                "The scene is left unsaved.",
+                "Fit Doors", "Cancel");
+
+            if (proceed) Debug.Log(FitDoors(save: false));
+        }
+
+        /// <summary>Only the doors, on the open scene, with no dialogs.</summary>
+        public static string FitDoors(bool save)
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            var report = new StringBuilder("[Last Orders] Diner double doors.\n");
+
+            Transform walls = Find(scene, WallsName);
+            if (walls == null) return $"[Last Orders] No '{WallsName}' in '{scene.name}'; nothing was changed.";
+
+            if (!RestaurantSceneSetup.ReadWalls(walls, out _, out _, out _, out Transform frontLeft, out Transform frontRight, out string problem))
+                return $"[Last Orders] {problem} Nothing was changed.";
+
+            PlaceDoor(frontLeft, frontRight, report);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (save) EditorSceneManager.SaveScene(scene);
+            return report.ToString();
         }
 
         /// <summary>The whole look on the open scene, with no dialogs.</summary>
@@ -202,6 +249,22 @@ namespace LastOrders.EditorTools
             DoorBehaviour door = FindDoor(frontLeft, frontRight);
             if (door != null)
             {
+                var swing = door.GetComponent<SwingDoors>();
+                if (swing != null)
+                {
+                    if (swing.PreviousDoorway > 0.05f)
+                    {
+                        SetDoorway(frontLeft, frontRight, swing.PreviousDoorway);
+                        report.Append($"  Doorway: back to {swing.PreviousDoorway:0.##} m.\n");
+                    }
+
+                    Undo.RecordObject(swing, "Diner door");
+                    swing.enabled = false;
+                }
+
+                Undo.RecordObject(door, "Diner door");
+                door.enabled = true;
+
                 Transform visual = VisualRoot(door);
                 Transform ours = visual.Find(DoorName);
                 Transform old = visual.Find(OldDoorName);
@@ -489,8 +552,9 @@ namespace LastOrders.EditorTools
         // --- The door ---------------------------------------------------------------------------------
 
         /// <summary>
-        /// Builds the frame and the leaf for the doorway between the two front pieces and puts them
-        /// into the door there, in place of its old model.
+        /// Widens the doorway between the two front pieces for a pair of doors, builds the frame and
+        /// the two leaves for it and puts them into the door there, in place of its old model, with
+        /// <see cref="SwingDoors"/> to swing them.
         /// </summary>
         static void PlaceDoor(Transform frontLeft, Transform frontRight, StringBuilder report)
         {
@@ -507,11 +571,11 @@ namespace LastOrders.EditorTools
                 return;
             }
 
-            if (l.center.x > r.center.x) (l, r) = (r, l);
-
-            float gap = r.min.x - l.max.x;
-            float depth = Mathf.Max(l.size.z, r.size.z);
-            var centre = new Vector3((l.max.x + r.min.x) * 0.5f, 0f, (l.center.z + r.center.z) * 0.5f);
+            if (l.center.x > r.center.x)
+            {
+                (l, r) = (r, l);
+                (frontLeft, frontRight) = (frontRight, frontLeft);
+            }
 
             DoorBehaviour door = FindDoor(frontLeft, frontRight);
             if (door == null)
@@ -520,9 +584,24 @@ namespace LastOrders.EditorTools
                 return;
             }
 
+            // Wide enough for two doors: the front pieces end further from the middle.
+            float before = r.min.x - l.max.x;
+            bool widened = before < DoubleDoorway - 0.02f;
+            if (widened)
+            {
+                SetDoorway(frontLeft, frontRight, DoubleDoorway);
+                l = BoundsOf(frontLeft);
+                r = BoundsOf(frontRight);
+                report.Append($"  Doorway: widened from {before:0.##} m to {r.min.x - l.max.x:0.##} m about its middle.\n");
+            }
+
+            float gap = r.min.x - l.max.x;
+            float depth = Mathf.Max(l.size.z, r.size.z);
+            var centre = new Vector3((l.max.x + r.min.x) * 0.5f, 0f, (l.center.z + r.center.z) * 0.5f);
+
             float half = gap * 0.5f - JambOverlap;
-            Mesh frame = BuildFrame(half, depth + FrameProud * 2f).Save(FrameMeshPath, "DinerDoor_Frame");
-            Mesh leafMesh = BuildLeaf(half).Save(LeafMeshPath, "DinerDoor_Leaf");
+            Mesh frame = BuildFrame(half, depth + FrameProud * 2f).Save(DoubleFrameMeshPath, "DinerDoor_DoubleFrame");
+            Mesh leafMesh = BuildSwingLeaf(half).Save(SwingLeafMeshPath, "DinerDoor_SwingLeaf");
             Material paint = AssetDatabase.LoadAssetAtPath<Material>(PaintedMaterialPath);
             if (paint == null) paint = B.PaintedMaterial();
 
@@ -547,11 +626,18 @@ namespace LastOrders.EditorTools
             frameT.localRotation = Quaternion.identity;
             B.Show(frameT.gameObject, frame, new[] { paint });
 
-            // The hinge on the left jamb; closed is DoorBehaviour's 90, the leaf across the doorway.
-            Transform leaf = Child(root, "Leaf");
-            leaf.position = centre + Vector3.right * (-half + HingeInset);
-            leaf.rotation = Quaternion.Euler(0f, 90f, 0f);
-            B.Show(leaf.gameObject, leafMesh, new[] { paint });
+            // The single leaf this used to hang, kept but off.
+            Transform single = root.Find("Leaf");
+            if (single != null)
+            {
+                Undo.RecordObject(single.gameObject, "Diner door");
+                single.gameObject.SetActive(false);
+            }
+
+            // A leaf on each jamb, shut across the doorway and meeting in the middle. The leaf runs
+            // along its own +Z from the hinge, so the left one is turned to 90 and the right to -90.
+            Transform leafLeft = Hang("LeafLeft", root, centre + Vector3.right * (-half + HingeInset), 90f, leafMesh, paint);
+            Transform leafRight = Hang("LeafRight", root, centre + Vector3.right * (half - HingeInset), -90f, leafMesh, paint);
 
             Transform old = visual.Find(OldDoorName);
             if (old != null)
@@ -560,12 +646,69 @@ namespace LastOrders.EditorTools
                 old.gameObject.SetActive(false);
             }
 
-            var so = new SerializedObject(door);
-            so.FindProperty("door").objectReferenceValue = leaf;
-            so.ApplyModifiedProperties();
+            // The doors swing themselves now; the old behaviour would turn a leaf that is switched off.
+            Undo.RecordObject(door, "Diner door");
+            door.enabled = false;
 
-            report.Append($"  Door: frame and leaf in '{Path(root)}' at ({centre.x:0.##}, {centre.z:0.##}), doorway {gap:0.##} m; " +
-                          $"'{OldDoorName}' switched off; DoorBehaviour now swings the new leaf.\n");
+            var swing = door.GetComponent<SwingDoors>();
+            if (swing == null) swing = Undo.AddComponent<SwingDoors>(door.gameObject);
+            Undo.RecordObject(swing, "Diner door");
+            swing.enabled = true;
+            swing.Configure(root, leafLeft, leafRight, gap * 0.5f, widened ? before : 0f);
+            EditorUtility.SetDirty(swing);
+
+            report.Append($"  Door: frame and a pair of swing doors in '{Path(root)}' at ({centre.x:0.##}, {centre.z:0.##}), " +
+                          $"doorway {gap:0.##} m, each leaf {half - HingeInset - MeetGap * 0.5f:0.##} m; '{OldDoorName}' and the " +
+                          "single leaf switched off; SwingDoors swings them, DoorBehaviour is off.\n");
+        }
+
+        /// <summary>A leaf on its hinge at <paramref name="hinge"/>, shut at <paramref name="yaw"/>.</summary>
+        static Transform Hang(string name, Transform root, Vector3 hinge, float yaw, Mesh mesh, Material paint)
+        {
+            Transform leaf = Child(root, name);
+            Undo.RecordObject(leaf.gameObject, "Diner door");
+            leaf.gameObject.SetActive(true);
+            leaf.SetPositionAndRotation(hinge, Quaternion.Euler(0f, yaw, 0f));
+            leaf.localScale = Vector3.one;
+            B.Show(leaf.gameObject, mesh, new[] { paint });
+            return leaf;
+        }
+
+        /// <summary>
+        /// Moves the two front pieces' facing ends so the doorway between them is <paramref name="width"/>
+        /// across, about the same middle. The far end of each piece stays where it is.
+        /// </summary>
+        static void SetDoorway(Transform frontLeft, Transform frontRight, float width)
+        {
+            Bounds l = BoundsOf(frontLeft), r = BoundsOf(frontRight);
+            if (l.center.x > r.center.x)
+            {
+                (l, r) = (r, l);
+                (frontLeft, frontRight) = (frontRight, frontLeft);
+            }
+
+            float each = (width - (r.min.x - l.max.x)) * 0.5f;
+            Shorten(frontLeft, Vector3.right, each);
+            Shorten(frontRight, Vector3.left, each);
+        }
+
+        /// <summary>Takes <paramref name="metres"/> off the end of a wall facing <paramref name="end"/> (a negative amount lengthens it).</summary>
+        static void Shorten(Transform wall, Vector3 end, float metres)
+        {
+            Undo.RecordObject(wall, "Diner doorway");
+
+            Vector3 scale = wall.localScale;
+            bool alongZ = Mathf.Abs(Vector3.Dot(wall.forward, end)) > Mathf.Abs(Vector3.Dot(wall.right, end));
+            float perUnit = alongZ
+                ? (Mathf.Abs(scale.z) > 1e-4f ? wall.lossyScale.z / scale.z : 1f)
+                : (Mathf.Abs(scale.x) > 1e-4f ? wall.lossyScale.x / scale.x : 1f);
+            float change = metres / Mathf.Max(1e-4f, Mathf.Abs(perUnit));
+
+            if (alongZ) scale.z -= change * Mathf.Sign(scale.z);
+            else scale.x -= change * Mathf.Sign(scale.x);
+
+            wall.localScale = scale;
+            wall.position -= end * (metres * 0.5f);
         }
 
         /// <summary>Keeps the door's parts at their true size under a parent that might be scaled.</summary>
@@ -664,26 +807,29 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
-        /// The leaf, in its own space: the hinge's axis on the origin, the leaf running out along +Z
-        /// across the doorway and its outside facing +X - so turned to 90 it closes the doorway,
-        /// outside to the street, and turned to 0 it stands open into the room. Red, its top corners
-        /// rounded to the arch, its edges rounded; a porthole, a push bar outside and a plate inside,
-        /// three hinges.
+        /// One of the pair of swing doors, in its own space: the hinge's axis on the origin, the leaf
+        /// running out along +Z to the meeting edge in the doorway's middle - so turned to 90 on the
+        /// left jamb, or to -90 on the right, it closes its half of the doorway. <paramref name="half"/>
+        /// is half the doorway. Both faces alike, as a door that swings both ways is, so the one leaf
+        /// hangs on either jamb: red, the top corner by the hinge rounded to the arch and the meeting
+        /// corner all but square, its edges rounded; a porthole, a steel kick plate along the foot and
+        /// a chrome push plate by the meeting edge on each face, three hinges.
         /// </summary>
-        static B.Model BuildLeaf(float half)
+        static B.Model BuildSwingLeaf(float half)
         {
             var m = new B.Model { Shade = (p, n) => Mathf.Lerp(0.85f, 1f, Mathf.SmoothStep(0f, 1f, p.y / 0.8f)) };
 
             float h = LeafThickness * 0.5f;
-            float a0 = -half + LeafClearance - (-half + HingeInset);
-            float a1 = a0 + half * 2f - LeafClearance * 2f;
+            float a0 = LeafClearance - HingeInset;
+            float a1 = half - HingeInset - MeetGap * 0.5f;
             float y0 = LeafFoot, y1 = OpeningHeight - LeafClearance;
             float corner = ArchRadius - FrameBand * 0.5f - LeafClearance;
             var middle = new Vector2((a0 + a1) * 0.5f, (y0 + y1) * 0.5f);
 
             // The outline inset by the edge's rounding: the faces fill it, the edge rolls round it.
             void Outline(float t, out Vector2 at, out Vector2 normal) =>
-                RoundTopRect(t, a0 + LeafEdge, a1 - LeafEdge, y0 + LeafEdge, y1 - LeafEdge, corner - LeafEdge, out at, out normal);
+                RoundTopRect(t, a0 + LeafEdge, a1 - LeafEdge, y0 + LeafEdge, y1 - LeafEdge,
+                             corner - LeafEdge, MeetCorner - LeafEdge, out at, out normal);
 
             Vector3 Leaf(Vector2 q, float x) => new Vector3(x, q.y, q.x);
 
@@ -755,21 +901,20 @@ namespace LastOrders.EditorTools
                 m.Surface((p, n) => Chrome, 40, 10, Facing(Rim, RimOut), true);
             }
 
-            // The push bar outside, on two stand-offs; a push plate inside.
-            float barX = h + 0.06f;
-            float barFrom = a0 + 0.2f, barTo = a1 - 0.14f;
-            m.Tube(B.Iron, new Vector3(barX, BarHeight, barFrom), new Vector3(barX, BarHeight, barTo), 0.017f, 10);
-            foreach (float a in new[] { barFrom + 0.03f, barTo - 0.03f })
-                m.Tube(B.Iron, new Vector3(h, BarHeight - 0.02f, a), new Vector3(barX, BarHeight, a), 0.012f, 8);
-
-            m.Box(Chrome, new Vector3(-h - 0.004f, BarHeight + 0.05f, a1 - 0.2f), new Vector3(0.01f, 0.3f, 0.11f), 0.004f);
-
-            // Three hinges: a strap on the outside and a barrel on the edge.
-            foreach (float y in new[] { 0.32f, 1.02f, 1.72f })
+            foreach (float side in new[] { 1f, -1f })
             {
-                m.Box(B.Iron, new Vector3(h + 0.004f, y, a0 + 0.09f), new Vector3(0.01f, 0.07f, 0.17f), 0.004f);
-                m.Tube(B.Iron, new Vector3(0f, y - 0.06f, 0f), new Vector3(0f, y + 0.06f, 0f), 0.032f, 10);
+                // A kick plate scuffed by every boot that pushed through; a push plate at hand height by the meeting edge.
+                m.Box(Steel, new Vector3(side * (h + 0.003f), LeafFoot + 0.13f, middle.x), new Vector3(0.006f, 0.22f, a1 - a0 - 0.1f), 0.003f);
+                m.Box(Chrome, new Vector3(side * (h + 0.004f), BarHeight + 0.12f, a1 - 0.13f), new Vector3(0.008f, 0.3f, 0.1f), 0.004f);
+
+                // Three hinge straps on each face.
+                foreach (float y in new[] { 0.32f, 1.02f, 1.72f })
+                    m.Box(B.Iron, new Vector3(side * (h + 0.004f), y, a0 + 0.09f), new Vector3(0.01f, 0.07f, 0.15f), 0.004f);
             }
+
+            // And their barrels on the hinge edge.
+            foreach (float y in new[] { 0.32f, 1.02f, 1.72f })
+                m.Tube(B.Iron, new Vector3(0f, y - 0.06f, 0f), new Vector3(0f, y + 0.06f, 0f), 0.032f, 10);
 
             return m;
         }
@@ -864,13 +1009,13 @@ namespace LastOrders.EditorTools
         }
 
         /// <summary>
-        /// A point round a rectangle with its two top corners rounded to <paramref name="r"/>, by
-        /// <paramref name="t"/> anticlockwise from its bottom left corner, and the outward normal there.
-        /// Each of its six runs - the bottom, the right side, a corner, the top, a corner, the left
-        /// side - takes an equal share of t, so a surface run round it in a multiple of six steps
-        /// lands on both its square corners.
+        /// A point round a rectangle with its top left corner rounded to <paramref name="rLeft"/> and its
+        /// top right to <paramref name="rRight"/>, by <paramref name="t"/> anticlockwise from its bottom
+        /// left corner, and the outward normal there. Each of its six runs - the bottom, the right side,
+        /// a corner, the top, a corner, the left side - takes an equal share of t, so a surface run round
+        /// it in a multiple of six steps lands on both its square corners.
         /// </summary>
-        static void RoundTopRect(float t, float x0, float x1, float y0, float y1, float r, out Vector2 at, out Vector2 normal)
+        static void RoundTopRect(float t, float x0, float x1, float y0, float y1, float rLeft, float rRight, out Vector2 at, out Vector2 normal)
         {
             float f = Mathf.Repeat(t, 1f) * 6f;
             int run = Mathf.Min(5, Mathf.FloorToInt(f));
@@ -883,23 +1028,23 @@ namespace LastOrders.EditorTools
                     normal = Vector2.down;
                     return;
                 case 1:
-                    at = new Vector2(x1, Mathf.Lerp(y0, y1 - r, s));
+                    at = new Vector2(x1, Mathf.Lerp(y0, y1 - rRight, s));
                     normal = Vector2.right;
                     return;
                 case 2:
                     normal = new Vector2(Mathf.Cos(s * Mathf.PI * 0.5f), Mathf.Sin(s * Mathf.PI * 0.5f));
-                    at = new Vector2(x1 - r, y1 - r) + normal * r;
+                    at = new Vector2(x1 - rRight, y1 - rRight) + normal * rRight;
                     return;
                 case 3:
-                    at = new Vector2(Mathf.Lerp(x1 - r, x0 + r, s), y1);
+                    at = new Vector2(Mathf.Lerp(x1 - rRight, x0 + rLeft, s), y1);
                     normal = Vector2.up;
                     return;
                 case 4:
                     normal = new Vector2(Mathf.Cos((1f + s) * Mathf.PI * 0.5f), Mathf.Sin((1f + s) * Mathf.PI * 0.5f));
-                    at = new Vector2(x0 + r, y1 - r) + normal * r;
+                    at = new Vector2(x0 + rLeft, y1 - rLeft) + normal * rLeft;
                     return;
                 default:
-                    at = new Vector2(x0, Mathf.Lerp(y1 - r, y0, s));
+                    at = new Vector2(x0, Mathf.Lerp(y1 - rLeft, y0, s));
                     normal = Vector2.left;
                     return;
             }

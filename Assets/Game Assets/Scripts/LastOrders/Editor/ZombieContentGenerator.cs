@@ -99,6 +99,9 @@ namespace LastOrders.EditorTools
         {
             var variants = new GameObject[Bodies.Length];
 
+            // The zombies' own clips once they are built; the visitors' walk, bent by the body, until then.
+            var zombieController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ZombieAnimations.ControllerPath);
+
             for (int i = 0; i < Bodies.Length; i++)
             {
                 GameObject body = VisitorCharacterGenerator.CreateCharacter(Bodies[i], $"Body_{i}", Vector3.zero, root.transform);
@@ -115,6 +118,10 @@ namespace LastOrders.EditorTools
                 body.transform.localPosition = Vector3.zero;
                 body.transform.localRotation = Quaternion.identity;
                 body.SetActive(i == 0);
+
+                if (zombieController != null)
+                    foreach (Animator animator in body.GetComponentsInChildren<Animator>(true))
+                        animator.runtimeAnimatorController = zombieController;
 
                 variants[i] = body;
             }

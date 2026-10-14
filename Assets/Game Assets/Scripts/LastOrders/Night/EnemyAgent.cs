@@ -36,8 +36,9 @@ namespace LastOrders.Night
     /// stops answering once the night's cap on wrecks is reached - after that every zombie goes for
     /// the restaurant.
     ///
-    /// Dying is seen, not a blink: the body topples, lies there a moment and sinks away, and
-    /// only then is the instance free to go back to its pool (<see cref="OnFallen"/>). So is
+    /// Dying is seen, not a blink: the body falls - by its own animation when it has one, toppled
+    /// whole when it does not - lies there a moment and sinks away, and only then is the instance
+    /// free to go back to its pool (<see cref="OnFallen"/>). So is
     /// leaving: when morning comes, whatever is still standing turns, shambles off and sinks into
     /// the dark rather than vanishing.
     /// </summary>
@@ -245,6 +246,7 @@ namespace LastOrders.Night
             if (blocker != null)
             {
                 target = blocker;
+                blowCooldown = UnityEngine.Random.Range(0.1f, 0.5f);
                 StartAttacking();
                 return;
             }
@@ -286,6 +288,16 @@ namespace LastOrders.Night
             {
                 ResumeMoving();
                 return;
+            }
+
+            Face(target.transform.position, deltaTime);
+
+            // The damage runs on by the frame; the arms come down once a second so it is seen.
+            blowCooldown -= deltaTime;
+            if (blowCooldown <= 0f)
+            {
+                blowCooldown = BlowInterval;
+                if (body != null) body.Pound();
             }
 
             // Accumulated rather than applied per-frame so that damage is frame-rate
@@ -604,18 +616,28 @@ namespace LastOrders.Night
             if (state == State.Dying) Fall();
         }
 
-        /// <summary>Topples onto its back, lies there a moment, then sinks out of sight.</summary>
+        /// <summary>Falls down - its own fall, or toppled onto its back - lies there a moment, then sinks out of sight.</summary>
         void Fall()
         {
-            // Lies as the walk left it: no reaching arms pointing at the sky.
-            SetAnimated(false);
-
             transform.DOKill();
 
-            Vector3 fallen = transform.eulerAngles + new Vector3(-90f, 0f, 0f);
+            float falling = body != null ? body.Die() : 0f;
 
             Sequence fall = DOTween.Sequence().SetTarget(transform);
-            fall.Append(transform.DORotate(fallen, FallSeconds).SetEase(Ease.InQuad));
+
+            if (falling > 0f)
+            {
+                fall.AppendInterval(falling);
+            }
+            else
+            {
+                // Lies as the walk left it: no reaching arms pointing at the sky.
+                SetAnimated(false);
+
+                Vector3 fallen = transform.eulerAngles + new Vector3(-90f, 0f, 0f);
+                fall.Append(transform.DORotate(fallen, FallSeconds).SetEase(Ease.InQuad));
+            }
+
             fall.AppendInterval(LieSeconds);
             fall.Append(transform.DOMove(transform.position + Vector3.down * SinkDepth, SinkSeconds).SetEase(Ease.InQuad));
             fall.OnComplete(() => OnFallen?.Invoke(this));
@@ -625,6 +647,16 @@ namespace LastOrders.Night
         void SetAnimated(bool on)
         {
             if (body is Behaviour behaviour && behaviour.enabled != on) behaviour.enabled = on;
+        }
+
+        /// <summary>The body from the start: standing, walking, a new face - off and on again, which
+        /// is where every body starts clean. One that fell by itself was never switched off.</summary>
+        void RestartBody()
+        {
+            if (!(body is Behaviour behaviour)) return;
+
+            behaviour.enabled = false;
+            behaviour.enabled = true;
         }
 
         // --- Pooling ----------------------------------------------------------
@@ -658,7 +690,7 @@ namespace LastOrders.Night
             // put back below.
             transform.DOKill();
             transform.localScale = baseScale;
-            SetAnimated(true);
+            RestartBody();
 
             health = 0f;
             attackAccumulator = 0f;

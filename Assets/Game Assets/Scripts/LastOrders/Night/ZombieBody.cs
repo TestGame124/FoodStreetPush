@@ -3,16 +3,17 @@ using UnityEngine;
 namespace LastOrders.Night
 {
     /// <summary>
-    /// Makes one of the project's people read as a zombie: arms held out in front, a forward
-    /// stoop, a lolling head, and a walk slowed to a shamble.
+    /// Makes one of the project's people read as a zombie.
     ///
-    /// All of it is done on top of the ordinary walk cycle, in LateUpdate, after the animator
-    /// has posed the skeleton. There is no zombie clip in the project; bending the bones the walk
-    /// has already placed is what turns a farmer walking into something the player knows to
-    /// shoot from a single glance - which is the only glance they get at forty pixels tall.
+    /// With the zombie controller on the rig (built by 'Build Zombie Animations') it plays the
+    /// zombies' own clips: a hunched idle that sways and twitches, a limping shamble - arms out in
+    /// front, or hanging and dragging - a lurching lope for the fast ones, a battering loop whose
+    /// blows land on the beat the agent hits on, a flinch for every hit and a fall to the ground
+    /// when it dies. The walk is played at the pace the body actually moves, so the feet do not
+    /// slide, and each life picks its own style and starts out of step with the rest of the crowd.
     ///
-    /// The arms are aimed in world space rather than by fixed local angles, so the pose holds on
-    /// any of the characters whatever their bones' own axes happen to be.
+    /// Without that controller it falls back to the old way: the ordinary walk cycle, slowed to a
+    /// shamble and bent in LateUpdate - arms held out, a stoop, a lolling head.
     ///
     /// Several bodies can sit under one prefab and one is picked each time it is enabled, so a
     /// pool of one prefab still turns out a crowd of different people.
@@ -20,11 +21,35 @@ namespace LastOrders.Night
     [DefaultExecutionOrder(1300)]
     public sealed class ZombieBody : MonoBehaviour, IEnemyBody
     {
-        static readonly int MoveHash = Animator.StringToHash("Move");
+        static readonly int MoveHash = Animator.StringToHash(ZombieMotion.MoveParam);
+        static readonly int StyleHash = Animator.StringToHash(ZombieMotion.StyleParam);
+        static readonly int WalkRateHash = Animator.StringToHash(ZombieMotion.WalkRateParam);
+        static readonly int BatterRateHash = Animator.StringToHash(ZombieMotion.BatterRateParam);
+
+        static readonly int LocomotionHash = Animator.StringToHash(ZombieMotion.LocomotionState);
+        static readonly int EmptyHash = Animator.StringToHash(ZombieMotion.EmptyState);
+        static readonly int SlamHash = Animator.StringToHash(ZombieMotion.SlamState);
+        static readonly int ClawHash = Animator.StringToHash(ZombieMotion.ClawState);
+        static readonly int DeathBackHash = Animator.StringToHash(ZombieMotion.DeathBackState);
+        static readonly int DeathForwardHash = Animator.StringToHash(ZombieMotion.DeathForwardState);
+
+        static readonly int[] HitHashes =
+        {
+            Animator.StringToHash(ZombieMotion.HitFrontState),
+            Animator.StringToHash(ZombieMotion.HitLeftState),
+            Animator.StringToHash(ZombieMotion.HitRightState),
+        };
 
         [Tooltip("Alternative bodies. One is shown per life; the rest stay hidden.")]
         [SerializeField] GameObject[] variants;
 
+        [Tooltip("Seconds the walk/idle blend takes to follow the speed.")]
+        [SerializeField] float moveDamping = 0.12f;
+
+        [Tooltip("Shortest gap between two flinches. Hits closer together than this ride the one already playing.")]
+        [SerializeField] float flinchGap = 0.2f;
+
+        [Header("Without the zombie controller")]
         [Tooltip("Metres per second the walk clip was made for. The clip is slowed to match how " +
                  "fast the body actually moves, which is most of what a shamble is.")]
         [SerializeField] float clipSpeed = 1.6f;
@@ -64,14 +89,89 @@ namespace LastOrders.Night
         float speed;
         float poundLeft;
 
+        /// <summary>The rig has the zombie controller: clips, not bent bones.</summary>
+        bool clips;
+
+        /// <summary>Waiting for the animator to come up before the clips can be started.</summary>
+        bool starting;
+
+        bool dead;
+        float style;
+        float walkRate = 1f;
+        bool battering;
+        int batterHash;
+        float lastBlow;
+        float blowInterval = 1f;
+        float lastFlinch = -10f;
+
         /// <summary>Metres per second over the last frame. What the walk is matched to.</summary>
         public float Speed => speed;
 
-        /// <summary>One blow on whatever is in front of it: both arms raised and brought down.</summary>
-        public void Pound() => poundLeft = poundSeconds;
+        /// <summary>Playing the zombie clips rather than bending the ordinary walk.</summary>
+        public bool PlaysClips => clips;
 
-        /// <summary>A shamble does not flinch.</summary>
-        public void Hurt(float amount) { }
+        /// <summary>One blow on whatever is in front of it: the arms come down on it, on the beat.</summary>
+        public void Pound()
+        {
+            if (dead) return;
+
+            if (!clips)
+            {
+                poundLeft = poundSeconds;
+                return;
+            }
+
+            if (!Ready()) return;
+
+            float now = Time.time;
+            if (battering) blowInterval = Mathf.Lerp(blowInterval, Mathf.Clamp(now - lastBlow, 0.4f, 4f), 0.6f);
+            lastBlow = now;
+
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(ZombieMotion.ActionLayer);
+            bool inLoop = battering && state.shortNameHash == batterHash && !animator.IsInTransition(ZombieMotion.ActionLayer);
+
+            if (!inLoop)
+            {
+                // Into the loop just before the blow comes down, so it lands now rather than a beat late.
+                battering = true;
+                animator.SetFloat(BatterRateHash, ZombieMotion.BatterSeconds / Mathf.Max(0.4f, blowInterval));
+                animator.CrossFadeInFixedTime(batterHash, 0.1f, ZombieMotion.ActionLayer,
+                                              ZombieMotion.BatterSeconds * (ZombieMotion.ImpactPhase - 0.08f));
+                return;
+            }
+
+            animator.SetFloat(BatterRateHash, ZombieMotion.BatterRate(Mathf.Repeat(state.normalizedTime, 1f), blowInterval));
+        }
+
+        /// <summary>A hit: the body jolts with it, over whatever it is doing.</summary>
+        public void Hurt(float amount)
+        {
+            if (dead || !clips || !Ready()) return;
+
+            float now = Time.time;
+            if (now - lastFlinch < flinchGap) return;
+            lastFlinch = now;
+
+            int pick = HitHashes[Random.Range(0, HitHashes.Length)];
+            animator.CrossFadeInFixedTime(pick, 0.04f, ZombieMotion.FlinchLayer, 0f);
+        }
+
+        /// <summary>Drops: backwards or forwards on its face, limbs flung out, a bounce and still.</summary>
+        public float Die()
+        {
+            if (dead) return ZombieMotion.LyingAfterSeconds;
+            if (!clips || !Ready()) return 0f;
+
+            dead = true;
+            battering = false;
+
+            animator.SetFloat(MoveHash, 0f);
+            animator.SetFloat(WalkRateHash, 1f);
+            animator.CrossFadeInFixedTime(EmptyHash, 0.12f, ZombieMotion.ActionLayer);
+            animator.CrossFadeInFixedTime(EmptyHash, 0.2f, ZombieMotion.FlinchLayer);
+            animator.CrossFadeInFixedTime(Random.value < 0.55f ? DeathBackHash : DeathForwardHash, 0.08f, ZombieMotion.BaseLayer, 0f);
+            return ZombieMotion.LyingAfterSeconds;
+        }
 
         void OnEnable()
         {
@@ -80,9 +180,20 @@ namespace LastOrders.Night
             lastPosition = transform.position;
             speed = 0f;
             poundLeft = 0f;
+            dead = false;
+            battering = false;
+            walkRate = 1f;
+            blowInterval = 1f;
+            lastFlinch = -10f;
 
             // Out of step with each other, so a group does not sway as one.
             phase = Random.value * 10f;
+
+            // Half reach out in front of them, half hang and drag; each a little its own.
+            style = Random.value < 0.5f ? Random.Range(0f, 0.2f) : Random.Range(0.8f, 1f);
+            batterHash = Random.value < 0.5f ? SlamHash : ClawHash;
+
+            starting = clips;
         }
 
         void ChooseVariant()
@@ -105,11 +216,14 @@ namespace LastOrders.Night
             Transform body = shown != null ? shown.transform : transform;
 
             animator = body.GetComponentInChildren<Animator>();
+            clips = animator != null && HasZombieController(animator);
 
-            // The pose below bends bones the animator has just written. A culled animator stops
+            // The old pose bends bones the animator has just written. A culled animator stops
             // writing them, and every frame's bend would then land on the last one - a stoop that
             // keeps stooping until the spine is spinning. Always animating keeps the base fresh.
+            // The clips need it too: a body falling out of its own bounds must not freeze mid-fall.
             if (animator != null) animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
             spine = Find(body, "Spine_03", "Spine_02", "Spine");
             head = Find(body, "Head");
             shoulderL = Find(body, "Shoulder_L", "LeftArm", "UpperArm_L");
@@ -118,6 +232,41 @@ namespace LastOrders.Night
             shoulderR = Find(body, "Shoulder_R", "RightArm", "UpperArm_R");
             elbowR = Find(body, "Elbow_R", "RightForeArm", "LowerArm_R");
             handR = Find(body, "Hand_R", "RightHand");
+        }
+
+        /// <summary>The controller has the zombie clips' parameters, not just the visitors' walk.</summary>
+        static bool HasZombieController(Animator animator)
+        {
+            if (animator.runtimeAnimatorController == null) return false;
+
+            // Parameters can only be read from an animator that is up; until then, ask the controller.
+            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+                if (clip != null && clip.name.StartsWith("Zombie_")) return true;
+
+            return false;
+        }
+
+        /// <summary>The animator is up and started on the walk, so the clips can be cued.</summary>
+        bool Ready()
+        {
+            if (animator == null || !animator.isActiveAndEnabled || !animator.isInitialized) return false;
+            if (starting) Begin();
+            return true;
+        }
+
+        /// <summary>A fresh life: standing, its own style, somewhere in the loop no neighbour is.</summary>
+        void Begin()
+        {
+            starting = false;
+
+            animator.Rebind();
+            animator.SetFloat(StyleHash, style);
+            animator.SetFloat(MoveHash, 0f);
+            animator.SetFloat(WalkRateHash, 1f);
+            animator.SetFloat(BatterRateHash, 1f);
+            animator.Play(LocomotionHash, ZombieMotion.BaseLayer, Random.value);
+            animator.Play(EmptyHash, ZombieMotion.ActionLayer, 0f);
+            animator.Play(EmptyHash, ZombieMotion.FlinchLayer, 0f);
         }
 
         void LateUpdate()
@@ -133,13 +282,42 @@ namespace LastOrders.Night
             // Smoothed, because steering jitters and a clip that changes pace every frame reads
             // as a stutter rather than a gait.
             speed = Mathf.Lerp(speed, moved.magnitude / dt, 1f - Mathf.Exp(-8f * dt));
-            phase += dt * (1.2f + speed);
 
+            if (clips)
+            {
+                Drive(dt);
+                return;
+            }
+
+            phase += dt * (1.2f + speed);
             if (poundLeft > 0f) poundLeft = Mathf.Max(0f, poundLeft - dt);
 
             Animate();
             Pose();
         }
+
+        /// <summary>The walk to the pace, and the battering put away once the blows stop or it moves on.</summary>
+        void Drive(float dt)
+        {
+            if (dead || !Ready()) return;
+
+            float scale = Mathf.Max(0.1f, animator.humanScale);
+            float move = ZombieMotion.Move(speed, scale);
+            animator.SetFloat(MoveHash, move, moveDamping, dt);
+
+            float blended = animator.GetFloat(MoveHash);
+            float rate = ZombieMotion.WalkRate(speed, Mathf.Max(blended, move > 0f ? ZombieMotion.ShambleSpeed : 0f), scale);
+            walkRate = Mathf.Lerp(walkRate, rate, 1f - Mathf.Exp(-6f * dt));
+            animator.SetFloat(WalkRateHash, walkRate);
+
+            if (battering && (speed > 0.3f || Time.time - lastBlow > blowInterval * 1.6f + 0.25f))
+            {
+                battering = false;
+                animator.CrossFadeInFixedTime(EmptyHash, 0.3f, ZombieMotion.ActionLayer);
+            }
+        }
+
+        // --- Without the zombie controller -----------------------------------------------------------
 
         /// <summary>
         /// 0 to 1 and back over a blow: a slow lift, then a fast drop. Zero between blows.

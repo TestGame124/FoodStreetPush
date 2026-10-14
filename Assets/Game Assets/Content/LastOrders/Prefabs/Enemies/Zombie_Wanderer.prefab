@@ -241,6 +241,8 @@ MonoBehaviour:
   - {fileID: 1687721880927602550}
   - {fileID: 5978295578838144418}
   - {fileID: 3881559286179236347}
+  moveDamping: 0.12
+  flinchGap: 0.2
   clipSpeed: 1.6
   minimumClipRate: 0.45
   armReach: 0.85
@@ -512,7 +514,7 @@ Animator:
   m_GameObject: {fileID: 1017241884952345800}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: b6f3faec25bb9dc429b63d7e5cd7eae1, type: 3}
-  m_Controller: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+  m_Controller: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -604,7 +606,7 @@ Animator:
   m_GameObject: {fileID: 5738053686141581614}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: b6f3faec25bb9dc429b63d7e5cd7eae1, type: 3}
-  m_Controller: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+  m_Controller: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -691,7 +693,7 @@ Animator:
   m_GameObject: {fileID: 7377735720416891399}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: b6f3faec25bb9dc429b63d7e5cd7eae1, type: 3}
-  m_Controller: {fileID: 9100000, guid: fb184dabc9fcc504c8fa2b4cdbd62155, type: 2}
+  m_Controller: {fileID: 9100000, guid: 67e5b04cf096a7145843a6a56929d13f, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
