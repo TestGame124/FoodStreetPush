@@ -5,7 +5,7 @@ using UnityEngine;
 namespace LastOrders.UI.Hud
 {
     /// <summary>The names of the sprites in the HUD atlas, shared by the baker, the builder and the HUD.</summary>
-    public static class HudSprites
+    public static partial class HudSprites
     {
         public const string Card = "card";
         public const string CardShadow = "card_shadow";

@@ -637,7 +637,7 @@ namespace LastOrders.EditorTools
             reason.text = string.Empty;
 
             (Button stores, Image storesImage, TextMeshProUGUI storesLabel) =
-                PayButton("PayResources", panelRect, new Vector2(-200f, -262f), Green, "60 Trade Tokens");
+                PayButton("PayResources", panelRect, new Vector2(-200f, -262f), Green, "60 Coins");
             (Button gems, Image gemsImage, TextMeshProUGUI gemsLabel) =
                 PayButton("PayPremium", panelRect, new Vector2(200f, -262f), new Color(0.55f, 0.36f, 0.85f), "20 Gems");
 

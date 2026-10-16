@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
   m_Name: Defense_CabbageShooter
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  requiredLevel: 5
   id: cabbage_shooter
   displayName: Cabbage Shooter
   description: A spring catapult on a garden cart, its bucket a kitchen colander.
@@ -21,20 +22,22 @@ MonoBehaviour:
   crewRole: 3
   buildPrice:
     resources:
-    - type: 6
-      amount: 50
+    - type: 0
+      amount: 200
     premium: 15
   prefab: {fileID: 6800733931761219371, guid: 06cc75e6000d358489fed3aaf45db73d, type: 3}
   levels:
-  - weapon: {fileID: 11400000, guid: 0f9f7c01f5bfb724aa2383f3ae5f4819, type: 2}
+  - requiredLevel: 5
+    weapon: {fileID: 11400000, guid: 0f9f7c01f5bfb724aa2383f3ae5f4819, type: 2}
     spotRangeMetres: 13
     upgradePrice:
       resources: []
       premium: 0
-  - weapon: {fileID: 11400000, guid: 49ebd75febb6c5145a7dbd6ffccd72ca, type: 2}
+  - requiredLevel: 7
+    weapon: {fileID: 11400000, guid: 49ebd75febb6c5145a7dbd6ffccd72ca, type: 2}
     spotRangeMetres: 14.5
     upgradePrice:
       resources:
-      - type: 6
-        amount: 75
+      - type: 0
+        amount: 300
       premium: 25

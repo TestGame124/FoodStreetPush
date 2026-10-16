@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Cow Shelter
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Cow Shelter
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 5
+  isUnlocked: 0
   categoryType: 1
   type: 302
-  PriceAmount: 200
+  PriceAmount: 280
   Sellable: 1
   prefab: {fileID: 6688702586161947374, guid: 577262c5dd7ab9f44906d16fd8f2c582, type: 3}
   visual: {fileID: 6546893563886115942, guid: 2a03a746c0d953840accd8e5b09d88a0, type: 3}

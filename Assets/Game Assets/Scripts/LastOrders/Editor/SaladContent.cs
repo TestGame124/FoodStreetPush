@@ -60,7 +60,7 @@ namespace LastOrders.EditorTools
             {
                 Dish = CropModels.Dish.CarrotSlaw, Item = ItemType.CarrotSlaw, Name = "Carrot Slaw", File = "CarrotSlaw",
                 Price = 5, Seconds = 90, Stars = 1, StartRewards = 1, Pitch = 36f,
-                Ingredients = new[] { (ItemType.Carrot, 2), (ItemType.Lettuce, 1) },
+                Ingredients = new[] { (ItemType.Cabbage, 1), (ItemType.Carrot, 1) },
             },
             new Salad
             {
@@ -164,6 +164,7 @@ namespace LastOrders.EditorTools
             item.canBePlanted = false;
             item.totalTimeInSeconds = seconds;
             item.itemImage = icon;
+            LastOrders.Economy.EconomyRules.ApplyItem(item);
             EditorUtility.SetDirty(item);
             AssetDatabase.SaveAssetIfDirty(item);
             return item;
@@ -196,9 +197,10 @@ namespace LastOrders.EditorTools
             recipe.TotalTimeToCook = salad.Seconds;
             recipe.Ingrediants = ingredients;
 
-            // One serving, as every other recipe makes: the cook hands out results.Amount + 1.
+            // Amount is the exact number of servings.
             recipe.Results = new ItemAmount { item = new Item(dish, 1), Amount = 0 };
             recipe.startRewards = salad.StartRewards;
+            LastOrders.Economy.EconomyRules.ApplyRecipe(recipe);
             EditorUtility.SetDirty(recipe);
             AssetDatabase.SaveAssetIfDirty(recipe);
             return recipe;

@@ -134,6 +134,7 @@ namespace LastOrders.EditorTools
                 item.totalTimeInSeconds = seconds;
             }
 
+            LastOrders.Economy.EconomyRules.ApplyItem(item);
             EditorUtility.SetDirty(item);
             AssetDatabase.SaveAssetIfDirty(item);
             return item;
@@ -172,8 +173,9 @@ namespace LastOrders.EditorTools
                 recipe.startRewards = dish.StartRewards;
             }
 
-            // One serving, as every other recipe makes: the cook hands out results.Amount + 1.
+            // Amount is the exact number of servings.
             recipe.Results = new ItemAmount { item = new Item(result, 1), Amount = 0 };
+            LastOrders.Economy.EconomyRules.ApplyRecipe(recipe);
             EditorUtility.SetDirty(recipe);
             AssetDatabase.SaveAssetIfDirty(recipe);
             return recipe;

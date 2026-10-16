@@ -155,7 +155,7 @@ namespace LastOrders.Core
             Time = new TimeService(balance.realSecondsPerClockMinute);
             Heat = new HeatService(balance.heatWeights);
             Reputation = new ReputationService(balance);
-            Ledger = new ResourceLedger();
+            Ledger = new ResourceLedger(new CoinWallet());
             Ghosts = new GhostRegistry();
 
             // Leaf services too: the queue knows nothing about who works it, and progression
@@ -210,7 +210,7 @@ namespace LastOrders.Core
             // guard turns up is tonight's wave's business.
             Defense = new DefenseService(Survivors, Ledger, new GemWallet(), Progression, Machine,
                                          DefenseTargets,
-                                         () => Context.TonightsWave?.NamedNight != null);
+                                         () => Context.TonightsWave?.NamedNight != null, () => LastOrdersBridge.PlayerLevel);
 
             // What the strip outside the walls catches is only ever the night's: the zombies lurking on
             // uncleared land never come out into it.

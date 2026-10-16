@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: BeanSaladRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 9c649009df4c69745a5c22c6d5292130, type: 3}
-  TotalTimeToCook: 240
+  TotalTimeToCook: 45
+  requiredLevel: 4
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 312c9113bf8e0ef47bd164bc22101ba8, type: 2}
@@ -31,5 +32,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 623de448ef9462441a9a581df9945e41, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 2
+    Amount: 2
+  startRewards: 3

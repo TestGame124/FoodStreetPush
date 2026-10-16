@@ -14,17 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.ExpansionAreaDefinition
   id: courtyard
   displayName: Overgrown courtyard
+  shortName: 
   benefit: Kitchen garden and optional seating
   unlockedBy: []
   expandCost:
+  - type: 0
+    amount: 90
   - type: 5
     amount: 15
   - type: 1
     amount: 10
   requiredLevel: 2
-  expandSeconds: 12
+  expandSeconds: 20
   claimReward:
-    experience: 5
+    experience: 20
     resources:
     - type: 5
       amount: 10

@@ -18,9 +18,8 @@ namespace LastOrders.Data
         // authored cost - shifting one would silently turn stored Scrap into stored Parts.
         Wood = 5,
 
-        /// <summary>What additional guard towers are bought with. Appended at the next unused
-        /// value for the same reason as Wood.</summary>
-        TradeToken = 6,
+        // Value 6 is retired. Canonical() converts old authored costs and saved balances
+        // at that value into Coin without renumbering any other resource.
 
         // The five ingredients of §8. Kept in the same enum as the hard resources so a
         // recipe cost and a build cost are the same type and share one wallet UI.
@@ -116,12 +115,15 @@ namespace LastOrders.Data
     /// allocating a dictionary per query.</summary>
     public static class ResourceCostExtensions
     {
+        public static ResourceType Canonical(this ResourceType type) => (int)type == 6 ? ResourceType.Coin : type;
+
         public static int AmountOf(this ResourceAmount[] costs, ResourceType type)
         {
             if (costs == null) return 0;
+            int total = 0;
             for (int i = 0; i < costs.Length; i++)
-                if (costs[i].type == type) return costs[i].amount;
-            return 0;
+                if (costs[i].type.Canonical() == type.Canonical()) total += costs[i].amount;
+            return total;
         }
 
         /// <summary>Scales a cost list, rounding up so a 40 percent rebuild of a 1-Scrap item
@@ -140,13 +142,12 @@ namespace LastOrders.Data
             return result;
         }
 
-        /// <summary>The name a player reads. The enum's own name everywhere it already reads
-        /// as a word; "TradeToken" does not.</summary>
+        /// <summary>The name a player reads, including retired currency values.</summary>
         public static string DisplayName(this ResourceType type)
         {
-            switch (type)
+            switch (type.Canonical())
             {
-                case ResourceType.TradeToken: return "Trade Tokens";
+                case ResourceType.Coin: return "Coins";
                 case ResourceType.RepairKit: return "Repair Kits";
                 default: return type.ToString();
             }

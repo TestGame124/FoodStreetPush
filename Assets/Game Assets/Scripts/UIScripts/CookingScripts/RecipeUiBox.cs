@@ -29,6 +29,10 @@ public class RecipeUiBox : MonoBehaviour
         set { SetCookingRecipe(value); }
     }
     CookeryStation cookeryBuilding;
+
+    /// <summary>The recipe on this card and the stock it cooks from, for the card's own view of them.</summary>
+    public CookingRecipe Recipe => cookingRecipe;
+    public InventorySystem Inventory => inventorySystem;
     private void OnEnable()
     {
         Vector3 scale = transform.localScale;
@@ -60,7 +64,7 @@ public class RecipeUiBox : MonoBehaviour
     }
     private void OnDisable()
     {
-        CookingRecipe.OnStartCooking = null;
+        CookingRecipe.OnStartCooking -= Redraw;
     }
     private void StartCookingButton()
     {
@@ -69,13 +73,12 @@ public class RecipeUiBox : MonoBehaviour
 
             if (cookingRecipe.CanCook(inventorySystem))
             {
-                if (!inventorySystem.IsFull())
+                if (inventorySystem.CanAdd(cookingRecipe.Results.item.type))
                 {
                     if (!cookeryBuilding.StartCooking(cookingRecipe, inventorySystem))
                         return;
                     
 
-                    cookingRecipe.Cook(inventorySystem);
                     //cookeryBuilding.StartCooking();
                 }
                 else
@@ -85,7 +88,7 @@ public class RecipeUiBox : MonoBehaviour
             }
             else
             {
-                UtilsClass.CreateWorldTextPopup("Not Enough Ingredient!!", transform.localPosition);
+                LastOrders.Interaction.TapFeedback.Report(cookingRecipe.BlockReason(inventorySystem));
                 //Debug.LogError("Not Enough Ingredients");
                 UIGame.GetUI().notEnoughIng.SetActive(true);
                 for (int i = 0; i < UIGame.GetUI().notEnoughIng.transform.childCount; i++)

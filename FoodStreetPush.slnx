@@ -8,6 +8,7 @@
   <Project Path="Unity.Cinemachine.Editor.csproj" />
   <Project Path="Unity.Addressables.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Unity.Pipeline.csproj" />
   <Project Path="Unity.Purchasing.PaymentProviderService.csproj" />
   <Project Path="Unity.VisualScripting.Core.Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Runtime.csproj" />
@@ -36,6 +37,7 @@
   <Project Path="Unity.AI.Pbr.csproj" />
   <Project Path="Unity.Cinemachine.csproj" />
   <Project Path="Unity.Burst.CodeGen.csproj" />
+  <Project Path="Unity.Pipeline.Editor.csproj" />
   <Project Path="Unity.Addressables.DocExampleCode.Editor.Tests.csproj" />
   <Project Path="Unity.VisualScripting.Flow.csproj" />
   <Project Path="Unity.Splines.Editor.csproj" />
@@ -78,6 +80,7 @@
   <Project Path="Unity.ProBuilder.Poly2Tri.csproj" />
   <Project Path="Unity.AI.Assistant.AssetGenerators.Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
+  <Project Path="Unity.Pipeline.IlInterpreter.csproj" />
   <Project Path="Unity.Services.Core.Configuration.csproj" />
   <Project Path="Unity.Addressables.csproj" />
   <Project Path="Unity.AI.Assistant.Annotations.Editor.csproj" />
@@ -97,6 +100,7 @@
   <Project Path="Unity.Purchasing.SecurityStub.csproj" />
   <Project Path="Unity.Mathematics.Editor.csproj" />
   <Project Path="Unity.Services.Core.csproj" />
+  <Project Path="Unity.Pipeline.Attributes.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="IAPResolver.csproj" />
   <Project Path="Unity.Microsoft.GDK.Tools.csproj" />
@@ -137,4 +141,5 @@
   <Project Path="Unity.Recorder.Base.csproj" />
   <Project Path="Coffee.UnmaskForUGUI.Editor.csproj" />
   <Project Path="Unity.Bindings.OpenImageIO.Editor.csproj" />
+  <Project Path="Unity.Pipeline.CodeGen.csproj" />
 </Solution>

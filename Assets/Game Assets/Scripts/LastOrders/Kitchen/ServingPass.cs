@@ -97,6 +97,25 @@ namespace LastOrders.Kitchen
             }
         }
 
+        /// <summary>
+        /// The counter was carried somewhere else - back with the kitchen when the restaurant grows
+        /// out the back: what it keeps clear of building and walking moves with it.
+        /// </summary>
+        public void Refit()
+        {
+            if (!isActiveAndEnabled) return;
+
+            PlacementService.SetFixture(this, WorldFootprint);
+            if (!onNavGrid) return;
+
+            NavigationSystem nav = NavigationSystem.Instance;
+            if (nav == null || nav.Grid == null) return;
+
+            navArea.Clear();
+            navArea.Add(WorldFootprint);
+            nav.Grid.SetStaticWalls(this, navArea);
+        }
+
         /// <summary>The nav grid can come up after the counter does: asked again until it is there.</summary>
         IEnumerator PutOnNavGrid()
         {

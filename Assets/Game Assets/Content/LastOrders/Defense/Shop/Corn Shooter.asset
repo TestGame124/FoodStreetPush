@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Corn Shooter
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Corn Shooter
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 2
+  isUnlocked: 0
   categoryType: 5
   type: 201
-  PriceAmount: 80
+  PriceAmount: 90
   Sellable: 1
   prefab: {fileID: 3492488189070685399, guid: 01317d553bc1f974ab1bc997f79deb9e, type: 3}
   visual: {fileID: 4643328594928198294, guid: 6190e82cc7dd93544ad01964e8b3ac3b, type: 3}

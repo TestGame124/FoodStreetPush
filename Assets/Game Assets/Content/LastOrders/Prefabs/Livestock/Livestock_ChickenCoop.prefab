@@ -34857,7 +34857,7 @@ MonoBehaviour:
   unitsName: eggs
   animalsName: the hens
   animalsAsleep: The hens are roosting for the night.
-  secondsPerUnit: 30
+  secondsPerUnit: 45
   capacity: 6
   startingStock: 0
   feed: {fileID: 11400000, guid: 268a046ee513cee4ab793ac73e1bb0fb, type: 2}
@@ -34895,8 +34895,8 @@ MonoBehaviour:
   dropStagger: 0.16
   usedColour: {r: 1, g: 0.66, b: 0.36, a: 1}
   uiAnchor: {fileID: 1959118502605389628}
-  cardPrefab: {fileID: 8805090939499543959, guid: 0d8e74497fb18f4409d28cfc9c503268, type: 3}
-  bubblePrefab: {fileID: 5869171909818849432, guid: 2aa1103c1ef21354f8c52d8d23418b54, type: 3}
+  cardPrefab: {fileID: 6927567221355252762, guid: e2f8b80e2ec98514e8f11b9af27507ad, type: 3}
+  bubblePrefab: {fileID: 6161963550126532253, guid: 3dbec2f7354281c44afa1716b5e37434, type: 3}
   cardSeconds: 4.5
   readyRing: {r: 0.45, g: 0.82, b: 0.35, a: 1}
   fullRing: {r: 0.98, g: 0.62, b: 0.2, a: 1}

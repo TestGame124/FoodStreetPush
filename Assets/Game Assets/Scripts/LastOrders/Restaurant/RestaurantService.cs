@@ -128,7 +128,7 @@ namespace LastOrders.Restaurant
             Mathf.Max(0, (tuning.For(side)?.maxSteps ?? 0) - StepsTaken(side));
 
         public bool AnyStepsLeft =>
-            StepsLeft(RestaurantSide.Forward) > 0 || StepsLeft(RestaurantSide.Left) > 0 || StepsLeft(RestaurantSide.Right) > 0;
+            StepsLeft(RestaurantSide.Back) > 0 || StepsLeft(RestaurantSide.Left) > 0 || StepsLeft(RestaurantSide.Right) > 0;
 
         /// <summary>What the next expansion costs, whichever side it is. Each one costs more than
         /// the last.</summary>
@@ -139,14 +139,15 @@ namespace LastOrders.Restaurant
         /// <summary>The flat direction a side grows in.</summary>
         public Vector2 DirectionOf(RestaurantSide side)
         {
-            // Stood outside the front, facing the building: left and right are the player's.
+            // Stood outside the front, facing the building: left and right are the player's, and
+            // the back is straight ahead, through the kitchen.
             Vector2 facing = -front;
 
             switch (side)
             {
                 case RestaurantSide.Left: return new Vector2(-facing.y, facing.x);
                 case RestaurantSide.Right: return new Vector2(facing.y, -facing.x);
-                default: return front;
+                default: return facing;
             }
         }
 
@@ -239,9 +240,10 @@ namespace LastOrders.Restaurant
                 }
             }
 
-            offer.Body = "Push a wall out to make the dining room bigger. Choose where once you say yes - " +
-                         "the ground has to be clear of anything standing on it.\n" +
-                         $"Forward: {StepsLeft(RestaurantSide.Forward)} left   " +
+            offer.Body = "Push a wall out to make the dining room bigger - out the back, the kitchen moves " +
+                         "back with it. Choose where once you say yes - the ground has to be clear of " +
+                         "anything standing on it.\n" +
+                         $"Back: {StepsLeft(RestaurantSide.Back)} left   " +
                          $"Left: {StepsLeft(RestaurantSide.Left)} left   " +
                          $"Right: {StepsLeft(RestaurantSide.Right)} left";
 
@@ -259,7 +261,7 @@ namespace LastOrders.Restaurant
             {
                 case RestaurantSide.Left: return "to the left";
                 case RestaurantSide.Right: return "to the right";
-                default: return "forward";
+                default: return "at the back";
             }
         }
 

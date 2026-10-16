@@ -12,19 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 292f3fbd07ebdd64485b224e406cbf46, type: 3}
   m_Name: WorldUiCatalog
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.UI.World.WorldUiCatalog
-  actionPrompt: {fileID: 3806636856447199408, guid: 9282cc4ad48574349b1de07ee27cbef7, type: 3}
-  workProgress: {fileID: 4075571599177153434, guid: f2f572da3005bec4fb6797150afbfacf, type: 3}
-  floatingText: {fileID: 9160944422742145667, guid: cb07c584b6134434c83d24bcff298fa4, type: 3}
-  expandPrompt: {fileID: 2189995453505706794, guid: e3e8d79646ed36b45b4a1fc69ad7e23e, type: 3}
-  expansionProgress: {fileID: 2017795596010039706, guid: 56231b61046618e46952874704cc26e5, type: 3}
-  healthBar: {fileID: 8701831802815428233, guid: c8dcb770fb9dde248a5e2c09cb0c84f9, type: 3}
-  repairPrompt: {fileID: 6010878323785592684, guid: a5d68cb0e13aca4448585682031a95a4, type: 3}
-  expansionPopup: {fileID: 4659460283448189333, guid: bdb60b5f767c11a45bc7a8d1f27e74ab, type: 3}
-  defensePopup: {fileID: 3820012427921058909, guid: 8fa547896a36d6c41a007fa665e70302, type: 3}
-  shelterPopup: {fileID: 5435377906654482448, guid: 7012b92a2f23f1a4eb3a3e052d31ecd7, type: 3}
-  workerPanel: {fileID: 7526627918924389885, guid: 96795f3b565c43945b27c384875a4958, type: 3}
-  restaurantExpansionPopup: {fileID: 5384621540198965367, guid: 92928d424b6bda0409cf01133e8bff23, type: 3}
-  feedPopup: {fileID: 1907954994503634265, guid: b5b9308a409e6524183eb31009590c4d, type: 3}
+  actionPrompt: {fileID: 8905354443384085636, guid: d5b604ef7294270448a71bff9a401a7d, type: 3}
+  workProgress: {fileID: 2579732717968684640, guid: a984f583460b95a44aa5e7a317630609, type: 3}
+  floatingText: {fileID: 5489523782261451324, guid: 8926d5df1fbcba44b9ab9a2ddfcdfc74, type: 3}
+  expandPrompt: {fileID: 8399213145877675994, guid: f60c313db75f66848a6f5a5548f8773e, type: 3}
+  expansionProgress: {fileID: 7336598851654928872, guid: f8396501258fdb44ea3c8795928a326e, type: 3}
+  healthBar: {fileID: 2126699118096306741, guid: 8ed8c619e74df3044bf0e74df9fa4761, type: 3}
+  repairPrompt: {fileID: 7314308589240109059, guid: 041aa32722236414d9c9b5dddfbefded, type: 3}
+  expansionPopup: {fileID: 8668487145177493296, guid: fd3eb7857128088448eddbcd50b2f626, type: 3}
+  defensePopup: {fileID: 3588304140186053790, guid: 4c83d7fbff10e944997db2f1f9d84314, type: 3}
+  shelterPopup: {fileID: 8852779331363052094, guid: 0598ceae00a36ec40b0418a04bd5b2bc, type: 3}
+  workerPanel: {fileID: 2149742550744180128, guid: 0aa4a629c1926ad45b20de4f40d405db, type: 3}
+  restaurantExpansionPopup: {fileID: 649496278973467060, guid: 0a48dd6266e6cda4f8badf255b7e9812, type: 3}
+  feedPopup: {fileID: 1634356862686928682, guid: d85fc1167a9bece4e92cf8e2640f2329, type: 3}
   promptOffset: {x: 0, y: 0.9, z: 0}
   progressOffset: {x: 0, y: 0.4, z: 0}
   floatingTextOffset: {x: 0, y: 0.8, z: 0}

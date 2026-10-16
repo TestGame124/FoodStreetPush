@@ -45,8 +45,8 @@ public class DefenseSiteTests
         defense = new DefenseService(new SurvivorService(balance, ledger), ledger, gems, progression, machine,
                                      () => hostiles, () => false);
 
-        corn = Defense("corn_shooter", 4f, new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, 40)));
-        turret = Defense("scrap_turret", 5f, new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, 45)));
+        corn = Defense("corn_shooter", 4f, new DefensePrice(15, new ResourceAmount(ResourceType.Coin, 40)));
+        turret = Defense("scrap_turret", 5f, new DefensePrice(15, new ResourceAmount(ResourceType.Coin, 45)));
         toaster = Defense("toastapult", 12f, new DefensePrice(20));
         options = new[] { corn, turret, toaster };
     }
@@ -121,7 +121,7 @@ public class DefenseSiteTests
         BuildChoiceOffer offer = defense.GetSiteOffer("wall_1", options);
 
         Assert.AreEqual(3, offer.Options.Count);
-        StringAssert.Contains("40 Trade Tokens", offer.Options[0].Label);
+        StringAssert.Contains("40 Coins", offer.Options[0].Label);
         StringAssert.Contains("20 Gems", offer.Options[2].Label, "A price with no materials is paid in premium currency.");
         Assert.IsNull(offer.Blocked);
     }
@@ -129,11 +129,11 @@ public class DefenseSiteTests
     [Test]
     public void BuildingPaysForTheChosenOneAndIsRemembered()
     {
-        ledger.Add(ResourceType.TradeToken, 50);
+        ledger.Add(ResourceType.Coin, 50);
 
         Assert.IsTrue(defense.TryBuildAt("wall_1", options, 1, out string message, out DefenseDefinition built), message);
         Assert.AreSame(turret, built);
-        Assert.AreEqual(5, ledger.Get(ResourceType.TradeToken), "The turret's 45, not the corn shooter's 40.");
+        Assert.AreEqual(5, ledger.Get(ResourceType.Coin), "The turret's 45, not the corn shooter's 40.");
         Assert.AreSame(turret, defense.BuiltAt("wall_1", options));
         Assert.IsNull(defense.BuiltAt("wall_2", options), "Another site is still empty.");
 
@@ -154,19 +154,19 @@ public class DefenseSiteTests
     [Test]
     public void ShortOfTheStoresNothingIsBuilt()
     {
-        ledger.Add(ResourceType.TradeToken, 30);
+        ledger.Add(ResourceType.Coin, 30);
 
         Assert.IsFalse(defense.TryBuildAt("wall_1", options, 0, out string message, out DefenseDefinition built));
         Assert.IsNull(built);
-        StringAssert.Contains("Trade Tokens", message);
-        Assert.AreEqual(30, ledger.Get(ResourceType.TradeToken));
+        StringAssert.Contains("Coins", message);
+        Assert.AreEqual(30, ledger.Get(ResourceType.Coin));
         Assert.IsNull(defense.BuiltAt("wall_1", options));
     }
 
     [Test]
     public void NothingIsBuiltOnTheWallAfterDark()
     {
-        ledger.Add(ResourceType.TradeToken, 100);
+        ledger.Add(ResourceType.Coin, 100);
         machine.AddState(new IdlePhase(DayPhase.Night));
         machine.ForceTo(DayPhase.Night);
 

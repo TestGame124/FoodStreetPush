@@ -15,13 +15,14 @@ MonoBehaviour:
   displayName: Flanker
   description: They do not come at the front. They find the thin part.
   silhouetteColour: {r: 0.55, g: 0.3, b: 0.7, a: 1}
+  tintBody: 1
   navigation: 2
   isNonCombatant: 0
   heatPerSecond: 0
   ignitesStructures: 0
   stealsResources: 0
   immuneToSlow: 0
-  structureDps: 8
+  structureDps: 5
   maxHealth: 35
   moveSpeed: 1.4
   agentRadius: 0.35

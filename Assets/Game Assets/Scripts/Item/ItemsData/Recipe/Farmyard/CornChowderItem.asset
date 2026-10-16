@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Corn Chowder
   Type: 22
-  coinsReward: 30
-  starsReward: 1
+  coinsReward: 28
+  starsReward: 4
   canBePlanted: 0
-  totalTimeInSeconds: 75
+  totalTimeInSeconds: 60
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 5c8bde17d465ee846991b0f8e299079f, type: 3}
   growStages: []
   cropLook: {fileID: 0}

@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Hash Browns
   Type: 27
-  coinsReward: 25
-  starsReward: 1
+  coinsReward: 18
+  starsReward: 3
   canBePlanted: 0
-  totalTimeInSeconds: 60
+  totalTimeInSeconds: 40
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 99eae2c6b25b4f34f96eeac6b7477739, type: 3}
   growStages: []
   cropLook: {fileID: 0}

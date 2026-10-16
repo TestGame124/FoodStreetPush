@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Name: Bread
   Type: 10
-  coinsReward: 20
-  starsReward: 1
+  coinsReward: 12
+  starsReward: 2
   canBePlanted: 0
-  totalTimeInSeconds: 45
+  totalTimeInSeconds: 30
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: aa2e5208a7bc4bd4e81d0c92a1409775, type: 3}
   growStages: []
   cropLook: {fileID: 0}

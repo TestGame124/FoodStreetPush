@@ -31,7 +31,7 @@ MonoBehaviour:
   prefab: {fileID: 4539864697106822478, guid: cef444316da4bb147ba78479f9d3d803, type: 3}
   poolPrewarm: 4
   threatCost: 1.5
-  earliestDay: 1
+  earliestDay: 9
   drops:
   - type: 10
     amount: 1

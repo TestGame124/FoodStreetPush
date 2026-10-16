@@ -47,7 +47,7 @@ namespace LastOrders.EditorTools
     /// the scene is left unsaved.
     ///
     /// Bought here, a shooter is paid for in the wallet's Coins, as everything in the shop is; its
-    /// upgrades are still bought by tapping it, in Trade Tokens or premium, from its definition.
+    /// upgrades are still bought by tapping it, in Coins or premium, from its definition.
     /// </summary>
     public static class DefenseShopSetup
     {

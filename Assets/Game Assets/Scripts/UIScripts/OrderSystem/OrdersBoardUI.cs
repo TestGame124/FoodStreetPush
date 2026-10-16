@@ -28,6 +28,10 @@ public class OrdersBoardUI : MonoBehaviour
 
     public static Action OnOrderClaimed;
 
+    /// <summary>The order this board shows, for the order card's own view of it.</summary>
+    public OrderSystem.Order ActiveOrder => activeOrder;
+    public InventorySystem Inventory => inventorySystem;
+
     private void OnEnable()
     {
         InventorySystem.onInventoryChangedCallback += RefreshItems;
@@ -49,7 +53,7 @@ public class OrdersBoardUI : MonoBehaviour
         CoinsReward.text = order.CoinsReward.ToString();
         StarRewards.text = order.StarsReward.ToString();
 
-        for(int i = 0; i < order.ordersData.Count; i++)
+        for(int i = 0; i < order.ordersData.Count && i < ItemSlotsParents.Length; i++)
         {
             ItemSlotUI itemSlot = Instantiate(itemslotPrefab, ItemSlotsParents[i]);
             itemSlot.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
@@ -109,7 +113,7 @@ public class OrdersBoardUI : MonoBehaviour
 
         for (int i = 0; i < order.ordersData.Count; i++)
         {
-            inventory.RemoveItem(order.ordersData[i]);
+            inventory.TryConsume(order.ordersData[i].type, order.ordersData[i].itemsAmount);
 
         }
 

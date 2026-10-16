@@ -12,7 +12,7 @@ namespace LastOrders.Defense
     /// <summary>The two ways a defense can be paid for.</summary>
     public enum DefensePayment
     {
-        /// <summary>From the stores - Trade Tokens, for a guard tower.</summary>
+        /// <summary>From the stores - Coins, for a guard tower.</summary>
         Resources = 0,
 
         /// <summary>Premium currency instead.</summary>
@@ -24,7 +24,7 @@ namespace LastOrders.Defense
     {
         public readonly DefensePayment Method;
 
-        /// <summary>"60 Trade Tokens".</summary>
+        /// <summary>"60 Coins".</summary>
         public readonly string Label;
 
         public readonly bool Affordable;
@@ -106,6 +106,7 @@ namespace LastOrders.Defense
         readonly DayCycleMachine machine;
         readonly Func<IReadOnlyList<IDefenseTarget>> hostiles;
         readonly Func<bool> isNamedNight;
+        readonly Func<int> playerLevel;
 
         public event Action<DefenseUnit> OnBuilt;
         public event Action<DefenseUnit> OnUpgraded;
@@ -115,7 +116,8 @@ namespace LastOrders.Defense
         /// guards refuse to stand watch through.</param>
         public DefenseService(SurvivorService survivors, ResourceLedger ledger, IPremiumWallet premium,
                               ProgressionService progression, DayCycleMachine machine,
-                              Func<IReadOnlyList<IDefenseTarget>> hostiles, Func<bool> isNamedNight)
+                              Func<IReadOnlyList<IDefenseTarget>> hostiles, Func<bool> isNamedNight,
+                              Func<int> playerLevel = null)
         {
             this.survivors = survivors;
             this.ledger = ledger;
@@ -124,6 +126,7 @@ namespace LastOrders.Defense
             this.machine = machine;
             this.hostiles = hostiles;
             this.isNamedNight = isNamedNight;
+            this.playerLevel = playerLevel ?? (() => 1);
         }
 
         /// <summary>Every registered defense, built or not, in the order they registered.</summary>
@@ -404,6 +407,7 @@ namespace LastOrders.Defense
             DefenseDefinition definition = unit.Definition;
 
             if (unit.IsBuilt) return $"There is already a {definition.displayName} here.";
+            if (playerLevel() < definition.requiredLevel) return $"Requires level {definition.requiredLevel}.";
             if (!AllowsBuilding()) return "Too dangerous to build after dark. Wait for dawn.";
             if (definition.Level(0)?.weapon == null) return $"The {definition.displayName} has no weapon set up yet.";
 
@@ -455,6 +459,12 @@ namespace LastOrders.Defense
                     offer.Details.Add($"{option.displayName}: {arms}{crew}");
 
                     PriceChoice(option.buildPrice, out string label, out bool affordable, out string shortBy);
+                    if (playerLevel() < option.requiredLevel)
+                    {
+                        affordable = false;
+                        shortBy = $"Requires level {option.requiredLevel}.";
+                        label = shortBy;
+                    }
                     offer.Options.Add(new BuildChoice($"{option.displayName}\n{label}", affordable, shortBy));
                 }
             }
@@ -483,6 +493,11 @@ namespace LastOrders.Defense
             }
 
             DefensePayment method = chosen.buildPrice.HasResourceOption ? DefensePayment.Resources : DefensePayment.Premium;
+            if (playerLevel() < chosen.requiredLevel)
+            {
+                message = $"Requires level {chosen.requiredLevel}.";
+                return false;
+            }
             if (!TryPay(chosen.buildPrice, method, out message)) return false;
 
             progression.Set(DefenseIds.Site(siteId, chosen.id));
@@ -609,6 +624,8 @@ namespace LastOrders.Defense
 
             if (!unit.IsBuilt) return $"Build the {definition.displayName} first.";
             if (!unit.HasNextLevel) return "Already at its highest level.";
+            int needed = definition.Level(unit.LevelIndex + 1).requiredLevel;
+            if (playerLevel() < needed) return $"Requires level {needed}.";
             if (!AllowsBuilding()) return "Too dangerous to work on it after dark. Wait for dawn.";
             if (definition.Level(unit.LevelIndex + 1).weapon == null) return $"Level {unit.LevelNumber + 1} has no weapon set up yet.";
 

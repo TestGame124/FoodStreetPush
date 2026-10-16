@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: SweetcornSaladRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 4804a97c358f9d243b4ef907370fc193, type: 3}
-  TotalTimeToCook: 60
+  TotalTimeToCook: 30
+  requiredLevel: 3
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 268a046ee513cee4ab793ac73e1bb0fb, type: 2}
@@ -31,5 +32,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 10051024432458d459116504c83ad594, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 1
+    Amount: 2
+  startRewards: 3

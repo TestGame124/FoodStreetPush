@@ -29,6 +29,9 @@ public class CookingUIPanel : MonoBehaviour
 
     CookeryStation cookBuilding;
 
+    /// <summary>The station this panel is showing, for the kitchen screen's own view of it.</summary>
+    public CookeryStation Station => cookBuilding;
+
     CanvasGroup canvasGroup;
     private void Awake()
     {
@@ -92,6 +95,7 @@ public class CookingUIPanel : MonoBehaviour
 
     void UpdateTimerUI(float timer, CookRecipeData recipeData)
     {
+        RefreshRushLabel();
         //for (int i = 0; i < cookBuilding.recipiesInProgress.Count; i++)
         //{
         if (itemSlotsTimerList.Count == 0)
@@ -163,10 +167,26 @@ public class CookingUIPanel : MonoBehaviour
 
         if(cookBuilding.recipiesInProgress.Count > 0)
         {
-            Debug.Log($"RecepiesData : {cookBuilding.recipiesInProgress[0].timer}");
-            cookBuilding.recipiesInProgress[0].FinishRecipe();
+            CookRecipeData batch = cookBuilding.recipiesInProgress[0];
+            int cost = RushCost(batch.timer);
+            if (!CurrenciesController.SubtractCurrency(CurrencyType.Coins, cost))
+            {
+                LastOrders.Interaction.TapFeedback.Report($"Need {cost} Coins to finish now.");
+                return;
+            }
+            batch.FinishRecipe();
             skipButton.SetActive(false);
         }
+    }
+
+    public static int RushCost(float seconds) => seconds <= 0 ? 0 : Mathf.Max(5, Mathf.CeilToInt(seconds / 5f) * 2);
+
+    void RefreshRushLabel()
+    {
+        if (skipButton == null || cookBuilding == null || cookBuilding.recipiesInProgress.Count == 0) return;
+        int cost = RushCost(cookBuilding.recipiesInProgress[0].timer);
+        foreach (var label in skipButton.GetComponentsInChildren<TMPro.TMP_Text>(true)) label.text = $"Finish · {cost} Coins";
+        foreach (var label in skipButton.GetComponentsInChildren<UnityEngine.UI.Text>(true)) label.text = $"Finish · {cost} Coins";
     }
   
 }

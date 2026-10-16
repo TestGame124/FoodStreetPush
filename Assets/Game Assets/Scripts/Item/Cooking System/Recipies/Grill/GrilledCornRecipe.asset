@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: GrilledCornRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 010dbe45f8a32a64c91ba2d6b9847dcb, type: 3}
-  TotalTimeToCook: 60
+  TotalTimeToCook: 45
+  requiredLevel: 4
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 268a046ee513cee4ab793ac73e1bb0fb, type: 2}
@@ -23,5 +24,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: dadd73c689cb549479bf95587d7ced1d, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 1
+    Amount: 2
+  startRewards: 3

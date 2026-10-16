@@ -63,10 +63,9 @@ MonoBehaviour:
       resources: []
     autoRepairAtDawn: 0
   restaurant:
-    killDistance: 1
-    forward:
+    back:
       side: 0
-      depth: 1.5
+      depth: 2
       maxSteps: 2
     left:
       side: 1
@@ -77,14 +76,88 @@ MonoBehaviour:
       depth: 3
       maxSteps: 2
     firstExpansionCost:
-      coins: 60
+      coins: 120
       resources:
       - type: 5
         amount: 15
       - type: 1
         amount: 10
-    costGrowth: 1.5
+    costGrowth: 1.6
     buildSeconds: 0.8
+  encounter:
+    attackEveryDays: 3
+    firstAttackDay: 3
+    preparationSeconds: 60
+    waveArrivalSeconds: 8
+    groupSize: {x: 2, y: 3}
+    groupStaggerSeconds: 1.2
+    breakBetweenWavesSeconds: 6
+    waveTimeoutSeconds: 75
+    stragglerGraceSeconds: 30
+    restaurantHealth: 450
+    crewRepairSeconds: 4
+    maxOutdoorWrecks: 2
+    outdoorObjectHealth: 60
+    raidSearchRadius: 16
+    maxRaidersPerObject: 2
+    raidGiveUpSeconds: 20
+    maxTierRisePerEncounter: 1
+    maxEnemyRisePerEncounter: 2
+    defeatsBeforeRelief: 2
+    reliefPerDefeat: 0.25
+    minimumRelief: 0.5
+    startingRepairKits: 1
+    repairKitCoinPrice: 30
+    retreatSeconds: 4
+    tiers:
+    - name: Low
+      minReputation: 0
+      waves: 2
+      enemies: 4
+      enemiesPerEncounter: 0.35
+      maxEnemies: 8
+      typesPerWave: 1
+      sidesPerWave: 1
+      maxThreatCost: 1.5
+      victoryCoins: 50
+      victoryExperience: 15
+      victoryRepairKits: 1
+    - name: Medium
+      minReputation: 45
+      waves: 2
+      enemies: 8
+      enemiesPerEncounter: 0.5
+      maxEnemies: 14
+      typesPerWave: 2
+      sidesPerWave: 1
+      maxThreatCost: 4
+      victoryCoins: 90
+      victoryExperience: 25
+      victoryRepairKits: 1
+    - name: High
+      minReputation: 75
+      waves: 3
+      enemies: 12
+      enemiesPerEncounter: 0.6
+      maxEnemies: 20
+      typesPerWave: 3
+      sidesPerWave: 2
+      maxThreatCost: 6
+      victoryCoins: 140
+      victoryExperience: 40
+      victoryRepairKits: 2
+  safety:
+    startingReputation: 30
+    cleanVictory: 8
+    breachedVictory: 4
+    wreckedVictory: 1
+    defeatPenalty: 10
+    restaurantDamageWeight: 0.5
+    arrivalIntervalAtZero: 2.6
+    arrivalIntervalAtHalf: 1
+    arrivalIntervalAtFull: 0.55
+    partySizeAtZero: {x: 1, y: 2}
+    partySizeAtFull: {x: 1, y: 4}
   closedForRepairsBuildBonus: 0.5
   closedForRepairsReputationCost: 15
   incompleteForecastChance: 0.16666667

@@ -103,9 +103,6 @@ public class ShopItem
         if (IsUnlocked)
             return;
 
-        if (level == itemData.requiredLevel - 1)
-        {
-            LevelUpSystem.AddReward(this);
-        }
+        if (level >= itemData.requiredLevel) Unlock();
     }
 }

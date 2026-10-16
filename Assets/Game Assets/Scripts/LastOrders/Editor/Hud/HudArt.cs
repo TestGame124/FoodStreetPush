@@ -23,7 +23,7 @@ namespace LastOrders.EditorTools.Hud
     ///
     /// Re-baking keeps each sprite's id, so a HUD already wired to the atlas keeps its references.
     /// </summary>
-    public static class HudArt
+    public static partial class HudArt
     {
         public const string Folder = "Assets/Game Assets/Content/LastOrders/UI/Hud";
         public const string AtlasPath = Folder + "/HudAtlas.png";
@@ -336,6 +336,10 @@ namespace LastOrders.EditorTools.Hud
             Glyph(HudSprites.GlyphAlert, Union(Box(41, 12, 59, 62, 8), Circle(50, 79, 9.5f)));
             Glyph(HudSprites.GlyphUp, Grow(Poly(50, 22, 78, 62, 22, 62), 6));
             Glyph(HudSprites.GlyphDown, Grow(Poly(22, 38, 78, 38, 50, 78), 6));
+
+            // The screens' kit: windows, tabs, wells, tiles and the icons the shop, kitchen and
+            // storehouse screens need (HudArt.Panels.cs).
+            AddPanelEntries(list);
 
             return list;
         }

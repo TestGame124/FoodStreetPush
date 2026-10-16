@@ -19,14 +19,16 @@ MonoBehaviour:
   unlockedBy:
   - {fileID: 11400000, guid: 41665900c0cd13041a4e7a917ad285b8, type: 2}
   expandCost:
+  - type: 0
+    amount: 1245
   - type: 5
     amount: 85
   - type: 1
     amount: 54
   requiredLevel: 9
-  expandSeconds: 30
+  expandSeconds: 55
   claimReward:
-    experience: 12
+    experience: 55
     resources:
     - type: 5
       amount: 18

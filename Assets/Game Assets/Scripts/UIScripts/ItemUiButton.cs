@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
+public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     PlacedObjectTypeSO data;
     ShopItem shopItem;
@@ -27,6 +27,15 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     public Action OnClickOnButton;
 
     private int itemPlacedCount;
+
+    // In a shelf that scrolls sideways, a sideways drag scrolls the shelf and only a drag up and
+    // out of it picks the item up; the drag is handed on to the scroll view for as long as it lasts.
+    ScrollRect sidewaysShelf;
+    bool scrollingShelf;
+
+    public PlacedObjectTypeSO Data => data;
+    public ShopItem Item => shopItem;
+    public bool Interactable => button == null || button.interactable;
 
     public void Initialize(PlacedObjectTypeSO data/*, Action onclick*/)
     {
@@ -81,7 +90,7 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
         }
         lockedObject.SetActive(true);
         
-        requiredLevelText.SetText($"Need Level {data.requiredLevel} To Unlock");
+        requiredLevelText.SetText($"Level {data.requiredLevel}");
     }
 
     public void ButtonState(bool state)
@@ -91,6 +100,15 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (sidewaysShelf == null) sidewaysShelf = GetComponentInParent<ScrollRect>();
+        if (sidewaysShelf != null && sidewaysShelf.horizontal && !sidewaysShelf.vertical &&
+            Mathf.Abs(eventData.delta.x) > Mathf.Abs(eventData.delta.y))
+        {
+            scrollingShelf = true;
+            sidewaysShelf.OnBeginDrag(eventData);
+            return;
+        }
+
         if (shopItem.IsUnlocked && shopItem.CanPurchase())
         {
             CameraPanZoomRig.InputBlocked = true;
@@ -100,8 +118,20 @@ public class ItemUiButton : MonoBehaviour, IBeginDragHandler, IEndDragHandler
         }
     }
 
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (scrollingShelf && sidewaysShelf != null) sidewaysShelf.OnDrag(eventData);
+    }
+
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (scrollingShelf)
+        {
+            scrollingShelf = false;
+            if (sidewaysShelf != null) sidewaysShelf.OnEndDrag(eventData);
+            return;
+        }
+
         CameraPanZoomRig.InputBlocked = false;
     }
 

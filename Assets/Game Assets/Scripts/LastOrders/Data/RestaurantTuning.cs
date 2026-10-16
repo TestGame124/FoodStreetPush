@@ -5,13 +5,14 @@ using UnityEngine;
 namespace LastOrders.Data
 {
     /// <summary>
-    /// The three ways the restaurant can grow, named from the player's side of it: Forward is
-    /// out through the front wall, toward the door and the gate; Left and Right are the side
-    /// walls as seen from the front. The back wall faces the kitchen and does not move.
+    /// The three ways the restaurant can grow, named from the player's side of it: Back is out
+    /// through the kitchen wall, away from the door, and the kitchen goes back with it; Left and
+    /// Right are the side walls as seen from the front. The front wall, with the door in it,
+    /// does not move.
     /// </summary>
     public enum RestaurantSide
     {
-        Forward = 0,
+        Back = 0,
         Left = 1,
         Right = 2,
     }
@@ -46,9 +47,9 @@ namespace LastOrders.Data
     public sealed class RestaurantTuning
     {
         [Header("Expanding")]
-        [Tooltip("Out through the front wall. Short by default: the car park's north bays start " +
-                 "a little under two metres in front of it.")]
-        public RestaurantSideTuning forward = new RestaurantSideTuning(RestaurantSide.Forward, 1.5f, 2);
+        [Tooltip("Out through the kitchen wall, the kitchen going back with it. Whole metres: the " +
+                 "stations stand on the build grid's one-metre cells and move back whole cells.")]
+        public RestaurantSideTuning back = new RestaurantSideTuning(RestaurantSide.Back, 2f, 2);
 
         public RestaurantSideTuning left = new RestaurantSideTuning(RestaurantSide.Left, 3f, 2);
 
@@ -71,7 +72,7 @@ namespace LastOrders.Data
             {
                 case RestaurantSide.Left: return left;
                 case RestaurantSide.Right: return right;
-                default: return forward;
+                default: return back;
             }
         }
     }

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Bakery
   m_EditorClassIdentifier: 
   nameString: Bakery
-  requiredLevel: 0
+  requiredLevel: 1
   isUnlocked: 1
   categoryType: 0
   type: 0
-  PriceAmount: 150
+  PriceAmount: 100
   Sellable: 1
   prefab: {fileID: 1480992646591469734, guid: 1723a89ddb88c164ba23c1e64850ba56, type: 3}
   visual: {fileID: 4441558532500535182, guid: 6e2cef4d05e375544bf5de53f3537b86, type: 3}

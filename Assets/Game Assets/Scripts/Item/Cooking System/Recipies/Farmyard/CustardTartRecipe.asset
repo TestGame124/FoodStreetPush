@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: CustardTartRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 691ebbb8d2a3d0a42a2d6fc68a46d5c0, type: 3}
-  TotalTimeToCook: 90
+  TotalTimeToCook: 75
+  requiredLevel: 6
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 14a4cca0a54f12f4ba67571d02989d75, type: 2}
@@ -31,5 +32,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 5c49f36be30072b46b288be8c43426fd, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 2
+    Amount: 2
+  startRewards: 4

@@ -18,6 +18,8 @@ public class ItemDataSO : ScriptableObject
     public bool canBePlanted;
     public int totalTimeInSeconds;
 
+    [Min(1)] public int harvestYield = 3;
+
     
 
     [Space]

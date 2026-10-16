@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Grilled Fish
   Type: 31
-  coinsReward: 55
-  starsReward: 2
+  coinsReward: 38
+  starsReward: 6
   canBePlanted: 0
-  totalTimeInSeconds: 150
+  totalTimeInSeconds: 90
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 643b5344e645b9e40ae0bd0164152243, type: 3}
   growStages: []
   cropLook: {fileID: 0}

@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Sweetcorn Salad
   Type: 14
-  coinsReward: 5
-  starsReward: 1
+  coinsReward: 20
+  starsReward: 3
   canBePlanted: 0
-  totalTimeInSeconds: 60
+  totalTimeInSeconds: 30
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 4804a97c358f9d243b4ef907370fc193, type: 3}
   growStages: []
   cropLook: {fileID: 0}

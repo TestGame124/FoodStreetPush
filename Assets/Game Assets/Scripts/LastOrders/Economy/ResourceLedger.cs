@@ -18,22 +18,36 @@ namespace LastOrders.Economy
     {
         readonly Dictionary<ResourceType, int> balances = new Dictionary<ResourceType, int>();
         readonly Dictionary<ResourceType, int> cellarProtected = new Dictionary<ResourceType, int>();
+        readonly IResourceWallet coins;
+
+        public ResourceLedger(IResourceWallet coins = null) { this.coins = coins; }
 
         /// <summary>Raised on any balance change, with the type and its new amount.</summary>
         public event Action<ResourceType, int> OnBalanceChanged;
 
-        public int Get(ResourceType type) =>
-            balances.TryGetValue(type, out int value) ? value : 0;
+        public int Get(ResourceType type)
+        {
+            type = type.Canonical();
+            if (type == ResourceType.Coin && coins != null) return coins.Balance;
+            return balances.TryGetValue(type, out int value) ? value : 0;
+        }
 
         /// <summary>Portion of a resource stored in a cellar and therefore unstealable.</summary>
         public int GetProtected(ResourceType type) =>
-            cellarProtected.TryGetValue(type, out int value) ? value : 0;
+            cellarProtected.TryGetValue(type.Canonical(), out int value) ? value : 0;
 
         public void Add(ResourceType type, int amount)
         {
             if (amount == 0) return;
-
-            int next = Mathf.Max(0, Get(type) + amount);
+            type = type.Canonical();
+            int next = (int)Math.Max(0L, Math.Min(int.MaxValue, (long)Get(type) + amount));
+            if (type == ResourceType.Coin && coins != null)
+            {
+                int delta = next - coins.Balance;
+                if (delta > 0) coins.Add(delta);
+                else if (delta < 0) coins.TrySpend(-delta);
+                next = coins.Balance;
+            }
             balances[type] = next;
             OnBalanceChanged?.Invoke(type, next);
         }
@@ -54,8 +68,11 @@ namespace LastOrders.Economy
             var required = new Dictionary<ResourceType, int>();
             for (int i = 0; i < cost.Length; i++)
             {
-                required.TryGetValue(cost[i].type, out int existing);
-                required[cost[i].type] = existing + cost[i].amount;
+                if (cost[i].amount < 0) return false;
+                ResourceType type = cost[i].type.Canonical();
+                required.TryGetValue(type, out int existing);
+                if ((long)existing + cost[i].amount > int.MaxValue) return false;
+                required[type] = existing + cost[i].amount;
             }
 
             foreach (KeyValuePair<ResourceType, int> entry in required)
@@ -83,7 +100,7 @@ namespace LastOrders.Economy
         /// concern - the cellar buildable decides how much it holds.</summary>
         public void SetCellarProtection(ResourceType type, int amount)
         {
-            cellarProtected[type] = Mathf.Max(0, amount);
+            cellarProtected[type.Canonical()] = Mathf.Max(0, amount);
         }
 
         /// <summary>
@@ -117,6 +134,13 @@ namespace LastOrders.Economy
             return taken.ToArray();
         }
 
-        public IReadOnlyDictionary<ResourceType, int> All => balances;
+        public IReadOnlyDictionary<ResourceType, int> All
+        {
+            get
+            {
+                if (coins != null) balances[ResourceType.Coin] = coins.Balance;
+                return balances;
+            }
+        }
     }
 }

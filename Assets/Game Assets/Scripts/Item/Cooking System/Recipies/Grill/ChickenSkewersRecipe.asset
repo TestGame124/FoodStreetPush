@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: ChickenSkewersRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 810177f78ff9fe948b4ae4a16ef9c5df, type: 3}
-  TotalTimeToCook: 120
+  TotalTimeToCook: 75
+  requiredLevel: 6
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 7c1ae516ab9ed194d9be2ba34fb0f7bc, type: 2}
@@ -27,5 +28,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: fdf5b01e05c2d8b4da9bbde12f656d3f, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 2
+    Amount: 2
+  startRewards: 4

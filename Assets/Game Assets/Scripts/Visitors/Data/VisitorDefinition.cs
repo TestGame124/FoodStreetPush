@@ -75,7 +75,8 @@ namespace FoodStreet.Visitors
             if (orders == null || orders.Length == 0) return default;
 
             float total = 0f;
-            for (int i = 0; i < orders.Length; i++) total += Mathf.Max(0f, orders[i].weight);
+            for (int i = 0; i < orders.Length; i++)
+                if (IsUnlocked(orders[i].item)) total += Mathf.Max(0f, orders[i].weight);
 
             if (total <= 0f) return default;
 
@@ -83,13 +84,15 @@ namespace FoodStreet.Visitors
 
             for (int i = 0; i < orders.Length; i++)
             {
+                if (!IsUnlocked(orders[i].item)) continue;
                 pick -= Mathf.Max(0f, orders[i].weight);
                 if (pick > 0f) continue;
 
                 ItemRequest request = orders[i];
 
                 int low = Mathf.Max(1, Mathf.Min(request.amountRange.x, request.amountRange.y));
-                int high = Mathf.Max(low, Mathf.Max(request.amountRange.x, request.amountRange.y));
+                low = Mathf.Min(low, 2);
+                int high = Mathf.Clamp(Mathf.Max(request.amountRange.x, request.amountRange.y), low, 2);
 
                 return new VisitorOrder(request.item, Random.Range(low, high + 1));
             }
@@ -98,6 +101,8 @@ namespace FoodStreet.Visitors
         }
 
         public float RollEatSeconds() => Random.Range(eatSeconds.x, eatSeconds.y);
+
+        static bool IsUnlocked(ItemType type) => !LastOrders.Economy.EconomyRules.TryDish(type, out var dish) || LevelUpSystem.GetLevel() >= dish.Level;
 
         void OnValidate()
         {

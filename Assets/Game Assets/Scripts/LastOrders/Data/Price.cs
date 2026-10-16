@@ -8,8 +8,7 @@ namespace LastOrders.Data
     /// What something costs: the level's Coins, the stores, or both. Every part of it is paid,
     /// so "60 Coins + 15 Wood" costs sixty coins and fifteen wood. A price with neither is free.
     ///
-    /// Coins here are the level's own - what visitors pay and the HUD counts - never the
-    /// ledger's Coin, which nothing credits after the starting kit.
+    /// Coins here and Coin resource entries use the same wallet in the working level.
     /// </summary>
     [Serializable]
     public struct Price

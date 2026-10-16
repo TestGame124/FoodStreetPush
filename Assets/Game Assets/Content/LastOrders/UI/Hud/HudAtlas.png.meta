@@ -114,7 +114,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 460
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -136,7 +136,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1808
-        y: 428
+        y: 624
         width: 128
         height: 128
       alignment: 0
@@ -157,8 +157,8 @@ TextureImporter:
       name: glass
       rect:
         serializedVersion: 2
-        x: 380
-        y: 724
+        x: 1280
+        y: 920
         width: 72
         height: 72
       alignment: 0
@@ -179,8 +179,8 @@ TextureImporter:
       name: glass_card
       rect:
         serializedVersion: 2
-        x: 1156
-        y: 592
+        x: 1504
+        y: 788
         width: 96
         height: 96
       alignment: 0
@@ -201,8 +201,8 @@ TextureImporter:
       name: cream_pill
       rect:
         serializedVersion: 2
-        x: 304
-        y: 724
+        x: 1204
+        y: 920
         width: 72
         height: 76
       alignment: 0
@@ -224,7 +224,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 576
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -246,7 +246,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 692
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -268,7 +268,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 808
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -290,7 +290,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 924
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -312,7 +312,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1040
-        y: 592
+        y: 788
         width: 112
         height: 112
       alignment: 0
@@ -333,7 +333,7 @@ TextureImporter:
       name: round_cream
       rect:
         serializedVersion: 2
-        x: 264
+        x: 728
         y: 4
         width: 192
         height: 192
@@ -355,7 +355,7 @@ TextureImporter:
       name: round_teal
       rect:
         serializedVersion: 2
-        x: 460
+        x: 924
         y: 4
         width: 192
         height: 192
@@ -377,7 +377,7 @@ TextureImporter:
       name: round_red
       rect:
         serializedVersion: 2
-        x: 656
+        x: 1120
         y: 4
         width: 192
         height: 192
@@ -399,7 +399,7 @@ TextureImporter:
       name: round_gold
       rect:
         serializedVersion: 2
-        x: 852
+        x: 1316
         y: 4
         width: 192
         height: 192
@@ -421,7 +421,7 @@ TextureImporter:
       name: round_glass
       rect:
         serializedVersion: 2
-        x: 1048
+        x: 1512
         y: 4
         width: 192
         height: 192
@@ -443,8 +443,8 @@ TextureImporter:
       name: badge
       rect:
         serializedVersion: 2
-        x: 456
-        y: 724
+        x: 1356
+        y: 920
         width: 64
         height: 64
       alignment: 0
@@ -465,8 +465,8 @@ TextureImporter:
       name: disc
       rect:
         serializedVersion: 2
-        x: 1256
-        y: 592
+        x: 1604
+        y: 788
         width: 96
         height: 96
       alignment: 0
@@ -487,8 +487,8 @@ TextureImporter:
       name: disc_shaded
       rect:
         serializedVersion: 2
-        x: 1356
-        y: 592
+        x: 1704
+        y: 788
         width: 96
         height: 96
       alignment: 0
@@ -509,8 +509,8 @@ TextureImporter:
       name: bar_track
       rect:
         serializedVersion: 2
-        x: 524
-        y: 724
+        x: 1492
+        y: 920
         width: 48
         height: 48
       alignment: 0
@@ -531,8 +531,8 @@ TextureImporter:
       name: bar_fill
       rect:
         serializedVersion: 2
-        x: 576
-        y: 724
+        x: 1544
+        y: 920
         width: 48
         height: 48
       alignment: 0
@@ -553,7 +553,7 @@ TextureImporter:
       name: ring
       rect:
         serializedVersion: 2
-        x: 1244
+        x: 1708
         y: 4
         width: 192
         height: 192
@@ -576,7 +576,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 4
-        y: 592
+        y: 788
         width: 128
         height: 128
       alignment: 0
@@ -620,7 +620,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 136
-        y: 592
+        y: 788
         width: 320
         height: 112
       alignment: 0
@@ -641,8 +641,8 @@ TextureImporter:
       name: chip
       rect:
         serializedVersion: 2
-        x: 628
-        y: 724
+        x: 1596
+        y: 920
         width: 48
         height: 48
       alignment: 0
@@ -663,8 +663,8 @@ TextureImporter:
       name: segment
       rect:
         serializedVersion: 2
-        x: 680
-        y: 724
+        x: 1686
+        y: 920
         width: 32
         height: 32
       alignment: 0
@@ -685,8 +685,8 @@ TextureImporter:
       name: white
       rect:
         serializedVersion: 2
-        x: 720
-        y: 728
+        x: 1726
+        y: 924
         width: 8
         height: 8
       alignment: 0
@@ -707,8 +707,8 @@ TextureImporter:
       name: icon_coin
       rect:
         serializedVersion: 2
-        x: 1604
-        y: 4
+        x: 364
+        y: 264
         width: 160
         height: 160
       alignment: 0
@@ -729,8 +729,8 @@ TextureImporter:
       name: icon_gem
       rect:
         serializedVersion: 2
-        x: 1768
-        y: 4
+        x: 528
+        y: 264
         width: 160
         height: 160
       alignment: 0
@@ -751,7 +751,7 @@ TextureImporter:
       name: icon_star
       rect:
         serializedVersion: 2
-        x: 4
+        x: 692
         y: 264
         width: 160
         height: 160
@@ -773,7 +773,7 @@ TextureImporter:
       name: icon_wood
       rect:
         serializedVersion: 2
-        x: 168
+        x: 856
         y: 264
         width: 160
         height: 160
@@ -795,7 +795,7 @@ TextureImporter:
       name: icon_scrap
       rect:
         serializedVersion: 2
-        x: 332
+        x: 1020
         y: 264
         width: 160
         height: 160
@@ -817,7 +817,7 @@ TextureImporter:
       name: icon_kit
       rect:
         serializedVersion: 2
-        x: 496
+        x: 1184
         y: 264
         width: 160
         height: 160
@@ -839,7 +839,7 @@ TextureImporter:
       name: icon_wrench
       rect:
         serializedVersion: 2
-        x: 660
+        x: 1348
         y: 264
         width: 160
         height: 160
@@ -861,7 +861,7 @@ TextureImporter:
       name: icon_shield
       rect:
         serializedVersion: 2
-        x: 824
+        x: 1512
         y: 264
         width: 160
         height: 160
@@ -883,7 +883,7 @@ TextureImporter:
       name: icon_diner
       rect:
         serializedVersion: 2
-        x: 988
+        x: 1676
         y: 264
         width: 160
         height: 160
@@ -905,7 +905,7 @@ TextureImporter:
       name: icon_zombie
       rect:
         serializedVersion: 2
-        x: 1152
+        x: 1840
         y: 264
         width: 160
         height: 160
@@ -927,8 +927,8 @@ TextureImporter:
       name: icon_sun
       rect:
         serializedVersion: 2
-        x: 1316
-        y: 264
+        x: 4
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -949,8 +949,8 @@ TextureImporter:
       name: icon_moon
       rect:
         serializedVersion: 2
-        x: 1480
-        y: 264
+        x: 168
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -971,8 +971,8 @@ TextureImporter:
       name: icon_dawn
       rect:
         serializedVersion: 2
-        x: 1644
-        y: 264
+        x: 332
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -993,8 +993,8 @@ TextureImporter:
       name: icon_clock
       rect:
         serializedVersion: 2
-        x: 1808
-        y: 264
+        x: 496
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1015,8 +1015,8 @@ TextureImporter:
       name: icon_shop
       rect:
         serializedVersion: 2
-        x: 4
-        y: 428
+        x: 660
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1037,8 +1037,8 @@ TextureImporter:
       name: icon_orders
       rect:
         serializedVersion: 2
-        x: 168
-        y: 428
+        x: 824
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1059,8 +1059,8 @@ TextureImporter:
       name: icon_gear
       rect:
         serializedVersion: 2
-        x: 332
-        y: 428
+        x: 988
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1081,8 +1081,8 @@ TextureImporter:
       name: icon_trophy
       rect:
         serializedVersion: 2
-        x: 496
-        y: 428
+        x: 1152
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1103,8 +1103,8 @@ TextureImporter:
       name: icon_cook
       rect:
         serializedVersion: 2
-        x: 660
-        y: 428
+        x: 1316
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1125,8 +1125,8 @@ TextureImporter:
       name: icon_serve
       rect:
         serializedVersion: 2
-        x: 824
-        y: 428
+        x: 1480
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1147,8 +1147,8 @@ TextureImporter:
       name: icon_clear
       rect:
         serializedVersion: 2
-        x: 988
-        y: 428
+        x: 1644
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1169,8 +1169,8 @@ TextureImporter:
       name: icon_visitors
       rect:
         serializedVersion: 2
-        x: 1152
-        y: 428
+        x: 1808
+        y: 460
         width: 160
         height: 160
       alignment: 0
@@ -1191,8 +1191,8 @@ TextureImporter:
       name: icon_medic
       rect:
         serializedVersion: 2
-        x: 1316
-        y: 428
+        x: 4
+        y: 624
         width: 160
         height: 160
       alignment: 0
@@ -1213,8 +1213,8 @@ TextureImporter:
       name: icon_flag
       rect:
         serializedVersion: 2
-        x: 1480
-        y: 428
+        x: 168
+        y: 624
         width: 160
         height: 160
       alignment: 0
@@ -1235,8 +1235,8 @@ TextureImporter:
       name: icon_hammer
       rect:
         serializedVersion: 2
-        x: 1644
-        y: 428
+        x: 332
+        y: 624
         width: 160
         height: 160
       alignment: 0
@@ -1257,8 +1257,8 @@ TextureImporter:
       name: glyph_plus
       rect:
         serializedVersion: 2
-        x: 1456
-        y: 592
+        x: 1804
+        y: 788
         width: 96
         height: 96
       alignment: 0
@@ -1279,8 +1279,8 @@ TextureImporter:
       name: glyph_check
       rect:
         serializedVersion: 2
-        x: 1556
-        y: 592
+        x: 1904
+        y: 788
         width: 96
         height: 96
       alignment: 0
@@ -1301,8 +1301,8 @@ TextureImporter:
       name: glyph_cross
       rect:
         serializedVersion: 2
-        x: 1656
-        y: 592
+        x: 4
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1323,8 +1323,8 @@ TextureImporter:
       name: glyph_play
       rect:
         serializedVersion: 2
-        x: 1756
-        y: 592
+        x: 104
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1345,8 +1345,8 @@ TextureImporter:
       name: glyph_info
       rect:
         serializedVersion: 2
-        x: 1856
-        y: 592
+        x: 204
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1367,8 +1367,8 @@ TextureImporter:
       name: glyph_alert
       rect:
         serializedVersion: 2
-        x: 4
-        y: 724
+        x: 304
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1389,8 +1389,8 @@ TextureImporter:
       name: glyph_up
       rect:
         serializedVersion: 2
-        x: 104
-        y: 724
+        x: 404
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1411,8 +1411,8 @@ TextureImporter:
       name: glyph_down
       rect:
         serializedVersion: 2
-        x: 204
-        y: 724
+        x: 504
+        y: 920
         width: 96
         height: 96
       alignment: 0
@@ -1433,8 +1433,8 @@ TextureImporter:
       name: alert_pointer
       rect:
         serializedVersion: 2
-        x: 1440
-        y: 4
+        x: 200
+        y: 264
         width: 160
         height: 160
       alignment: 0
@@ -1447,6 +1447,490 @@ TextureImporter:
       bones: []
       spriteID: 18580483c3c563e43901445ed9b5542f
       internalID: 1427709195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: window
+      rect:
+        serializedVersion: 2
+        x: 524
+        y: 4
+        width: 200
+        height: 240
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 48, y: 52, z: 48, w: 106}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c2d6c26b69d7854aa99e79d726221c6
+      internalID: -1797797293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: well
+      rect:
+        serializedVersion: 2
+        x: 1424
+        y: 920
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 22, y: 22, z: 22, w: 22}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 53e09cab7b160d64db57adb8b0f2cb46
+      internalID: 1929437276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: tile
+      rect:
+        serializedVersion: 2
+        x: 1156
+        y: 788
+        width: 112
+        height: 112
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 34, y: 40, z: 34, w: 34}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cd198db1ef9907c4d9a7cd92cd6da3bf
+      internalID: -1476600425
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: tab
+      rect:
+        serializedVersion: 2
+        x: 1388
+        y: 788
+        width: 112
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 34, y: 8, z: 34, w: 40}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3357ced0ee2206c49ab04057b8bdc608
+      internalID: 419118999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: button_tint
+      rect:
+        serializedVersion: 2
+        x: 1272
+        y: 788
+        width: 112
+        height: 112
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 36, y: 46, z: 36, w: 36}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e751cecce48c0b0478e0571bb2cf3aa4
+      internalID: 1435323880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: round_tint
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 264
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b1843e4561773474683b4f5bf212406e
+      internalID: 834227256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: checker
+      rect:
+        serializedVersion: 2
+        x: 1649
+        y: 921
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 60c1ec185ca7b4e4b9460630a02d1a82
+      internalID: 1647597326
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: rays
+      rect:
+        serializedVersion: 2
+        x: 264
+        y: 4
+        width: 256
+        height: 256
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a3b6803d1f57a404da819d10221e112c
+      internalID: 1070379424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_lock
+      rect:
+        serializedVersion: 2
+        x: 496
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff54a6a4d21a6d149a2df16fa52583e2
+      internalID: -612841863
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_crate
+      rect:
+        serializedVersion: 2
+        x: 660
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2ccc575e4f9adb4984239fa32f48cd3
+      internalID: -364264477
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_seeds
+      rect:
+        serializedVersion: 2
+        x: 824
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 83afdeb3e362faf4ab30dada96374f67
+      internalID: 133592941
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_sprout
+      rect:
+        serializedVersion: 2
+        x: 988
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c074b5c547045c74fa9456c06defc56d
+      internalID: -1309083027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_tiles
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b57cd6b601d33794a812d331659ecd87
+      internalID: 1663387107
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_frame
+      rect:
+        serializedVersion: 2
+        x: 1316
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 652b65f2bcecb2246afc7d8c5057bb41
+      internalID: -161239090
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_barrel
+      rect:
+        serializedVersion: 2
+        x: 1480
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e1cd27db15ab35b4c9b13c100df0f58b
+      internalID: -1140477221
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_hand
+      rect:
+        serializedVersion: 2
+        x: 1644
+        y: 624
+        width: 160
+        height: 160
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cd3240f0b7dc9e544b48da0f405445a4
+      internalID: -35599529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_rotate
+      rect:
+        serializedVersion: 2
+        x: 604
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cefd2a5bbe1d45f49b000347ab895255
+      internalID: -1918663856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_trash
+      rect:
+        serializedVersion: 2
+        x: 704
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e5cac996f876b44f9420fb53d50e464
+      internalID: 995469110
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_minus
+      rect:
+        serializedVersion: 2
+        x: 804
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9fe1157862f32fe43b99ec4b52e5d97b
+      internalID: -272325855
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_next
+      rect:
+        serializedVersion: 2
+        x: 904
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 942f80ac3a313954a9e37abe991dcd5a
+      internalID: 1104817581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_lock
+      rect:
+        serializedVersion: 2
+        x: 1004
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 582cc8ed6f016a54293e5ae68f651825
+      internalID: -1619882755
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: glyph_skip
+      rect:
+        serializedVersion: 2
+        x: 1104
+        y: 920
+        width: 96
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03cf3a5df913f2a4ba572a18aab6816b
+      internalID: 1565241282
       vertices: []
       indices: 
       edges: []
@@ -1474,8 +1958,10 @@ TextureImporter:
       button_grey: -520945851
       button_red: -147713279
       button_teal: -1324884167
+      button_tint: 1435323880
       card: 1597833566
       card_shadow: -1133734297
+      checker: 1647597326
       chip: 516692515
       cream_pill: 956957085
       disc: 1129105170
@@ -1488,34 +1974,49 @@ TextureImporter:
       glyph_cross: -1129137459
       glyph_down: -636227807
       glyph_info: 1925232899
+      glyph_lock: -1619882755
+      glyph_minus: -272325855
+      glyph_next: 1104817581
       glyph_play: 354598519
       glyph_plus: 2110028477
+      glyph_rotate: -1918663856
+      glyph_skip: 1565241282
+      glyph_trash: 995469110
       glyph_up: -1071965620
+      icon_barrel: -1140477221
       icon_clear: 923973080
       icon_clock: 1994764462
       icon_coin: 1831639930
       icon_cook: 155742646
+      icon_crate: -364264477
       icon_dawn: 1835758645
       icon_diner: 510620625
       icon_flag: 949861663
+      icon_frame: -161239090
       icon_gear: 442906812
       icon_gem: -427720030
       icon_hammer: 649948676
+      icon_hand: -35599529
       icon_kit: 1260608661
+      icon_lock: -612841863
       icon_medic: 2044686205
       icon_moon: 1637092903
       icon_orders: 1812029605
       icon_scrap: -1523948197
+      icon_seeds: 133592941
       icon_serve: -387864284
       icon_shield: 1003273
       icon_shop: -1693170733
+      icon_sprout: -1309083027
       icon_star: 502839209
       icon_sun: 1222381864
+      icon_tiles: 1663387107
       icon_trophy: 544640789
       icon_visitors: 1187426134
       icon_wood: -1715297191
       icon_wrench: -781566849
       icon_zombie: -1408104668
+      rays: 1070379424
       ribbon: 1340980864
       ring: 957850625
       round_cream: -11051997
@@ -1523,9 +2024,14 @@ TextureImporter:
       round_gold: 1301396215
       round_red: 349911636
       round_teal: 684065789
+      round_tint: 834227256
       segment: 658615178
+      tab: 419118999
+      tile: -1476600425
       vignette: 1201649414
+      well: 1929437276
       white: 492367677
+      window: -1797797293
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

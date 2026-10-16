@@ -18,6 +18,7 @@ MonoBehaviour:
   starsReward: 0
   canBePlanted: 0
   totalTimeInSeconds: 0
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 85e8635ed95e5174592d0f662f3f506c, type: 3}
   growStages: []
   cropLook: {fileID: 0}

@@ -68,7 +68,7 @@ public class RestaurantTests
     /// <summary>Three metres a side, two steps each, 10 coins and 5 wood to start.</summary>
     static RestaurantTuning Tuning() => new RestaurantTuning
     {
-        forward = new RestaurantSideTuning(RestaurantSide.Forward, 3f, 2),
+        back = new RestaurantSideTuning(RestaurantSide.Back, 3f, 2),
         left = new RestaurantSideTuning(RestaurantSide.Left, 3f, 2),
         right = new RestaurantSideTuning(RestaurantSide.Right, 3f, 1),
         firstExpansionCost = new Price(10, new ResourceAmount(ResourceType.Wood, 5)),
@@ -88,7 +88,7 @@ public class RestaurantTests
     {
         RestaurantService restaurant = Service();
 
-        Assert.AreEqual(Rect.MinMaxRect(10f, 12f, 30f, 15f), restaurant.StripFor(RestaurantSide.Forward));
+        Assert.AreEqual(Rect.MinMaxRect(10f, 29f, 30f, 32f), restaurant.StripFor(RestaurantSide.Back));
         Assert.AreEqual(Rect.MinMaxRect(7f, 15f, 10f, 29f), restaurant.StripFor(RestaurantSide.Left));
         Assert.AreEqual(Rect.MinMaxRect(30f, 15f, 33f, 29f), restaurant.StripFor(RestaurantSide.Right));
     }
@@ -105,7 +105,7 @@ public class RestaurantTests
         // Turned round, so are they.
         restaurant.SetFootprint(Diner, Vector2.up);
         Assert.AreEqual(Vector2.right, restaurant.DirectionOf(RestaurantSide.Left));
-        Assert.AreEqual(Vector2.up, restaurant.DirectionOf(RestaurantSide.Forward));
+        Assert.AreEqual(Vector2.down, restaurant.DirectionOf(RestaurantSide.Back));
     }
 
     [Test]
@@ -129,12 +129,12 @@ public class RestaurantTests
         Rect taken = default;
         restaurant.OnExpanded += (side, strip) => { grown = side; taken = strip; };
 
-        Assert.IsTrue(restaurant.TryExpand(RestaurantSide.Forward, out string message), message);
+        Assert.IsTrue(restaurant.TryExpand(RestaurantSide.Back, out string message), message);
 
-        Assert.AreEqual(Rect.MinMaxRect(10f, 12f, 30f, 29f), restaurant.Footprint);
-        Assert.AreEqual(1, restaurant.StepsTaken(RestaurantSide.Forward));
-        Assert.AreEqual(RestaurantSide.Forward, grown);
-        Assert.AreEqual(Rect.MinMaxRect(10f, 12f, 30f, 15f), taken);
+        Assert.AreEqual(Rect.MinMaxRect(10f, 15f, 30f, 32f), restaurant.Footprint);
+        Assert.AreEqual(1, restaurant.StepsTaken(RestaurantSide.Back));
+        Assert.AreEqual(RestaurantSide.Back, grown);
+        Assert.AreEqual(Rect.MinMaxRect(10f, 29f, 30f, 32f), taken);
 
         Assert.AreEqual(0, coins.Balance);
         Assert.AreEqual(0, ledger.Get(ResourceType.Wood));
@@ -149,8 +149,8 @@ public class RestaurantTests
         restaurant.TryExpand(RestaurantSide.Left, out _);
 
         Assert.AreEqual(Rect.MinMaxRect(4f, 15f, 7f, 29f), restaurant.StripFor(RestaurantSide.Left));
-        Assert.AreEqual(Rect.MinMaxRect(7f, 12f, 30f, 15f), restaurant.StripFor(RestaurantSide.Forward),
-                        "The front strip is as wide as the front has become.");
+        Assert.AreEqual(Rect.MinMaxRect(7f, 29f, 30f, 32f), restaurant.StripFor(RestaurantSide.Back),
+                        "The back strip is as wide as the back has become.");
     }
 
     [Test]
@@ -235,7 +235,7 @@ public class RestaurantTests
     public void TheOfferSaysNoOnceEverySideIsAsBigAsItGets()
     {
         var tuning = Tuning();
-        tuning.forward.maxSteps = 0;
+        tuning.back.maxSteps = 0;
         tuning.left.maxSteps = 0;
         tuning.right.maxSteps = 0;
 

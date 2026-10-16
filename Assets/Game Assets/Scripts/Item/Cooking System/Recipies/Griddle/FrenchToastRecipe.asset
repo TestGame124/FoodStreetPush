@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: FrenchToastRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: e83d6ada2c5cc754f9ef7d992154ec7d, type: 3}
-  TotalTimeToCook: 90
+  TotalTimeToCook: 60
+  requiredLevel: 5
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 14a4cca0a54f12f4ba67571d02989d75, type: 2}
@@ -31,5 +32,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 539fc9e3b11ac9e468f89e5fd00c97ff, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 2
+    Amount: 2
+  startRewards: 4

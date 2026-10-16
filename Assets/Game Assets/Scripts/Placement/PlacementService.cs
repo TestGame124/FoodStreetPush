@@ -17,6 +17,13 @@ namespace FoodStreet.Placement
         /// </summary>
         static readonly Dictionary<object, Rect> fixtures = new Dictionary<object, Rect>();
 
+        /// <summary>
+        /// Something was put down on the grid by the player's hand or a build command: a new object
+        /// (false) or one picked up and put down somewhere else (true). Not raised for what the scene
+        /// registers at start, nor for <see cref="TryShift"/>, which carries objects rather than drops them.
+        /// </summary>
+        public static event System.Action<PlacedObject_Done, bool> Placed;
+
         readonly GridXZ<GridBuildingSystem3D.GridObject> cells;
         public GridLayout Layout { get; }
 
@@ -91,6 +98,16 @@ namespace FoodStreet.Placement
             return false;
         }
 
+        /// <summary>The ground an object's cells cover, flat: x across, y along the world's Z.</summary>
+        public Rect Footprint(PlacedObject_Done target)
+        {
+            if (target == null || target.PlacedObjectTypeSO == null) return default;
+
+            Vector2Int size = target.PlacedObjectTypeSO.GetFootprintSize(target.Dir);
+            Vector3 corner = Layout.CellToWorld(target.Origin);
+            return new Rect(corner.x, corner.z, size.x * Layout.CellSize, size.y * Layout.CellSize);
+        }
+
         public PlacedObject_Done GetAt(Vector2Int cell, bool floor = false)
         {
             var value = cells.GetGridObject(cell.x, cell.y);
@@ -104,6 +121,7 @@ namespace FoodStreet.Placement
                 type.prefab.GetComponent<PlacedObject_Done>() == null) return false;
             placed = PlacedObject_Done.Create(Layout.Pivot(type, origin, direction), origin, direction, type);
             Register(placed);
+            Placed?.Invoke(placed, false);
             return true;
         }
 
@@ -117,7 +135,77 @@ namespace FoodStreet.Placement
             Unregister(target);
             target.PlaceSelectedObject(Layout.Pivot(target.PlacedObjectTypeSO, origin, direction), origin, direction);
             Register(target);
+            Placed?.Invoke(target, true);
             return true;
+        }
+
+        /// <summary>
+        /// True when every one of <paramref name="movers"/> fits <paramref name="offset"/> cells
+        /// along: still on the grid, and onto cells that are free or held by another of them. The
+        /// first object standing in the way, when there is one, as <paramref name="blocker"/> - null
+        /// with false means the grid itself ends there. Rules and fittings are not asked: the group
+        /// moves together, as it already stands.
+        /// </summary>
+        public bool CanShift(IReadOnlyList<PlacedObject_Done> movers, Vector2Int offset, out PlacedObject_Done blocker)
+        {
+            blocker = null;
+            if (movers == null) return true;
+
+            foreach (PlacedObject_Done target in movers)
+            {
+                if (target == null || target.isRemoved || target.PlacedObjectTypeSO == null) continue;
+
+                Vector2Int origin = target.Origin + offset;
+                Vector2Int size = target.PlacedObjectTypeSO.GetFootprintSize(target.Dir);
+                if (!Layout.Contains(origin) || size.x > Layout.Width - origin.x || size.y > Layout.Height - origin.y)
+                    return false;
+
+                bool floor = target.IsFloor();
+                for (int x = origin.x; x < origin.x + size.x; x++)
+                    for (int z = origin.y; z < origin.y + size.y; z++)
+                    {
+                        var cell = cells.GetGridObject(x, z);
+                        var occupant = floor ? cell.Floor : cell.Solid;
+                        if (occupant == null || Contains(movers, occupant)) continue;
+
+                        blocker = occupant;
+                        return false;
+                    }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Moves a group of objects the same number of cells together - the kitchen going back with
+        /// the restaurant's back wall - as one step, so none of them is refused for a cell another one
+        /// is only just leaving. Their poses jump to the new cells; how they get there is the caller's.
+        /// </summary>
+        public bool TryShift(IReadOnlyList<PlacedObject_Done> movers, Vector2Int offset)
+        {
+            if (movers == null || movers.Count == 0 || offset == Vector2Int.zero) return true;
+            if (!CanShift(movers, offset, out _)) return false;
+
+            foreach (PlacedObject_Done target in movers)
+                if (target != null && !target.isRemoved) Unregister(target);
+
+            foreach (PlacedObject_Done target in movers)
+            {
+                if (target == null || target.isRemoved || target.PlacedObjectTypeSO == null) continue;
+
+                Vector2Int origin = target.Origin + offset;
+                target.PlaceSelectedObject(Layout.Pivot(target.PlacedObjectTypeSO, origin, target.Dir), origin, target.Dir);
+                Register(target);
+            }
+
+            return true;
+        }
+
+        static bool Contains(IReadOnlyList<PlacedObject_Done> list, PlacedObject_Done item)
+        {
+            for (int i = 0; i < list.Count; i++)
+                if (list[i] == item) return true;
+            return false;
         }
 
         public bool CanRemove(PlacedObject_Done target)

@@ -59,6 +59,14 @@ namespace LastOrders.UI.Hud
         /// <summary>A springy kick: positive grows then settles, negative dips.</summary>
         public void Punch(float amount = 0.15f) => punchVelocity += amount * 30f;
 
+        /// <summary>Pops in: starts at <paramref name="from"/> of its size and springs up past full size and back.</summary>
+        public void Appear(float from = 0.45f)
+        {
+            punch = -(1f - Mathf.Clamp01(from));
+            punchVelocity = 0f;
+            if (rect != null) rect.localScale = baseScale * (1f + punch);
+        }
+
         /// <summary>A short jolt, for a hit.</summary>
         public void Shake(float pixels = 10f)
         {

@@ -15,21 +15,22 @@ MonoBehaviour:
   displayName: Raider
   description: People this time. Armed, and they know what a pantry looks like.
   silhouetteColour: {r: 0.7, g: 0.65, b: 0.4, a: 1}
+  tintBody: 1
   navigation: 0
   isNonCombatant: 0
   heatPerSecond: 0
   ignitesStructures: 0
   stealsResources: 1
   immuneToSlow: 0
-  structureDps: 12
-  maxHealth: 50
+  structureDps: 8
+  maxHealth: 60
   moveSpeed: 1.2
   agentRadius: 0.35
   attackRange: 0.6
   prefab: {fileID: 5738560815899688678, guid: a5b71798d628427459a27232dc1ce296, type: 3}
   poolPrewarm: 16
   threatCost: 5
-  earliestDay: 22
+  earliestDay: 24
   drops:
   - type: 1
     amount: 1

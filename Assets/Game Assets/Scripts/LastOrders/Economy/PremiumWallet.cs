@@ -25,6 +25,11 @@ namespace LastOrders.Economy
     {
     }
 
+    public interface IResourceWallet : IWallet
+    {
+        void Add(int amount);
+    }
+
     /// <summary>
     /// The level's own Gems. The Last Orders ledger has no premium currency of its own, and a
     /// second one beside the wallet the HUD already shows would be two balances for one thing.
@@ -41,16 +46,16 @@ namespace LastOrders.Economy
     /// <summary>
     /// The level's own Coins - what visitors pay into and what the HUD's counter shows.
     ///
-    /// Not the ledger's Coin. In the working level nothing credits that one after the starting
-    /// kit, so a price charged there would be charged against a balance the player can neither
-    /// see nor earn.
+    /// Also backs the resource ledger's Coin entries, so all earnings and costs share this balance.
     /// </summary>
-    public sealed class CoinWallet : IWallet
+    public sealed class CoinWallet : IResourceWallet
     {
         public string DisplayName => "Coins";
 
         public int Balance => CurrenciesController.GetCurrencyAmount(CurrencyType.Coins);
 
         public bool TrySpend(int amount) => CurrenciesController.SubtractCurrency(CurrencyType.Coins, amount);
+
+        public void Add(int amount) => CurrenciesController.AddCurrency(CurrencyType.Coins, amount);
     }
 }

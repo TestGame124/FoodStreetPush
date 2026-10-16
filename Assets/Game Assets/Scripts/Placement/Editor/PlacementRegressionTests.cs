@@ -226,5 +226,46 @@ public class PlacementRegressionTests
 
         Assert.AreEqual(PlacementFailure.None, service.Validate(Type(), new Vector2Int(2, 2), PlacedObjectTypeSO.Dir.Down));
     }
+    [Test] public void ShiftMovesAGroupOntoCellsItsOwnMembersAreLeaving()
+    {
+        // A row two deep behind another: each one's new cells are the other's old ones.
+        var front = Place(Type(2, 1), new Vector2Int(1, 1));
+        var back = Place(Type(2, 1), new Vector2Int(1, 2));
+        var movers = new List<PlacedObject_Done> { front, back };
+        int raised = 0;
+        System.Action<PlacedObject_Done, bool> count = (p, m) => raised++;
+        PlacementService.Placed += count;
+        try
+        {
+            Assert.IsTrue(service.TryShift(movers, new Vector2Int(0, 1)));
+        }
+        finally
+        {
+            PlacementService.Placed -= count;
+        }
+
+        Assert.AreEqual(new Vector2Int(1, 2), front.Origin);
+        Assert.AreEqual(new Vector2Int(1, 3), back.Origin);
+        Assert.AreSame(front, service.GetAt(new Vector2Int(2, 2)));
+        Assert.AreSame(back, service.GetAt(new Vector2Int(2, 3)));
+        Assert.IsNull(service.GetAt(new Vector2Int(1, 1)), "the cells left behind are free");
+        Assert.AreEqual(service.Layout.Pivot(back.PlacedObjectTypeSO, back.Origin, back.Dir), back.transform.position);
+        Assert.AreEqual(0, raised, "carried, not put down: no landing");
+    }
+    [Test] public void BlockedShiftMovesNothingAndNamesTheBlocker()
+    {
+        var mover = Place(Type(), new Vector2Int(1, 1));
+        var blocker = Place(Type(), new Vector2Int(1, 3));
+        var movers = new List<PlacedObject_Done> { mover };
+
+        Assert.IsFalse(service.CanShift(movers, new Vector2Int(0, 2), out var found));
+        Assert.AreSame(blocker, found);
+        Assert.IsFalse(service.TryShift(movers, new Vector2Int(0, 2)));
+        Assert.AreEqual(new Vector2Int(1, 1), mover.Origin);
+        Assert.AreSame(mover, service.GetAt(new Vector2Int(1, 1)));
+
+        Assert.IsFalse(service.CanShift(movers, new Vector2Int(0, 9), out found), "off the grid");
+        Assert.IsNull(found);
+    }
 }
 #endif

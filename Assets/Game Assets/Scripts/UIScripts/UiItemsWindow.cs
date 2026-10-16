@@ -28,6 +28,13 @@ public class UiItemsWindow : MonoBehaviour
 
     [SerializeField] ScrollRect scrollRect;
 
+    [Tooltip("A drawer that slides up from the bottom of the screen. Empty: the old left-hand column, which slides in from the left.")]
+    [SerializeField] RectTransform drawer;
+    [SerializeField] float drawerDrop = 420f;
+
+    Vector2 drawerRest;
+    bool drawerRestKnown;
+
     public void Initialize(ObjectDatabaseHandler.ObjectDatabases[] itemData)
     {
 
@@ -92,6 +99,24 @@ public class UiItemsWindow : MonoBehaviour
    
     public void ActiveState(bool state)
     {
+        if (drawer != null)
+        {
+            if (!drawerRestKnown)
+            {
+                drawerRest = drawer.anchoredPosition;
+                drawerRestKnown = true;
+            }
+
+            bool opening = state && !gameObject.activeSelf;
+            gameObject.SetActive(state);
+            DOTween.Kill(drawer);
+            if (opening)
+                drawer.DOAnchorPos(drawerRest, 0.28f).From(drawerRest + Vector2.down * drawerDrop).SetEase(Ease.OutCubic).SetUpdate(true);
+            else
+                drawer.anchoredPosition = drawerRest;
+            return;
+        }
+
         gameObject.SetActive(state);
         transform.DOMoveX(0, .2f).From(-670);
     }

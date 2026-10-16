@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using LastOrders.Core;
 using LastOrders.Data;
+using LastOrders.Effects;
 using LastOrders.Interaction;
 using LastOrders.Perimeter;
 using LastOrders.UI.World;
@@ -153,6 +154,9 @@ namespace LastOrders.Defense
             }
 
             if (!animate || !standing) return;
+
+            // Dust round its foot as it goes up, like anything put down on the build grid.
+            PlacementJuice.Burst(transform.position, 2.4f);
 
             // The wall swells into the bastion first, then the defense rises on top of it - or, on a
             // pad, straight away.

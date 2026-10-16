@@ -44,6 +44,7 @@ namespace LastOrders.Data
     [Serializable]
     public sealed class DefenseLevel
     {
+        [Min(1)] public int requiredLevel = 1;
         [Tooltip("What this level fires. An upgrade that hands the guard a rifle is this field.")]
         public WeaponDefinition weapon;
 
@@ -73,6 +74,7 @@ namespace LastOrders.Data
     [CreateAssetMenu(menuName = "Last Orders/Defense/Defense", fileName = "Defense_")]
     public sealed class DefenseDefinition : ScriptableObject
     {
+        [Min(1)] public int requiredLevel = 1;
         [Tooltip("Stable identity for this kind of defense.")]
         public string id = "guard_tower";
 

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Chicken Coop
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Chicken Coop
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 3
+  isUnlocked: 0
   categoryType: 1
   type: 301
-  PriceAmount: 120
+  PriceAmount: 160
   Sellable: 1
   prefab: {fileID: 7079737316154518597, guid: c758685936c38944091599d346582edd, type: 3}
   visual: {fileID: 1582923237961887706, guid: dc49bb4de47af614294ca438795e5f2e, type: 3}

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Soup Kitchen
   m_EditorClassIdentifier: 
   nameString: Soup Kitchen
-  requiredLevel: 0
+  requiredLevel: 1
   isUnlocked: 1
   categoryType: 0
   type: 1
-  PriceAmount: 150
+  PriceAmount: 100
   Sellable: 1
   prefab: {fileID: 1480992646591469734, guid: cc00f58c917349744ae5c9779122aa5c, type: 3}
   visual: {fileID: 4975638934420075952, guid: 7a7f5b876a68833439048eb961aef134, type: 3}

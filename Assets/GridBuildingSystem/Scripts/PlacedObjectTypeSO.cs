@@ -271,4 +271,15 @@ public enum ObjectType
     SaladStation = 401,
     GriddleStation = 402,
     GrillStation = 403,
+
+    // Decorations for the diner, bought from the shop's Decoration tab and set down on the grid.
+    ________Decor_________ = 500, // Should not be set to any Object
+    PottedPlant = 501,
+    FlowerPlanter = 502,
+    Jukebox = 503,
+    MenuBoard = 504,
+    GumballMachine = 505,
+    FloorLamp = 506,
+    DisplayShelf = 507,
+    ArcadeCabinet = 508,
 }

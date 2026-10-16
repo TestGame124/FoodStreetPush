@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: FriedEggsRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: c231d4163966c2e4fa4f27d400f0832b, type: 3}
-  TotalTimeToCook: 45
+  TotalTimeToCook: 35
+  requiredLevel: 3
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 420aaf89478300a4dae5b51113d39ba8, type: 2}
@@ -23,5 +24,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 9313e0993b2bb604c953fc5435d38eb7, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 1
+    Amount: 2
+  startRewards: 3

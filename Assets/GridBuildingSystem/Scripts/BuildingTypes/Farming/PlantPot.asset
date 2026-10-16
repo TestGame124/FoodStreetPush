@@ -13,18 +13,20 @@ MonoBehaviour:
   m_Name: PlantPot
   m_EditorClassIdentifier: 
   nameString: Building
-  requiredLevel: 0
+  requiredLevel: 1
   isUnlocked: 1
   categoryType: 1
   type: 2
-  PriceAmount: 0
+  PriceAmount: 30
   Sellable: 0
   prefab: {fileID: 4782235985580720507, guid: 784115736f4fa8f4dabc080c79008f01, type: 3}
   visual: {fileID: 2499414142690952232, guid: 39f07d0bc4cef994da9271040751b266, type: 3}
   width: 1
   height: 1
+  placementProfile: {fileID: 0}
   maxItems: 6
   previewImage: {fileID: 0}
+  shopIcon: {fileID: 0}
   buildCategory: 1
   buildCost:
   - type: 1

@@ -15,14 +15,15 @@ MonoBehaviour:
   displayName: Glutton
   description: Went straight past the people. Straight to the stores.
   silhouetteColour: {r: 0.95, g: 0.9, b: 0.5, a: 1}
+  tintBody: 1
   navigation: 3
   isNonCombatant: 0
   heatPerSecond: 0
   ignitesStructures: 0
   stealsResources: 0
   immuneToSlow: 0
-  structureDps: 5
-  maxHealth: 90
+  structureDps: 4
+  maxHealth: 80
   moveSpeed: 0.9
   agentRadius: 0.35
   attackRange: 0.6

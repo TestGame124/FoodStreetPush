@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
   m_Name: Defense_GuardTower
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  requiredLevel: 1
   id: guard_tower
   displayName: Guard Tower
   description: A raised post inside the perimeter wall where one survivor watches
@@ -20,19 +21,22 @@ MonoBehaviour:
   crewRole: 3
   buildPrice:
     resources:
-    - type: 6
-      amount: 60
+    - type: 0
+      amount: 80
     premium: 20
+  prefab: {fileID: 0}
   levels:
-  - weapon: {fileID: 11400000, guid: b3cc86cf43976c247a1bfc744db63091, type: 2}
+  - requiredLevel: 1
+    weapon: {fileID: 11400000, guid: b3cc86cf43976c247a1bfc744db63091, type: 2}
     spotRangeMetres: 14
     upgradePrice:
       resources: []
       premium: 0
-  - weapon: {fileID: 11400000, guid: cf422c4a577745345b9eb032431246d8, type: 2}
+  - requiredLevel: 3
+    weapon: {fileID: 11400000, guid: cf422c4a577745345b9eb032431246d8, type: 2}
     spotRangeMetres: 18
     upgradePrice:
       resources:
-      - type: 6
-        amount: 90
+      - type: 0
+        amount: 120
       premium: 30

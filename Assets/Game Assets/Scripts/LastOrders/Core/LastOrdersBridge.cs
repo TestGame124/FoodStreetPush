@@ -94,10 +94,7 @@ namespace LastOrders.Core
         /// <summary>
         /// A customer paid, and the level's own wallet should show it.
         ///
-        /// The Last Orders ledger is the system of record and it has already been credited by
-        /// the time this is called; this only mirrors the coins into the wallet the shop and
-        /// the HUD actually read. A level with no such wallet ignores it, and a level with one
-        /// would otherwise show a balance that never moves while the player serves all day.
+        /// Credits the shared coin wallet. Ledger Coin lookups read the same balance.
         /// </summary>
         public static void NotifyCoinsPaid(int amount)
         {
@@ -145,7 +142,6 @@ namespace LastOrders.Core
             if (composition == null || amount <= 0) return;
 
             composition.Context.Report.CoinEarned += amount;
-            composition.Ledger.Add(Data.ResourceType.Coin, amount);
         }
 
         /// <summary>

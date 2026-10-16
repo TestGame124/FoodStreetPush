@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Griddle Station
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Griddle Station
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 3
+  isUnlocked: 0
   categoryType: 0
   type: 402
-  PriceAmount: 250
+  PriceAmount: 200
   Sellable: 1
   prefab: {fileID: 4386906205654504650, guid: 5a8716ab8990b9f46bf6dda7f2bcdaae, type: 3}
   visual: {fileID: 3151800287701022893, guid: 3fbb69c66ad9da34f85892105a650ca9, type: 3}

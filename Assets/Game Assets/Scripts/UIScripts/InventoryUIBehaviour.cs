@@ -24,7 +24,7 @@ public class InventoryUIBehaviour : MonoBehaviour
         
         for (int i = 0; i < allItemsSlot.Count; i++)
         {
-            allItemsSlot[i].transform.DOScale(1, 0.3f).From(0).SetEase(Ease.OutBack).SetDelay(i * 0.15f);
+            allItemsSlot[i].transform.DOScale(1, 0.3f).From(0).SetEase(Ease.OutBack).SetDelay(Mathf.Min(i * 0.03f, 0.45f));
         }
     }
     public void Initialise(InventorySystem inventorySystem)

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Tomato Shooter
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Tomato Shooter
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 3
+  isUnlocked: 0
   categoryType: 5
   type: 202
-  PriceAmount: 60
+  PriceAmount: 130
   Sellable: 1
   prefab: {fileID: 5308659418858801624, guid: 5ef78667325f0dd43837be5198fe1479, type: 3}
   visual: {fileID: 7886696922733631089, guid: a1e6fc1754dc313408488fb07f2e2a94, type: 3}

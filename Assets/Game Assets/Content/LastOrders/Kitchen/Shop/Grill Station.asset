@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Grill Station
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Grill Station
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 4
+  isUnlocked: 0
   categoryType: 0
   type: 403
-  PriceAmount: 300
+  PriceAmount: 260
   Sellable: 1
   prefab: {fileID: 1236301920059225750, guid: 58cf5cebcebda3d438f676209cf7a178, type: 3}
   visual: {fileID: 7645463927291978953, guid: 563d999ef9162db44b30c2d020c9670d, type: 3}

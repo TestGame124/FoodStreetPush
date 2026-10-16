@@ -51,6 +51,11 @@ public class Zone : MonoBehaviour
         // every session. Runtime-placed objects allocate above RUNTIME_ID_BASE.
         for (int i = 0; i < placedObject.Count; i++)
         {
+            // A placed object deleted from the scene leaves an empty entry behind. Skip it rather
+            // than stop here - this runs in the middle of GameHandler.Start, and throwing left the
+            // storehouse, the orders and the UI never set up. Its index stays reserved, so the
+            // others keep their IDs.
+            if (placedObject[i] == null) continue;
             placedObject[i].InitializeObject(i + 1);
         }
 
@@ -64,7 +69,7 @@ public class Zone : MonoBehaviour
 
     public PlacedObject_Done GetAlreadyPlacedObject(int id)
     {
-        return this.placedObject.Find(x => x.ID == id);
+        return this.placedObject.Find(x => x != null && x.ID == id);
     }
     public List<PlacedObject_Done> GetAlreadyObjectsList()
     {
@@ -72,7 +77,7 @@ public class Zone : MonoBehaviour
     }
     public void RemoveAlreadyPlacedObject(PlacedObject_Done placed)
     {
-        PlacedObject_Done temp = placedObject.Find(x =>x.ID == placed.ID);
+        PlacedObject_Done temp = placedObject.Find(x => x != null && x.ID == placed.ID);
         if (placedObject.Contains(temp))
         {
             placedObject.Remove(temp);

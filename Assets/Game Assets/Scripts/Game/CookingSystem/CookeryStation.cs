@@ -7,19 +7,19 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
 {
 
     private InventorySystem inventorySystem;
-    [SerializeField] CookingRecipe[] recipies;
+    [SerializeField] CookingRecipe[] recipies = Array.Empty<CookingRecipe>();
     CookingUIPanel cookPanel;
 
     [SerializeField] List<Coroutine> recipiesCoroutines;
 
     [SerializeField]
-    public List<CookRecipeData> recipiesInProgress;
+    public List<CookRecipeData> recipiesInProgress = new List<CookRecipeData>();
 
     PlacedObjectTypeSO placedObjectData;
 
     public static Action OnStartCooking;
 
-    [SerializeField] int MaxCookRecipies;
+    [SerializeField, Min(1)] int MaxCookRecipies = 3;
     public Transform centerPoint;
 
     [Tooltip("What the cooking panel calls this station when it has no placed-object type to name it - a station set down by hand in the level rather than bought.")]
@@ -96,7 +96,9 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     
     public bool StartCooking(CookingRecipe recipe, InventorySystem inventory)
     {
-        if (recipiesInProgress.Count >= MaxCookRecipies)
+        if (recipe == null || Array.IndexOf(recipies, recipe) < 0 ||
+            recipiesInProgress.Count >= Mathf.Max(1, MaxCookRecipies) ||
+            LastOrders.Consequence.OutdoorWreck.IsWreckedOn(this) || !recipe.TryCook(inventory))
         {
             return false;
         }
@@ -119,6 +121,8 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     public void RemoveCookRecipeData(CookRecipeData recipeData)
     {
         recipiesInProgress.Remove(recipeData);
+        if (recipiesInProgress.Count > 0) recipiesInProgress[0].active = true;
+        OnStartCooking?.Invoke();
     }
 }
 

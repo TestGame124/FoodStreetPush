@@ -49,6 +49,8 @@ public class UIGame : MonoBehaviour
 
     [Header("In APP Store")]
     [SerializeField] GameObject storeUI;
+    [Tooltip("The offers that drop in one after another. Empty: the store's first child's children, as the old store was laid out.")]
+    [SerializeField] Transform storeCards;
 
 
     private void Awake()
@@ -71,6 +73,7 @@ public class UIGame : MonoBehaviour
 
     void Update()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Input.GetKeyDown(KeyCode.E))
         {
             LevelUpSystem.AddXP(2);
@@ -79,6 +82,7 @@ public class UIGame : MonoBehaviour
         CurrenciesController.AddCurrency(CurrencyType.Coins, 1000);
         CurrenciesController.AddCurrency(CurrencyType.Gems, 2);
         }
+#endif
     }
     /// <summary>
     /// Kept as the name the UI code already calls, but the answer now comes from PointerInput so
@@ -98,10 +102,11 @@ public class UIGame : MonoBehaviour
         if (storeUI.activeInHierarchy)
             return;
         storeUI.GetComponent<CanvasGroup>().DOFade(1, 0.2f).From(0);
-       
-        for (int i = 0; i < storeUI.transform.GetChild(0).childCount; i++)
+
+        Transform cards = storeCards != null ? storeCards : storeUI.transform.GetChild(0);
+        for (int i = 0; i < cards.childCount; i++)
         {
-            storeUI.transform.GetChild(0).GetChild(i).DOLocalMoveY(0, 0.5f).SetDelay(i * 0.15f).From(1000).SetEase(Ease.OutBack);
+            cards.GetChild(i).DOLocalMoveY(0, 0.5f).SetDelay(i * 0.15f).From(1000).SetEase(Ease.OutBack);
         }
         storeUI.gameObject.SetActive(true);
     }

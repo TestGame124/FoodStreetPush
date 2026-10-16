@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Fried Eggs
   Type: 26
-  coinsReward: 25
-  starsReward: 1
+  coinsReward: 20
+  starsReward: 3
   canBePlanted: 0
-  totalTimeInSeconds: 45
+  totalTimeInSeconds: 35
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: c231d4163966c2e4fa4f27d400f0832b, type: 3}
   growStages: []
   cropLook: {fileID: 0}

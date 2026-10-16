@@ -17,7 +17,8 @@ MonoBehaviour:
   coinsReward: 0
   starsReward: 0
   canBePlanted: 1
-  totalTimeInSeconds: 45
+  totalTimeInSeconds: 30
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 564b13125f11d7543a1b4b3fc6c694c6, type: 3}
   growStages:
   - {fileID: 21300000, guid: 18b1676b77947a349836179ff6bdc01b, type: 3}

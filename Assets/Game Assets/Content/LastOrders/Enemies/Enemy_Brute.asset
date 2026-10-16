@@ -15,21 +15,22 @@ MonoBehaviour:
   displayName: Brute
   description: Wall came down at the depot. Not the door. The wall.
   silhouetteColour: {r: 0.6, g: 0.15, b: 0.15, a: 1}
+  tintBody: 1
   navigation: 1
   isNonCombatant: 0
   heatPerSecond: 0
   ignitesStructures: 0
   stealsResources: 0
   immuneToSlow: 0
-  structureDps: 25
-  maxHealth: 180
+  structureDps: 12
+  maxHealth: 120
   moveSpeed: 0.7
   agentRadius: 0.35
   attackRange: 0.6
   prefab: {fileID: 2210883807797046269, guid: ef56796435b8d844e842cb068d2c030c, type: 3}
   poolPrewarm: 16
   threatCost: 6
-  earliestDay: 8
+  earliestDay: 12
   drops:
   - type: 1
     amount: 1

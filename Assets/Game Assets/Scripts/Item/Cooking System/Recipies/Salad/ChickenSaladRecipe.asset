@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: ChickenSaladRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 640bfd55dc82adf46b725e015c16f579, type: 3}
-  TotalTimeToCook: 300
+  TotalTimeToCook: 50
+  requiredLevel: 5
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 7c1ae516ab9ed194d9be2ba34fb0f7bc, type: 2}
@@ -31,5 +32,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 7700025206ed4ea44b4d6cbd1d3b7401, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 3
+    Amount: 2
+  startRewards: 4

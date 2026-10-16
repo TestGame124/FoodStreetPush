@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using DG.Tweening;
 using FoodStreet.Navigation;
+using FoodStreet.Placement;
 using FoodStreet.Visitors;
 using LastOrders.Core;
 using LastOrders.Data;
@@ -11,6 +12,7 @@ using LastOrders.Effects;
 using LastOrders.Field;
 using LastOrders.Interaction;
 using LastOrders.Jobs;
+using LastOrders.Kitchen;
 using LastOrders.Night;
 using LastOrders.Perimeter;
 using LastOrders.UI.Popups;
@@ -26,18 +28,20 @@ namespace LastOrders.Restaurant
     ///
     /// Growing it is three steps. The EXPAND button over the front wall - or a tap on any of the
     /// walls - asks "Expand the restaurant?" with what the next expansion costs. Yes lights up
-    /// the strip of ground in front of, left of and right of the building that each side would
-    /// take in: green where it is clear, red where something is standing on it. Tapping a strip
+    /// the strip of ground behind, left of and right of the building that each side would take
+    /// in: green where it is clear, red where something is standing on it. Tapping a strip
     /// checks again that nothing is in the way and that the player can pay, and only then pushes
     /// that wall out. Anything standing on the ground is in the way - a plant pot, the stores, a
     /// shelter, a tower, a stretch of the compound wall, a parking bay - and so is the compound
     /// wall itself: the restaurant never grows past it.
     ///
     /// The walls are plain cubes with their length along local Z, as the layout tools lay them.
-    /// A side that grows moves its own wall out and lengthens the two walls either side of it;
-    /// the front wall is in two pieces round the door, and the door, its route nodes and the
-    /// night shelter's door move out with them. The floor (<see cref="RestaurantFloor"/>) is laid
-    /// again between the walls on every frame they move.
+    /// A side that grows moves its own wall out and lengthens the two walls either side of it.
+    /// The front wall, in two pieces round the door, never moves: the door stays where the
+    /// visitors and the defenses know it. Growing out the back carries the kitchen back with the
+    /// back wall - the stations and anything else built on the grid there, the serving pass and
+    /// the waiters' places at it - so it is the dining room that gets bigger. The floor
+    /// (<see cref="RestaurantFloor"/>) is laid again between the walls on every frame they move.
     ///
     /// It also stands the walls up for the night: the service is registered as the barrier that
     /// stops every zombie at them, and the walls' outlines go to the nav grid so the night's
@@ -50,7 +54,8 @@ namespace LastOrders.Restaurant
         [SerializeField] GameLifetimeScope scope;
 
         [Header("Walls")]
-        [Tooltip("The kitchen wall, opposite the door. It never moves; it lengthens when a side grows.")]
+        [Tooltip("The kitchen wall, opposite the door. It moves out, the kitchen with it, when the " +
+                 "restaurant grows at the back; it lengthens when a side grows.")]
         [SerializeField] Transform backWall;
 
         [Tooltip("The side wall on the left, seen from outside the front.")]
@@ -65,8 +70,8 @@ namespace LastOrders.Restaurant
         [Tooltip("The front wall between the door and the right wall.")]
         [SerializeField] Transform frontRightWall;
 
-        [Tooltip("What moves out with the front wall: the door, the visitor route's door nodes, the " +
-                 "night shelter's door nodes.")]
+        [Tooltip("What stands at the front wall: the door, the visitor route's door nodes, the night " +
+                 "shelter's door nodes. Never counted as in the way of the walls.")]
         [SerializeField] Transform[] frontFixtures;
 
         [Tooltip("Routes round the building are kept outside its footprint. Found when left empty.")]
@@ -103,6 +108,12 @@ namespace LastOrders.Restaurant
         /// <summary>Metres across the frame round each strip.</summary>
         const float EdgeWidth = 0.18f;
 
+        /// <summary>How deep the kitchen is when there is no floor to say.</summary>
+        const float DefaultKitchenDepth = 3f;
+
+        /// <summary>Metres from the serving pass a waiter's place can be and still be at it.</summary>
+        const float WaiterReach = 1.5f;
+
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
         static readonly Regex CopySuffix = new Regex(@"\s*\(\d+\)$");
@@ -130,6 +141,11 @@ namespace LastOrders.Restaurant
         bool wallsOnGrid;
 
         readonly List<Rect> wallAreas = new List<Rect>(5);
+
+        // What stands in the kitchen, gathered when the back wall is about to go out.
+        readonly List<PlacedObject_Done> kitchenPlaced = new List<PlacedObject_Done>();
+        readonly List<ServingPass> kitchenPasses = new List<ServingPass>();
+        readonly List<Waiter> kitchenWaiters = new List<Waiter>();
 
         /// <summary>One side's strip of ground while the player is choosing.</summary>
         sealed class Strip
@@ -336,7 +352,7 @@ namespace LastOrders.Restaurant
             handledTapFrame = Time.frameCount;
             ReleaseExpandButton();
 
-            foreach (RestaurantSide side in new[] { RestaurantSide.Forward, RestaurantSide.Left, RestaurantSide.Right })
+            foreach (RestaurantSide side in new[] { RestaurantSide.Back, RestaurantSide.Left, RestaurantSide.Right })
                 if (restaurant.StepsLeft(side) > 0) ShowStrip(side);
 
             Recheck();
@@ -391,6 +407,12 @@ namespace LastOrders.Restaurant
             {
                 Warn(area, "In the way!");
                 return $"{obstacle} is in the way. Clear the ground {RestaurantService.Describe(side)} first.";
+            }
+
+            if (side == RestaurantSide.Back && !KitchenCanGoBack(out string blocked))
+            {
+                Warn(area, "In the way!");
+                return blocked;
             }
 
             if (!restaurant.TryExpand(side, out string message))
@@ -670,6 +692,12 @@ namespace LastOrders.Restaurant
             return Clean(named.name);
         }
 
+        static string NameOf(PlacedObject_Done placed)
+        {
+            PlacedObjectTypeSO type = placed.PlacedObjectTypeSO;
+            return type != null && !string.IsNullOrEmpty(type.nameString) ? type.nameString : Clean(placed.name);
+        }
+
         static string Clean(string raw)
         {
             string name = CopySuffix.Replace(raw ?? string.Empty, string.Empty).Replace('_', ' ').Trim();
@@ -692,16 +720,15 @@ namespace LastOrders.Restaurant
 
             Sequence walls = DOTween.Sequence().SetTarget(this);
 
+            bool kitchenMoves = false;
+
             switch (side)
             {
-                case RestaurantSide.Forward:
-                    Move(walls, frontLeftWall, direction, depth, seconds);
-                    Move(walls, frontRightWall, direction, depth, seconds);
+                case RestaurantSide.Back:
+                    Move(walls, backWall, direction, depth, seconds);
                     Extend(walls, leftWall, direction, depth, seconds);
                     Extend(walls, rightWall, direction, depth, seconds);
-
-                    if (frontFixtures != null)
-                        foreach (Transform fixture in frontFixtures) Move(walls, fixture, direction, depth, seconds);
+                    kitchenMoves = MoveKitchen(walls, direction, depth, seconds);
                     break;
 
                 case RestaurantSide.Left:
@@ -730,8 +757,12 @@ namespace LastOrders.Restaurant
                 }
             }
 
-            // The floor follows the walls out as they move, not after.
-            walls.OnUpdate(FitFloor);
+            // The floor follows the walls out as they move, not after, and the plates ride the pass.
+            walls.OnUpdate(() =>
+            {
+                FitFloor();
+                if (kitchenMoves && ServingPassBoard.Instance != null) ServingPassBoard.Instance.KeepPlatesOnSpots();
+            });
 
             walls.OnComplete(() =>
             {
@@ -739,6 +770,14 @@ namespace LastOrders.Restaurant
                 FitFloor();
                 Refit();
                 wallsOnGrid = PutWallsOnGrid();
+
+                if (kitchenMoves)
+                {
+                    foreach (ServingPass pass in kitchenPasses)
+                        if (pass != null) pass.Refit();
+
+                    if (ServingPassBoard.Instance != null) ServingPassBoard.Instance.KeepPlatesOnSpots();
+                }
 
                 foreach (WorkerAgent worker in FindObjectsByType<WorkerAgent>(FindObjectsSortMode.None))
                     worker.KeepHomeOutOf(grown, homeClearance);
@@ -788,6 +827,136 @@ namespace LastOrders.Restaurant
 
             into.Join(wall.DOMove(wall.position + direction * depth * 0.5f, seconds).SetEase(Ease.OutCubic));
             into.Join(wall.DOScale(target, seconds).SetEase(Ease.OutCubic));
+        }
+
+        // --- The kitchen going back -------------------------------------------------------------------
+
+        static PlacementService Grid => GridBuildingSystem3D.Instance != null ? GridBuildingSystem3D.Instance.Placement : null;
+
+        /// <summary>The kitchen: the strip along the back wall's inner face, as deep as the floor's kitchen tiles.</summary>
+        Rect KitchenArea()
+        {
+            Rect inner = MeasureInside();
+            float depth = Mathf.Min(floor != null ? floor.KitchenDepth : DefaultKitchenDepth, inner.height, inner.width);
+            Vector2 back = restaurant.DirectionOf(RestaurantSide.Back);
+
+            if (back.y > 0.5f) return Rect.MinMaxRect(inner.xMin, inner.yMax - depth, inner.xMax, inner.yMax);
+            if (back.y < -0.5f) return Rect.MinMaxRect(inner.xMin, inner.yMin, inner.xMax, inner.yMin + depth);
+            if (back.x > 0.5f) return Rect.MinMaxRect(inner.xMax - depth, inner.yMin, inner.xMax, inner.yMax);
+            return Rect.MinMaxRect(inner.xMin, inner.yMin, inner.xMin + depth, inner.yMax);
+        }
+
+        /// <summary>
+        /// What stands in the kitchen now and goes back with its wall: anything built on the grid
+        /// with the middle of its cells in it, the serving pass counters there, and the waiters
+        /// whose places are at those counters.
+        /// </summary>
+        void GatherKitchen()
+        {
+            kitchenPlaced.Clear();
+            kitchenPasses.Clear();
+            kitchenWaiters.Clear();
+
+            Rect area = KitchenArea();
+            PlacementService grid = Grid;
+
+            if (grid != null)
+            {
+                foreach (PlacedObject_Done placed in FindObjectsByType<PlacedObject_Done>(FindObjectsSortMode.None))
+                {
+                    if (placed.isRemoved || !placed.IsPlaced || placed.PlacedObjectTypeSO == null) continue;
+                    if (area.Contains(grid.Footprint(placed).center)) kitchenPlaced.Add(placed);
+                }
+            }
+
+            foreach (ServingPass pass in FindObjectsByType<ServingPass>(FindObjectsSortMode.None))
+                if (area.Contains(pass.WorldFootprint.center)) kitchenPasses.Add(pass);
+
+            foreach (Waiter waiter in FindObjectsByType<Waiter>(FindObjectsSortMode.None))
+            {
+                foreach (ServingPass pass in kitchenPasses)
+                {
+                    if (RestaurantService.DistanceTo(pass.WorldFootprint, waiter.Home) > WaiterReach) continue;
+
+                    kitchenWaiters.Add(waiter);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>The whole cells the stations go back for the back wall's next step.</summary>
+        Vector2Int KitchenCells(PlacementService grid)
+        {
+            Vector2 back = restaurant.DirectionOf(RestaurantSide.Back) * restaurant.Tuning.For(RestaurantSide.Back).depth;
+            float cell = grid.Layout.CellSize;
+            return new Vector2Int(Mathf.RoundToInt(back.x / cell), Mathf.RoundToInt(back.y / cell));
+        }
+
+        /// <summary>True when everything built in the kitchen has free cells to go back onto; the reply when not.</summary>
+        bool KitchenCanGoBack(out string reason)
+        {
+            reason = null;
+            PlacementService grid = Grid;
+            if (grid == null) return true;
+
+            GatherKitchen();
+            if (grid.CanShift(kitchenPlaced, KitchenCells(grid), out PlacedObject_Done blocker)) return true;
+
+            reason = blocker != null
+                ? $"{NameOf(blocker)} is in the way of the kitchen going back. Move it first."
+                : "The kitchen cannot go back any further: the building ground ends there.";
+            return false;
+        }
+
+        /// <summary>
+        /// Carries the kitchen back with the back wall: the stations change cells at once - nothing
+        /// can be built into the ground they are going to - and slide there with the wall; the
+        /// counters slide with them and the waiters walk to their new places. False when there is
+        /// nothing in the kitchen to carry.
+        /// </summary>
+        bool MoveKitchen(Sequence into, Vector3 direction, float depth, float seconds)
+        {
+            GatherKitchen();
+
+            PlacementService grid = Grid;
+            if (grid != null && kitchenPlaced.Count > 0)
+            {
+                var from = new Vector3[kitchenPlaced.Count];
+                for (int i = 0; i < kitchenPlaced.Count; i++)
+                {
+                    PlacementPop.SettleOn(kitchenPlaced[i].transform);
+                    kitchenPlaced[i].transform.DOKill(true);
+                    from[i] = kitchenPlaced[i].transform.position;
+                }
+
+                Vector2Int cells = KitchenCells(grid);
+                float along = new Vector2(cells.x, cells.y).magnitude * grid.Layout.CellSize;
+                if (Mathf.Abs(along - depth) > 0.01f)
+                {
+                    Debug.LogWarning($"[RestaurantShell] The back wall moves {depth:0.##} m but the kitchen can only go back " +
+                                     $"whole cells ({along:0.##} m). Set the back side's depth to whole metres.", this);
+                }
+
+                if (!grid.TryShift(kitchenPlaced, cells))
+                    Debug.LogWarning("[RestaurantShell] The kitchen could not go back on the build grid; it stays where it is.", this);
+
+                for (int i = 0; i < kitchenPlaced.Count; i++)
+                {
+                    Transform station = kitchenPlaced[i].transform;
+                    Vector3 to = station.position;
+                    if ((to - from[i]).sqrMagnitude < 1e-6f) continue;
+
+                    station.position = from[i];
+                    into.Join(station.DOMove(to, seconds).SetEase(Ease.OutCubic));
+                }
+            }
+
+            foreach (ServingPass pass in kitchenPasses) Move(into, pass.transform, direction, depth, seconds);
+
+            foreach (Waiter waiter in kitchenWaiters)
+                waiter.SetHome(waiter.Home + direction * depth, waiter.HomeRotation);
+
+            return kitchenPlaced.Count > 0 || kitchenPasses.Count > 0;
         }
 
         /// <summary>Tells the routes and the night where the building now stands and where its door is.</summary>

@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7747bdf78fa6141a2f81d16ff91e5f, type: 3}
+  m_Name: Gumball Machine
+  m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
+  nameString: Gumball Machine
+  requiredLevel: 0
+  isUnlocked: 1
+  categoryType: 2
+  type: 505
+  PriceAmount: 90
+  Sellable: 1
+  prefab: {fileID: 6884959280958339064, guid: ee554f7eb58a908449f768f7a2a81628, type: 3}
+  visual: {fileID: 208348221036546722, guid: 20f6ed7e9d2e557439e150f6dbae9ae1, type: 3}
+  width: 1
+  height: 1
+  placementProfile: {fileID: 0}
+  maxItems: 3
+  previewImage: {fileID: 0}
+  shopIcon: {fileID: 21300000, guid: 57e9d94c5e6ffec4b87954e1d8f23489, type: 3}
+  buildCategory: 5
+  buildCost: []
+  buildClockMinutes: 1
+  maxHealth: 40
+  damagedEfficiency: 0.75
+  isPerimeter: 0
+  isHearth: 0
+  heatPerTile: 0.5
+  isPoweredLight: 0
+  isGenerator: 0
+  isJukebox: 0
+  seatCapacity: 0
+  isDoor: 0
+  isWall: 0
+  isCellar: 0
+  isPantry: 0
+  isTakeawayWindow: 0
+  defenseDps: 0
+  defenseRangeTiles: 0
+  consumesAmmo: 0
+  recipes: []
+  wallMaterial: {fileID: 0}
+  comfortMultiplier: 1.03
+  requiredReputation: 0
+  requiresBlueprint: 0

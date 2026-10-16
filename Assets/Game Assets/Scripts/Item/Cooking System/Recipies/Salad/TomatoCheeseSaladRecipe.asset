@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: TomatoCheeseSaladRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 900e6d899a361594383bd4d5aa5ec686, type: 3}
-  TotalTimeToCook: 180
+  TotalTimeToCook: 40
+  requiredLevel: 4
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: e531fbcf676582943b3d6092186b87ea, type: 2}
@@ -27,5 +28,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 31e619ab948a6164098c3d86947e971b, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 2
+    Amount: 2
+  startRewards: 3

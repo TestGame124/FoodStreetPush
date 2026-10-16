@@ -16,13 +16,14 @@ MonoBehaviour:
   description: They wander the ruined town by day. After dark the lights draw them
     in, a few at a time.
   silhouetteColour: {r: 0.55, g: 0.65, b: 0.45, a: 1}
+  tintBody: 1
   navigation: 0
   isNonCombatant: 0
   heatPerSecond: 0
   ignitesStructures: 0
   stealsResources: 0
   immuneToSlow: 0
-  structureDps: 6
+  structureDps: 4
   maxHealth: 30
   moveSpeed: 1
   agentRadius: 0.35

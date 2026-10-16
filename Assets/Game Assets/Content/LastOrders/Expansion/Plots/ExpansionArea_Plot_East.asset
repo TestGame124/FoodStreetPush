@@ -18,14 +18,16 @@ MonoBehaviour:
   benefit: More room inside the walls
   unlockedBy: []
   expandCost:
+  - type: 0
+    amount: 165
   - type: 5
     amount: 25
   - type: 1
     amount: 15
   requiredLevel: 3
-  expandSeconds: 15
+  expandSeconds: 25
   claimReward:
-    experience: 4
+    experience: 25
     resources:
     - type: 5
       amount: 6

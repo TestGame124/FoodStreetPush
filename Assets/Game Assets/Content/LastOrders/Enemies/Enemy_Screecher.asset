@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Screecher
   description: Something out there is calling the others in.
   silhouetteColour: {r: 0.6, g: 0.8, b: 0.95, a: 1}
+  tintBody: 1
   navigation: 0
   isNonCombatant: 1
   heatPerSecond: 0.6
@@ -22,14 +23,14 @@ MonoBehaviour:
   stealsResources: 0
   immuneToSlow: 0
   structureDps: 0
-  maxHealth: 25
+  maxHealth: 30
   moveSpeed: 1
   agentRadius: 0.35
   attackRange: 0.6
   prefab: {fileID: 2210883807797046269, guid: ef56796435b8d844e842cb068d2c030c, type: 3}
   poolPrewarm: 16
   threatCost: 4
-  earliestDay: 35
+  earliestDay: 30
   drops:
   - type: 1
     amount: 1

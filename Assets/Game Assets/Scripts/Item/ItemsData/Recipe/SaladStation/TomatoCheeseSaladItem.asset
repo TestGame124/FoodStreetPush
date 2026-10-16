@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Tomato and Cheese Salad
   Type: 16
-  coinsReward: 10
-  starsReward: 2
+  coinsReward: 24
+  starsReward: 4
   canBePlanted: 0
-  totalTimeInSeconds: 180
+  totalTimeInSeconds: 40
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 900e6d899a361594383bd4d5aa5ec686, type: 3}
   growStages: []
   cropLook: {fileID: 0}

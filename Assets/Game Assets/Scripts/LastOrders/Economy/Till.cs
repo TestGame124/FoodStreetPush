@@ -10,9 +10,31 @@ namespace LastOrders.Economy
     /// </summary>
     public static class Till
     {
+        static Price Normalize(Price price)
+        {
+            long totalCoins = System.Math.Max(0, price.coins);
+            var resources = new System.Collections.Generic.Dictionary<ResourceType, int>();
+            if (price.resources != null)
+                foreach (ResourceAmount entry in price.resources)
+                {
+                    ResourceType type = entry.type.Canonical();
+                    if (entry.amount <= 0) continue;
+                    if (type == ResourceType.Coin) totalCoins += entry.amount;
+                    else
+                    {
+                        resources.TryGetValue(type, out int amount);
+                        resources[type] = (int)System.Math.Min(int.MaxValue, (long)amount + entry.amount);
+                    }
+                }
+            var result = new System.Collections.Generic.List<ResourceAmount>();
+            foreach (var entry in resources) result.Add(new ResourceAmount(entry.Key, entry.Value));
+            return new Price((int)System.Math.Min(int.MaxValue, totalCoins), result.ToArray());
+        }
+
         /// <summary>The first thing the player is short of, in words. Null when they have it all.</summary>
         public static string Shortfall(Price price, ResourceLedger ledger, IWallet coins)
         {
+            price = Normalize(price);
             if (price.coins > 0)
             {
                 int have = coins != null ? coins.Balance : 0;
@@ -36,6 +58,7 @@ namespace LastOrders.Economy
 
         public static bool TryPay(Price price, ResourceLedger ledger, IWallet coins, out string reason)
         {
+            price = Normalize(price);
             reason = Shortfall(price, ledger, coins);
             if (reason != null) return false;
             if (price.IsFree) return true;

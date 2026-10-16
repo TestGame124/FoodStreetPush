@@ -13,19 +13,20 @@ MonoBehaviour:
   m_Name: CarrotSlawRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: 55ee39ed9d137a349bceff1fddd95218, type: 3}
-  TotalTimeToCook: 90
+  TotalTimeToCook: 30
+  requiredLevel: 3
   Ingrediants:
   - item:
-      itemDataSO: {fileID: 11400000, guid: 0fef5935066249a479eee9b75a2ca57c, type: 2}
+      itemDataSO: {fileID: 11400000, guid: 23181298b935c7f468b73200f92d6dfc, type: 2}
       itemsAmount: 1
-    Amount: 2
+    Amount: 1
   - item:
-      itemDataSO: {fileID: 11400000, guid: 296ea354328b2e04a8572998dc18926b, type: 2}
+      itemDataSO: {fileID: 11400000, guid: 0fef5935066249a479eee9b75a2ca57c, type: 2}
       itemsAmount: 1
     Amount: 1
   Results:
     item:
       itemDataSO: {fileID: 11400000, guid: 69155852f7b51984da7d96724f1fa29c, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 1
+    Amount: 2
+  startRewards: 3

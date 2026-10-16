@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Plate Shooter
   m_EditorClassIdentifier: Assembly-CSharp::PlacedObjectTypeSO
   nameString: Plate Shooter
-  requiredLevel: 0
-  isUnlocked: 1
+  requiredLevel: 6
+  isUnlocked: 0
   categoryType: 5
   type: 204
-  PriceAmount: 100
+  PriceAmount: 230
   Sellable: 1
   prefab: {fileID: 3708258064410157233, guid: b17ea52b0c0c18446aadfa9987125804, type: 3}
   visual: {fileID: 7257506393567018981, guid: 069e50f41c6a86545a94faed0b3aa5fa, type: 3}

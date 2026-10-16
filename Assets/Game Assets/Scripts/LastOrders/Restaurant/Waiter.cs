@@ -115,11 +115,20 @@ namespace LastOrders.Restaurant
             if (mover != null) mover.Stop();
         }
 
-        /// <summary>Its place at the pass, facing the dining room. Set by the scene setup, or where it starts.</summary>
+        /// <summary>Its place at the pass, where it waits for the next dish.</summary>
+        public Vector3 Home => home;
+
+        public Quaternion HomeRotation => homeTurn;
+
+        /// <summary>Its place at the pass, facing the dining room. Set by the scene setup, or where it
+        /// starts; moved when the pass is carried back with the kitchen, and walked to if it was
+        /// standing at the old one.</summary>
         public void SetHome(Vector3 position, Quaternion rotation)
         {
             home = position;
             homeTurn = rotation;
+
+            if (Application.isPlaying && isActiveAndEnabled && step == Step.AtHome) GoHome();
         }
 
         // --- The round ------------------------------------------------------------------------------

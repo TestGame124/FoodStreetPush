@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: GardenSaladRecipe
   m_EditorClassIdentifier: Assembly-CSharp::CookingRecipe
   RecipeImage: {fileID: 21300000, guid: f468b594d804eb149b58ba6182ad9e3a, type: 3}
-  TotalTimeToCook: 45
+  TotalTimeToCook: 20
+  requiredLevel: 2
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 14a4cca0a54f12f4ba67571d02989d75, type: 2}
@@ -26,6 +27,6 @@ MonoBehaviour:
   Results:
     item:
       itemDataSO: {fileID: 11400000, guid: cbf7ace5b98797f4fbbe0b4e1599bc4a, type: 2}
-      itemsAmount: 4
-    Amount: 0
-  startRewards: 1
+      itemsAmount: 1
+    Amount: 2
+  startRewards: 2

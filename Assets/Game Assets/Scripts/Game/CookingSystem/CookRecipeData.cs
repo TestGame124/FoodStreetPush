@@ -14,6 +14,7 @@ public class CookRecipeData
     public string inventoryName;
     public int totalTime;
     public bool active;
+    public int completionExperience;
 
     [NonSerialized]
     public CookeryStation manager;
@@ -26,12 +27,13 @@ public class CookRecipeData
     {
         this.managerName = manager.name;
         this.position = manager.transform.position;
-        this.recipeImageName = recipe.RecipeImage.name;
+        this.recipeImageName = recipe.RecipeImage != null ? recipe.RecipeImage.name : string.Empty;
         this.totalTime = recipe.TotalTimeToCook;
         this.results = recipe.Results;
         this.inventoryName = inventory.name;
         this.manager = manager;
         this.inventory = inventory;
+        this.completionExperience = Mathf.Max(1, recipe.startRewards);
     }
 
     /// <summary>
@@ -49,19 +51,21 @@ public class CookRecipeData
 
         while (timer > 0)
         {
+            while (!active || LastOrders.Consequence.OutdoorWreck.IsWreckedOn(manager)) yield return null;
             UpdateTimer?.Invoke(timer, this);
             yield return new WaitForSeconds(1);
-            timer--;
+            if (active && !LastOrders.Consequence.OutdoorWreck.IsWreckedOn(manager)) timer--;
         }
         UpdateTimer?.Invoke(timer, this);
 
         int servings = 0;
 
-        for (int i = 0; i <= results.Amount; i++)
+        for (int i = 0; i < Mathf.Max(1, results.Amount); i++)
         {
+            while (!inventory.CanAdd(results.item.type)) yield return null;
             Vector3 offset = new Vector3(UnityEngine.Random.Range(-1, 1), 2, UnityEngine.Random.Range(-1, 1));
 
-            Item newItem = new(ItemController.GetItem(results.item.type), results.item.itemsAmount);
+            Item newItem = new(ItemController.GetItem(results.item.type), 1);
 
             // A dish goes out onto the serving pass for the waiters, its plate hopping from the
             // station to the counter, rather than flying off to the storehouse as an icon. Into the
@@ -86,6 +90,7 @@ public class CookRecipeData
         // The serving count is what reaches the customer system: each plate produced here is a
         // meal on the pass, and the pass is what travellers on the road are deciding about.
         LastOrders.Core.LastOrdersBridge.NotifyDishCooked(servings: servings);
+        LastOrders.Core.LastOrdersBridge.AddExperience(completionExperience);
 
         manager.RemoveCookRecipeData(this);
     }

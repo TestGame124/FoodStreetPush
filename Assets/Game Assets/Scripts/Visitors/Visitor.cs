@@ -877,8 +877,10 @@ namespace FoodStreet.Visitors
             eatRemaining = definition != null ? definition.RollEatSeconds() : 4f;
             Stage = VisitorStage.Eating;
 
-            int payment = definition != null ? definition.payment : 0;
+            ItemDataSO meal = order.Data;
+            int payment = meal != null ? meal.coinsReward * Mathf.Max(1, order.Amount) : (definition != null ? definition.payment : 0);
             if (payment > 0) OnServed?.Invoke(this, payment);
+            if (meal != null) LastOrders.Core.LastOrdersBridge.AddExperience(meal.starsReward * Mathf.Max(1, order.Amount));
         }
 
         // --- The plate -------------------------------------------------------------------

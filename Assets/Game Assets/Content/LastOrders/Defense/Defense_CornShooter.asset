@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
   m_Name: Defense_CornShooter
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  requiredLevel: 2
   id: corn_shooter
   displayName: Corn Shooter
   description: An old pitching machine re-geared for corn. Its engine spins two tyres,
@@ -20,20 +21,22 @@ MonoBehaviour:
   crewRole: 3
   buildPrice:
     resources:
-    - type: 6
-      amount: 40
+    - type: 0
+      amount: 90
     premium: 15
   prefab: {fileID: 6227909708042131297, guid: 900c87045524dbc40a09c59f1d7197f6, type: 3}
   levels:
-  - weapon: {fileID: 11400000, guid: 9d27b9dcb40e9a7488484a5156d674d1, type: 2}
+  - requiredLevel: 2
+    weapon: {fileID: 11400000, guid: 9d27b9dcb40e9a7488484a5156d674d1, type: 2}
     spotRangeMetres: 12
     upgradePrice:
       resources: []
       premium: 0
-  - weapon: {fileID: 11400000, guid: 7c4bfca2d37b1494584bad82037c8dff, type: 2}
+  - requiredLevel: 4
+    weapon: {fileID: 11400000, guid: 7c4bfca2d37b1494584bad82037c8dff, type: 2}
     spotRangeMetres: 13.5
     upgradePrice:
       resources:
-      - type: 6
-        amount: 60
+      - type: 0
+        amount: 135
       premium: 25

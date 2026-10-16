@@ -24,12 +24,17 @@
 // not swim across a moving crown. At zero, the default, nothing moves: the furniture shares this.
 //
 // The main light's cookie is applied, so the level's drifting cloud shadows pass over the trees too.
+//
+// With _VertexPaint at 1 the mesh's vertex colours multiply the palette: the diner's decorations are
+// modelled in code and painted per vertex, and lit through here so they sit beside the imported
+// tables and chairs. At zero, the default, vertex colours are ignored.
 Shader "LastOrders/Toon"
 {
     Properties
     {
         _BaseMap ("Palette", 2D) = "white" {}
         _BaseColor ("Tint", Color) = (1, 1, 1, 1)
+        _VertexPaint ("Vertex colour paint (0 = ignored)", Range(0, 1)) = 0
         _LeafTex ("Leaf pattern (grey, 0.5 = no change)", 2D) = "gray" {}
         _LeafScale ("Leaf pattern tiles per metre", Float) = 0.28
         _LeafStrength ("Leaf pattern strength", Range(0, 1)) = 0.75
@@ -67,6 +72,7 @@ Shader "LastOrders/Toon"
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor;
+            half _VertexPaint;
             float4 _LeafTex_ST;
             float _LeafScale;
             half _LeafStrength;
@@ -121,6 +127,7 @@ Shader "LastOrders/Toon"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -131,6 +138,7 @@ Shader "LastOrders/Toon"
                 float3 positionWS : TEXCOORD1;
                 float3 normalWS : TEXCOORD2;
                 half fogFactor : TEXCOORD3;
+                half3 paint : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -147,6 +155,7 @@ Shader "LastOrders/Toon"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
+                output.paint = lerp(half3(1.0, 1.0, 1.0), input.color.rgb, _VertexPaint);
                 return output;
             }
 
@@ -167,7 +176,7 @@ Shader "LastOrders/Toon"
                 UNITY_SETUP_INSTANCE_ID(input);
 
                 half3 normalWS = normalize(input.normalWS);
-                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb;
+                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb * input.paint;
 
                 // Foliage is whatever the palette paints green.
                 half foliage = saturate((albedo.g - max(albedo.r, albedo.b)) * 12.0);

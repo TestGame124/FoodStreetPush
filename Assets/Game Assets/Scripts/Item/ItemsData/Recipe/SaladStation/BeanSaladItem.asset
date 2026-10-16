@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDataSO
   Name: Bean Salad
   Type: 17
-  coinsReward: 12
-  starsReward: 2
+  coinsReward: 24
+  starsReward: 4
   canBePlanted: 0
-  totalTimeInSeconds: 240
+  totalTimeInSeconds: 45
+  harvestYield: 3
   itemImage: {fileID: 21300000, guid: 9c649009df4c69745a5c22c6d5292130, type: 3}
   growStages: []
   cropLook: {fileID: 0}

@@ -208,17 +208,22 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
     }
 
     private void Harvest() { 
-        
+        InventorySystem inventory = InventorySystem.instance;
+        if (activeItem == null || inventory == null || !inventory.CanAdd(activeItem.type))
+        {
+            LastOrders.Interaction.TapFeedback.Report("Make room in the storehouse before harvesting.");
+            return;
+        }
 
         finishedEffect.SetActive(false);
         plantPreview.SetActive(false);
         if (patch != null)
             patch.Clear();
-        InventorySystem inventory = InventorySystem.instance;
-        int generateItems = 2;
+        int generateItems = Mathf.Max(2, activeItem.itemDataSO.harvestYield);
 
         // Thrown out of the crop together, so they fan out rather than land on each other.
         activeItem.itemDataSO.GenerateItem(ItemController.instance.itemReceiver, activeItem, CropTop, inventory, generateItems);
+        LastOrders.Core.LastOrdersBridge.AddExperience(1);
 
         currentState= PotState.Empty;
         Harvested?.Invoke(this);

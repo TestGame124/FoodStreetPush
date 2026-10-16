@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 441d098c82b9ee149bacc93f964e3092, type: 3}
   m_Name: Defense_PlateShooter
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Data.DefenseDefinition
+  requiredLevel: 6
   id: plate_shooter
   displayName: Plate Shooter
   description: The diner's plate dispenser on a bus cart, with a clay-pigeon arm
@@ -21,20 +22,22 @@ MonoBehaviour:
   crewRole: 3
   buildPrice:
     resources:
-    - type: 6
-      amount: 45
+    - type: 0
+      amount: 230
     premium: 15
   prefab: {fileID: 8932253230467647575, guid: 52ac13b9de3e0604d8e0c75d107f789b, type: 3}
   levels:
-  - weapon: {fileID: 11400000, guid: 9ed94b5f926aae64bbd6e12b9c3523a5, type: 2}
+  - requiredLevel: 6
+    weapon: {fileID: 11400000, guid: 9ed94b5f926aae64bbd6e12b9c3523a5, type: 2}
     spotRangeMetres: 11.5
     upgradePrice:
       resources: []
       premium: 0
-  - weapon: {fileID: 11400000, guid: a1b7608e2b5ec3a4fb655bfd861e98c0, type: 2}
+  - requiredLevel: 8
+    weapon: {fileID: 11400000, guid: a1b7608e2b5ec3a4fb655bfd861e98c0, type: 2}
     spotRangeMetres: 13
     upgradePrice:
       resources:
-      - type: 6
-        amount: 70
+      - type: 0
+        amount: 345
       premium: 25

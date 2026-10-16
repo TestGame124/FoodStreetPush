@@ -12,7 +12,7 @@ namespace LastOrders.EditorTools
     /// damage figure or price.
     ///
     /// Level 1 is the design's own numbers: a pistol, 16 damage every 1.5 seconds within
-    /// 6 m, and 60 Trade Tokens for each tower after the first. The spot range, the premium
+    /// 6 m, and 60 Coins for each tower after the first. The spot range, the premium
     /// price and all of Level 2 - the rifle - are placeholders the design has not given
     /// numbers for yet, marked as such below.
     /// </summary>
@@ -121,7 +121,7 @@ namespace LastOrders.EditorTools
             asset.crewRole = SurvivorRole.Guard;
 
             // Placeholder: cheaper than a tower's 60, since it fires a little softer.
-            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, 45));
+            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.Coin, 45));
 
             asset.levels = new[]
             {
@@ -131,7 +131,7 @@ namespace LastOrders.EditorTools
                 {
                     weapon = twin,
                     spotRangeMetres = 13f,
-                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.TradeToken, 70)),
+                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.Coin, 70)),
                 },
             };
 
@@ -203,7 +203,7 @@ namespace LastOrders.EditorTools
             asset.crewRole = SurvivorRole.Guard;
 
             // Placeholder, like the turret's.
-            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, 40));
+            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.Coin, 40));
 
             asset.levels = new[]
             {
@@ -212,7 +212,7 @@ namespace LastOrders.EditorTools
                 {
                     weapon = doubleToast,
                     spotRangeMetres = 13.5f,
-                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.TradeToken, 65)),
+                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.Coin, 65)),
                 },
             };
 
@@ -295,7 +295,7 @@ namespace LastOrders.EditorTools
             asset.crewRole = SurvivorRole.Guard;
 
             // Placeholder: a little under the turret's, since it hits softer.
-            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, 40));
+            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.Coin, 40));
 
             asset.levels = new[]
             {
@@ -304,7 +304,7 @@ namespace LastOrders.EditorTools
                 {
                     weapon = blast,
                     spotRangeMetres = 13.5f,
-                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.TradeToken, 60)),
+                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.Coin, 60)),
                 },
             };
 
@@ -519,7 +519,7 @@ namespace LastOrders.EditorTools
             asset.swayDegrees = 0f;
         }
 
-        /// <summary>A crewless shooter with two levels, priced in Trade Tokens (and premium), filled in only when it is created.</summary>
+        /// <summary>A crewless shooter with two levels, priced in Coins (and premium), filled in only when it is created.</summary>
         static DefenseDefinition Shooter(string path, string id, string name, string description, WeaponDefinition level1,
                                          WeaponDefinition level2, float spot, float spotUpgraded, int build, int upgrade)
         {
@@ -532,7 +532,7 @@ namespace LastOrders.EditorTools
             asset.crewRole = SurvivorRole.Guard;
 
             // What a wall site would charge for it. Bought from the shop, it is paid in Coins instead.
-            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.TradeToken, build));
+            asset.buildPrice = new DefensePrice(15, new ResourceAmount(ResourceType.Coin, build));
 
             asset.levels = new[]
             {
@@ -541,7 +541,7 @@ namespace LastOrders.EditorTools
                 {
                     weapon = level2,
                     spotRangeMetres = spotUpgraded,
-                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.TradeToken, upgrade)),
+                    upgradePrice = new DefensePrice(25, new ResourceAmount(ResourceType.Coin, upgrade)),
                 },
             };
 
@@ -708,7 +708,7 @@ namespace LastOrders.EditorTools
             asset.crewRole = SurvivorRole.Guard;
 
             // Placeholder premium price: the design says "or optional premium currency" and names no figure.
-            asset.buildPrice = new DefensePrice(20, new ResourceAmount(ResourceType.TradeToken, 60));
+            asset.buildPrice = new DefensePrice(20, new ResourceAmount(ResourceType.Coin, 60));
 
             asset.levels = new[]
             {
@@ -721,7 +721,7 @@ namespace LastOrders.EditorTools
                 {
                     weapon = rifle,
                     spotRangeMetres = 18f,
-                    upgradePrice = new DefensePrice(30, new ResourceAmount(ResourceType.TradeToken, 90)),
+                    upgradePrice = new DefensePrice(30, new ResourceAmount(ResourceType.Coin, 90)),
                 },
             };
 

@@ -13,6 +13,9 @@ public class OrderSystem : MonoBehaviour
 
     private static List<Item> allAvailableItems = new();
 
+    static List<Item> UnlockedItems() => allAvailableItems.FindAll(item => item != null && item.itemDataSO != null &&
+        (!LastOrders.Economy.EconomyRules.TryDish(item.type, out var dish) || LevelUpSystem.GetLevel() >= dish.Level));
+
     InventorySystem inventory;
 
     [SerializeField] protected int totalOrdersClaimed;
@@ -45,10 +48,10 @@ public class OrderSystem : MonoBehaviour
     IEnumerator InitializeAfterDelay()
     {
         yield return null;
-        for (int i = 0; i <= totalOrdersCount; i++)
+        allOrders.Clear();
+        for (int i = 0; i < totalOrdersCount; i++)
         {
-            int randAmountItem = Random.Range(1, allAvailableItems.Count);
-            Order newOrder = new Order(allAvailableItems, randAmountItem);
+            Order newOrder = new Order(UnlockedItems(), LastOrders.Economy.EconomyRules.OrderKinds(LevelUpSystem.GetLevel()));
 
             allOrders.Add(newOrder);
         }
@@ -57,7 +60,7 @@ public class OrderSystem : MonoBehaviour
     }
     public static void AddAvailableItems(Item item)
     {
-        if(!allAvailableItems.Contains(item))
+        if(item != null && !allAvailableItems.Exists(existing => existing.type == item.type))
             allAvailableItems.Add(item);
       
     }
@@ -70,8 +73,8 @@ public class OrderSystem : MonoBehaviour
     {
         allOrders.Remove(orderToRemove);
 
-        int randAmountItem = Random.Range(1, allAvailableItems.Count);
-        Order newOrder = new Order(allAvailableItems, randAmountItem);
+        Order newOrder = new Order(UnlockedItems(), LastOrders.Economy.EconomyRules.OrderKinds(LevelUpSystem.GetLevel()));
+        allOrders.Add(newOrder);
         board.ResetState();
         board.Initialize(newOrder, inventory,this);
         return newOrder;
@@ -98,47 +101,41 @@ public class OrderSystem : MonoBehaviour
         public int StarsReward;
 
         public List<Item> ordersData = new();
-        
+
+        /// <summary>The most dishes one order asks for: an order ticket has six spots.</summary>
+        public const int MaxDishes = 6;
+
         public Order(List<Item> availableItems, int totalItems)
         {
-            
-            for(int i =0; i < totalItems; i++)
+            var choices = new List<Item>();
+            if (availableItems != null)
+                foreach (Item entry in availableItems)
+                    if (entry != null && entry.itemDataSO != null && !choices.Exists(other => other.type == entry.type)) choices.Add(entry);
+            int kinds = Mathf.Min(choices.Count, Mathf.Clamp(totalItems, 1, LastOrders.Economy.EconomyRules.OrderKinds(LevelUpSystem.GetLevel())));
+            for (int i = 0; i < kinds; i++)
             {
-                int randomItem = Random.Range(0, availableItems.Count);
-                Item newItem = availableItems[randomItem];
-
-                int randomAmount = Random.Range(1, availableItems.Count + 1);
-                newItem.itemsAmount = randomAmount;
-                if (!ordersData.Contains(newItem))
-                {
-                    ordersData.Add(newItem);
-
-                    CoinsReward += newItem.itemDataSO.coinsReward * newItem.itemsAmount;
-                    StarsReward += newItem.itemDataSO.starsReward * newItem.itemsAmount;
-                }
+                int pick = Random.Range(0, choices.Count);
+                Item template = choices[pick];
+                choices.RemoveAt(pick);
+                Item newItem = new Item(template.itemDataSO, Random.Range(1, LastOrders.Economy.EconomyRules.OrderQuantity(LevelUpSystem.GetLevel()) + 1));
+                ordersData.Add(newItem);
+                CoinsReward += newItem.itemDataSO.coinsReward * newItem.itemsAmount;
+                StarsReward += newItem.itemDataSO.starsReward * newItem.itemsAmount;
             }
         }
         // create Order with Specific Recipe
         public Order(Item item, int totalItems, int starReward)
         {
-            for (int i = 0; i < totalItems; i++)
-            {
-                
-                Item newItem = item;
-
-                newItem.itemsAmount = 1;
-                if (!ordersData.Contains(newItem))
-                {
-                    ordersData.Add(newItem);
-
-                    CoinsReward += newItem.itemDataSO.coinsReward * newItem.itemsAmount;
-                    StarsReward = starReward;
-                }
-            }
+            if (item == null || item.itemDataSO == null || totalItems <= 0) return;
+            Item newItem = new Item(item.itemDataSO, Mathf.Clamp(totalItems, 1, 3));
+            ordersData.Add(newItem);
+            CoinsReward = newItem.itemDataSO.coinsReward * newItem.itemsAmount;
+            StarsReward = Mathf.Max(0, starReward);
         }
 
         public bool CanClaim(InventorySystem inventory)
         {
+            if (inventory == null || ordersData.Count == 0) return false;
             foreach (Item order in ordersData)
             {
                 if (inventory.ItemCount(order.type) < order.itemsAmount || !inventory.ContainsItem(order.type))

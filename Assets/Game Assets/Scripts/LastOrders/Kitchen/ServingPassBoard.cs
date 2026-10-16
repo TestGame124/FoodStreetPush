@@ -315,6 +315,8 @@ namespace LastOrders.Kitchen
         /// </summary>
         void Reconcile()
         {
+            KeepPlatesOnSpots();
+
             stock.Clear();
             shown.Clear();
             target.Clear();
@@ -413,6 +415,23 @@ namespace LastOrders.Kitchen
             {
                 dish.transform.SetPositionAndRotation(s.Point.position, facing);
                 dish.PopIn();
+            }
+        }
+
+        /// <summary>
+        /// Stands every plate that is not on its way somewhere back on its spot: the counter under it
+        /// was carried, back with the kitchen when the restaurant grew. A plate still hopping is left
+        /// to land, and stood right on the next pass of this.
+        /// </summary>
+        public void KeepPlatesOnSpots()
+        {
+            for (int i = 0; i < spots.Count; i++)
+            {
+                Spot s = spots[i];
+                if (s.Dish == null || s.Point == null || s.Dish.IsMoving) continue;
+
+                Transform plate = s.Dish.transform;
+                if ((plate.position - s.Point.position).sqrMagnitude > 1e-6f) plate.position = s.Point.position;
             }
         }
 

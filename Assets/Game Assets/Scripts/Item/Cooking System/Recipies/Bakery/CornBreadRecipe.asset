@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: CornBreadRecipe
   m_EditorClassIdentifier: 
   RecipeImage: {fileID: 21300000, guid: 0c56554ee14033f428baf728063d4bde, type: 3}
-  TotalTimeToCook: 120
+  TotalTimeToCook: 50
+  requiredLevel: 2
   Ingrediants:
   - item:
       itemDataSO: {fileID: 11400000, guid: 14a4cca0a54f12f4ba67571d02989d75, type: 2}
@@ -27,5 +28,5 @@ MonoBehaviour:
     item:
       itemDataSO: {fileID: 11400000, guid: 390bc8468c6730e4eae7faf8704a6d76, type: 2}
       itemsAmount: 1
-    Amount: 0
-  startRewards: 3
+    Amount: 2
+  startRewards: 2

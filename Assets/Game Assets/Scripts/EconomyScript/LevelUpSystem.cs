@@ -21,7 +21,7 @@ public class LevelUpSystem : MonoBehaviour
     private static Dictionary<int, CurrencyReward> rewardConfigDictionary;
     private static RewardManager rewardManager;
 
-    private const int StartingXpToNextLevel = 3;
+    private const int StartingXpToNextLevel = 20;
 
     private static int level = 1;
     private static int currentXp;
@@ -32,7 +32,7 @@ public class LevelUpSystem : MonoBehaviour
         rewardManager = new RewardManager();
         rewardConfigDictionary = new Dictionary<int, CurrencyReward>();
 
-        foreach (var config in rewardConfigs)
+        foreach (var config in rewardConfigs ?? new List<CurrencyReward>())
         {
             rewardConfigDictionary[config.level] = config;
         }
@@ -79,6 +79,7 @@ public class LevelUpSystem : MonoBehaviour
 
             ApplyRewards(level);
             xpToNextLevel = CalculateXPToNextLevel(level);
+            OnLevelUp?.Invoke(level);
         }
     }
 
@@ -94,16 +95,17 @@ public class LevelUpSystem : MonoBehaviour
 
     private static int CalculateXPToNextLevel(int reachedLevel)
     {
-        return StartingXpToNextLevel + (reachedLevel - 1) * 2;
+        return LastOrders.Economy.EconomyRules.XpForLevel(reachedLevel);
     }
 
     public static void ApplyRewards(int level)
     {
-        CurrencyReward reward = new CurrencyReward(CurrencyType.Coins, 50 * level);
+        CurrencyReward reward = new CurrencyReward(CurrencyType.Coins, LastOrders.Economy.EconomyRules.LevelReward(level));
 
         if (UIGame.GetUI() != null)
             UIGame.GetUI().levelUpUi.OnLevelUp(reward);
 
+        if (rewardManager == null) rewardManager = new RewardManager();
         rewardManager.AddReward(reward);
         rewardManager.GiveAllRewards();
     }

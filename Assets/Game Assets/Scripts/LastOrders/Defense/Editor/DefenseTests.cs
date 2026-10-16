@@ -13,7 +13,7 @@ using UnityEngine;
 /// The rules of the defenses, without a scene: a tower fires only while a guard is posted, at
 /// the design's 16 damage every 1.5 seconds within 6 m; it sees further than it shoots; guards
 /// are posted, replaced and lost as the roster changes; the first tower is free and the rest
-/// cost 60 Trade Tokens or premium, with no worker involved; and an upgrade and an automated,
+/// cost 60 Coins or premium, with no worker involved; and an upgrade and an automated,
 /// ammo-fed turret both run through the same code.
 /// </summary>
 public class DefenseTests
@@ -66,7 +66,7 @@ public class DefenseTests
         tower.displayName = "Guard Tower";
         tower.requiresCrew = true;
         tower.crewRole = SurvivorRole.Guard;
-        tower.buildPrice = new DefensePrice(20, new ResourceAmount(ResourceType.TradeToken, 60));
+        tower.buildPrice = new DefensePrice(20, new ResourceAmount(ResourceType.Coin, 60));
         tower.levels = new[]
         {
             new DefenseLevel { weapon = pistol, spotRangeMetres = 14f },
@@ -74,7 +74,7 @@ public class DefenseTests
             {
                 weapon = rifle,
                 spotRangeMetres = 18f,
-                upgradePrice = new DefensePrice(30, new ResourceAmount(ResourceType.TradeToken, 90)),
+                upgradePrice = new DefensePrice(30, new ResourceAmount(ResourceType.Coin, 90)),
             },
         };
     }
@@ -457,30 +457,30 @@ public class DefenseTests
     [Test]
     public void StartingTowerCostsNothing()
     {
-        ledger.Add(ResourceType.TradeToken, 100);
+        ledger.Add(ResourceType.Coin, 100);
 
         DefenseUnit unit = BuiltTower();
 
         Assert.IsTrue(unit.IsBuilt);
-        Assert.AreEqual(100, ledger.Get(ResourceType.TradeToken));
+        Assert.AreEqual(100, ledger.Get(ResourceType.Coin));
     }
 
     [Test]
-    public void AdditionalTowerCostsSixtyTradeTokensAndNeedsNoWorker()
+    public void AdditionalTowerCostsSixtyCoinsAndNeedsNoWorker()
     {
         DefenseUnit unit = defense.Register(tower, "east", Vector3.zero, startsBuilt: false);
-        ledger.Add(ResourceType.TradeToken, 59);
+        ledger.Add(ResourceType.Coin, 59);
 
         Assert.IsFalse(defense.TryBuild("east", DefensePayment.Resources, out string reason));
-        StringAssert.Contains("Need 1 more Trade Tokens", reason);
+        StringAssert.Contains("Need 1 more Coins", reason);
         Assert.IsFalse(unit.IsBuilt);
 
-        ledger.Add(ResourceType.TradeToken, 1);
+        ledger.Add(ResourceType.Coin, 1);
 
         // Built by paying - there is no job, and nothing has to tick for it to stand.
         Assert.IsTrue(defense.TryBuild("east", DefensePayment.Resources, out string message), message);
         Assert.IsTrue(unit.IsBuilt);
-        Assert.AreEqual(0, ledger.Get(ResourceType.TradeToken));
+        Assert.AreEqual(0, ledger.Get(ResourceType.Coin));
         Assert.IsTrue(progression.Has(DefenseIds.Built("east")));
     }
 
@@ -488,14 +488,14 @@ public class DefenseTests
     public void AdditionalTowerCanBeBoughtWithPremiumInstead()
     {
         DefenseUnit unit = defense.Register(tower, "east", Vector3.zero, startsBuilt: false);
-        ledger.Add(ResourceType.TradeToken, 10);
+        ledger.Add(ResourceType.Coin, 10);
         gems.Balance = 25;
 
         Assert.IsTrue(defense.TryBuild("east", DefensePayment.Premium, out string message), message);
 
         Assert.IsTrue(unit.IsBuilt);
         Assert.AreEqual(5, gems.Balance);
-        Assert.AreEqual(10, ledger.Get(ResourceType.TradeToken), "Paying premium leaves the tokens alone.");
+        Assert.AreEqual(10, ledger.Get(ResourceType.Coin), "Paying premium leaves the tokens alone.");
     }
 
     [Test]
@@ -508,7 +508,7 @@ public class DefenseTests
 
         Assert.IsNull(offer.Blocked);
         Assert.AreEqual(2, offer.Payments.Count);
-        Assert.AreEqual("60 Trade Tokens", offer.Payments[0].Label);
+        Assert.AreEqual("60 Coins", offer.Payments[0].Label);
         Assert.AreEqual("20 Gems", offer.Payments[1].Label);
         Assert.IsFalse(offer.CanBuy(DefensePayment.Resources));
         Assert.IsTrue(offer.CanBuy(DefensePayment.Premium));
@@ -518,33 +518,33 @@ public class DefenseTests
     public void BuyingTheSameSiteTwiceChargesOnce()
     {
         defense.Register(tower, "east", Vector3.zero, startsBuilt: false);
-        ledger.Add(ResourceType.TradeToken, 200);
+        ledger.Add(ResourceType.Coin, 200);
 
         Assert.IsTrue(defense.TryBuild("east", DefensePayment.Resources, out _));
         Assert.IsFalse(defense.TryBuild("east", DefensePayment.Resources, out string reason));
 
         StringAssert.Contains("already", reason);
-        Assert.AreEqual(140, ledger.Get(ResourceType.TradeToken));
+        Assert.AreEqual(140, ledger.Get(ResourceType.Coin));
     }
 
     [Test]
     public void NoTowerIsBoughtAfterDark()
     {
         defense.Register(tower, "east", Vector3.zero, startsBuilt: false);
-        ledger.Add(ResourceType.TradeToken, 60);
+        ledger.Add(ResourceType.Coin, 60);
         Phase(DayPhase.Dusk);
 
         Assert.IsFalse(defense.TryBuild("east", DefensePayment.Resources, out string reason));
 
         StringAssert.Contains("dark", reason);
-        Assert.AreEqual(60, ledger.Get(ResourceType.TradeToken));
+        Assert.AreEqual(60, ledger.Get(ResourceType.Coin));
     }
 
     [Test]
     public void BoughtTowerIsStillThereAfterAReload()
     {
         defense.Register(tower, "east", Vector3.zero, startsBuilt: false);
-        ledger.Add(ResourceType.TradeToken, 60);
+        ledger.Add(ResourceType.Coin, 60);
         Assert.IsTrue(defense.TryBuild("east", DefensePayment.Resources, out _));
 
         defense.Unregister("east");
@@ -565,7 +565,7 @@ public class DefenseTests
         Run(3f);
         Assert.AreEqual(0, enemy.Hits, "Out of the pistol's reach.");
 
-        ledger.Add(ResourceType.TradeToken, 90);
+        ledger.Add(ResourceType.Coin, 90);
         Assert.IsTrue(defense.TryUpgrade("gate", DefensePayment.Resources, out string message), message);
 
         Assert.AreEqual(2, unit.LevelNumber);
