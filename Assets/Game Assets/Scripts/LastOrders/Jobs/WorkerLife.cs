@@ -76,7 +76,8 @@ namespace LastOrders.Jobs
         Animator animator;
         CharacterLookAt look;
         Transform head;
-        bool canGesture, swings;
+        GestureDriver gestures;
+        bool swings;
 
         Plan plan;
         float planLeft;
@@ -85,8 +86,7 @@ namespace LastOrders.Jobs
         bool speaking, arrived;
         float turnLeft, chatLeft, strollTimeout;
 
-        Gesture current;
-        float gestureLeft, nextGesture;
+        float nextGesture;
         Transform pointAt;
 
         Transform noticed;
@@ -115,7 +115,7 @@ namespace LastOrders.Jobs
                 head = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
             }
 
-            canGesture = WorkerGestures.CanGesture(animator);
+            gestures = new GestureDriver(animator);
             lastPosition = transform.position;
         }
 
@@ -136,7 +136,7 @@ namespace LastOrders.Jobs
             lastPosition = transform.position;
             stillFor = moved ? 0f : stillFor + dt;
 
-            if (canGesture) animator.SetInteger(WorkerGestures.WorkStyleId, swings ? WorkerGestures.WorkSwing : WorkerGestures.WorkHands);
+            if (gestures.CanGesture) animator.SetInteger(WorkerGestures.WorkStyleId, swings ? WorkerGestures.WorkSwing : WorkerGestures.WorkHands);
 
             bool idle = agent.isActiveAndEnabled && agent.IsIdle && !agent.IsWorking && !agent.IsSheltering;
             if (!idle)
@@ -198,7 +198,7 @@ namespace LastOrders.Jobs
             if (!Standing) return;
 
             planLeft -= dt;
-            if (planLeft > 0f || (WorkerGestures.IsHeld(current) && gestureLeft > 1f)) return;
+            if (planLeft > 0f || (WorkerGestures.IsHeld(gestures.Current) && gestures.Left > 1f)) return;
 
             float roll = Random.value;
             if (roll < 0.45f && Time.time >= chatAgain && TryChat()) return;
@@ -323,7 +323,7 @@ namespace LastOrders.Jobs
             if (speaking)
             {
                 turnLeft -= dt;
-                if (current == Gesture.None && turnLeft > 0.8f) Play(Random.value < 0.5f ? Gesture.TalkA : Gesture.TalkB);
+                if (!gestures.Busy && turnLeft > 0.8f) Play(Random.value < 0.5f ? Gesture.TalkA : Gesture.TalkB);
 
                 if (turnLeft <= 0f)
                 {
@@ -343,7 +343,7 @@ namespace LastOrders.Jobs
                     }
                 }
             }
-            else if (current == Gesture.None && Random.value < dt * 0.08f)
+            else if (!gestures.Busy && Random.value < dt * 0.08f)
             {
                 Play(Random.value < 0.5f ? Gesture.ArmsCrossed : Gesture.HandsOnHips, Random.Range(3f, 6f));
             }
@@ -375,12 +375,11 @@ namespace LastOrders.Jobs
 
         void Gestures(float dt, bool moved)
         {
-            if (current != Gesture.None)
+            if (gestures.Busy)
             {
-                gestureLeft -= dt;
-
                 // On the move, nobody keeps their arms folded.
-                if (gestureLeft <= 0f || (moved && WorkerGestures.IsHeld(current))) LetGo();
+                gestures.Tick(dt, moved);
+                if (!gestures.Busy) pointAt = null;
                 return;
             }
 
@@ -419,27 +418,14 @@ namespace LastOrders.Jobs
         }
 
         /// <summary>Starts a gesture; a held one is let go after <paramref name="hold"/> seconds.</summary>
-        void Play(Gesture gesture, float hold = 0f)
-        {
-            if (!canGesture) return;
-
-            animator.SetInteger(WorkerGestures.GestureId, (int)gesture);
-            animator.SetTrigger(WorkerGestures.ActId);
-            current = gesture;
-            gestureLeft = WorkerGestures.IsHeld(gesture) ? Mathf.Max(1f, hold) : WorkerGestures.Seconds(gesture) + 0.15f;
-        }
+        void Play(Gesture gesture, float hold = 0f) => gestures.Play(gesture, hold);
 
         void LetGo()
         {
-            if (current == Gesture.None) return;
+            if (!gestures.Busy) return;
 
-            current = Gesture.None;
+            gestures.LetGo();
             pointAt = null;
-            if (canGesture)
-            {
-                animator.SetInteger(WorkerGestures.GestureId, 0);
-                animator.ResetTrigger(WorkerGestures.ActId);
-            }
         }
 
         // --- Eyes -------------------------------------------------------------------------------------
@@ -477,7 +463,7 @@ namespace LastOrders.Jobs
             seen[best.GetInstanceID()] = Time.time;
 
             // A customer walking by close, and nothing else on: a wave.
-            if (idle && current == Gesture.None && Standing && plan != Plan.Chat && people.Contains(best) &&
+            if (idle && !gestures.Busy && Standing && plan != Plan.Chat && people.Contains(best) &&
                 Flat(best.position - me).magnitude < 7f && Time.time - lastWave > waveEvery && Random.value < waveChance &&
                 best.GetComponent<WorkerAgent>() == null)
             {
@@ -521,6 +507,7 @@ namespace LastOrders.Jobs
                 return;
             }
 
+            Gesture current = gestures.Current;
             if (current == Gesture.Point && pointAt != null)
             {
                 look.Watch(pointAt, Vector3.up * 0.8f);

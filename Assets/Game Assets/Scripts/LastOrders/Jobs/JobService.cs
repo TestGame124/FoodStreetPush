@@ -93,7 +93,7 @@ namespace LastOrders.Jobs
             {
                 Job job = jobs[i];
 
-                if (job.RequiredRole != role) continue;
+                if (job.RequiredRole != role && !Covers(role, job.RequiredRole)) continue;
                 if (job.ReservedFor != null && job.ReservedFor != workerId) continue;
                 if (job.State != JobState.Queued && job.State != JobState.Blocked) continue;
                 if (job.Sequence >= best) continue;
@@ -103,6 +103,43 @@ namespace LastOrders.Jobs
             }
 
             return claimed != null && claimed.TryReserve(workerId);
+        }
+
+        // --- Who is on duty ----------------------------------------------------------------------------
+
+        readonly Dictionary<WorkerRole, HashSet<string>> onDuty = new Dictionary<WorkerRole, HashSet<string>>();
+
+        /// <summary>
+        /// A worker reports for duty (or goes off it). Once anybody has, the main character also takes on
+        /// the work of any role nobody is on duty for: a diner that starts with no hired hands still gets
+        /// its walls repaired, by the player's own character, until somebody is hired to do it.
+        /// </summary>
+        public void ReportOnDuty(WorkerRole role, string workerId, bool on)
+        {
+            if (string.IsNullOrEmpty(workerId)) return;
+
+            if (!onDuty.TryGetValue(role, out HashSet<string> who))
+            {
+                if (!on) return;
+                onDuty[role] = who = new HashSet<string>();
+            }
+
+            if (on) who.Add(workerId);
+            else who.Remove(workerId);
+        }
+
+        /// <summary>True if anybody of <paramref name="role"/> is on duty.</summary>
+        public bool IsStaffed(WorkerRole role) => onDuty.TryGetValue(role, out HashSet<string> who) && who.Count > 0;
+
+        /// <summary>
+        /// True if a worker of <paramref name="role"/> may take a job meant for <paramref name="needed"/>:
+        /// the main character covers for roles with nobody on duty - once workers report at all, so a queue
+        /// nobody reports to keeps strictly to roles.
+        /// </summary>
+        public bool Covers(WorkerRole role, WorkerRole needed)
+        {
+            if (role != WorkerRole.MainCharacter || needed == role || onDuty.Count == 0) return false;
+            return !IsStaffed(needed);
         }
 
         /// <summary>

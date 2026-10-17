@@ -63,6 +63,10 @@ namespace FoodStreet.Visitors
         [Tooltip("Where the hurt are looked after. Found in the scene when left empty.")]
         [SerializeField] HospitalTent tent;
 
+        [Header("Tips")]
+        [Tooltip("Chance that a diner who was served quickly - delighted with it - leaves a gem as a tip.")]
+        [SerializeField, Range(0f, 1f)] float gemTipChance = 0.08f;
+
         readonly List<Visitor> active = new List<Visitor>();
         readonly List<Visitor> finished = new List<Visitor>();
         readonly List<SeatRef> partySeats = new List<SeatRef>(4);
@@ -235,20 +239,64 @@ namespace FoodStreet.Visitors
         }
 
         /// <summary>
-        /// How the Safety Reputation stretches or shortens the wait for the next car: survivors on
-        /// the road come more often to a place they believe is safe. One in a level with no day
-        /// cycle. The chairs and the car park still gate every arrival whatever this says.
+        /// How the Safety Reputation and the player's level stretch or shorten the wait for the next
+        /// car: survivors on the road come more often to a place they believe is safe, and to one
+        /// that has made a name for itself. One in a level with no day cycle. The chairs and the car
+        /// park still gate every arrival whatever this says.
         /// </summary>
-        float ReputationPace => composition != null ? composition.Reputation.ArrivalIntervalScale : 1f;
+        float ReputationPace => composition != null ? composition.Reputation.ArrivalIntervalScaleAt(Level) : 1f;
 
-        /// <summary>How many the next car brings: by the Safety Reputation, never more than there
-        /// are free chairs and room on the street for.</summary>
+        static int Level => Mathf.Max(1, LastOrders.Core.LastOrdersBridge.PlayerLevel);
+
+        /// <summary>The Safety Reputation, as who turns up reads it. Full in a level with no day cycle.</summary>
+        float Safety => composition != null ? composition.Reputation.Current : LastOrders.Reputation.ReputationService.Max;
+
+        /// <summary>Visitors on the map at once, at most: more as the level climbs.</summary>
+        int MaxOnStreet => profile.MaxConcurrent(Level);
+
+        /// <summary>The kinds of visitor on the road at today's level and Safety.</summary>
+        public IReadOnlyList<VisitorDefinition> Coming => profile != null ? profile.Coming(Level, Safety) : new List<VisitorDefinition>();
+
+        /// <summary>
+        /// "Visitors now: Regular, Farmhand. Next: Trucker at level 2." Who the road brings today,
+        /// and the nearest kind still to come with what it is waiting for.
+        /// </summary>
+        public string DescribeClientele()
+        {
+            if (profile == null || profile.visitors == null) return string.Empty;
+
+            int level = Level;
+            float safety = Safety;
+
+            var names = new List<string>();
+            VisitorDefinition next = null;
+            foreach (VisitorDefinition kind in profile.visitors)
+            {
+                if (kind == null || kind.spawnWeight <= 0f) continue;
+
+                if (kind.ComesAt(level, safety)) names.Add(kind.displayName);
+                else if (next == null || kind.minLevel < next.minLevel ||
+                         (kind.minLevel == next.minLevel && kind.minSafety < next.minSafety)) next = kind;
+            }
+
+            string line = names.Count > 0 ? $"Visitors now: {string.Join(", ", names)}." : string.Empty;
+            if (next == null) return line;
+
+            var needs = new List<string>();
+            if (level < next.minLevel) needs.Add($"level {next.minLevel}");
+            if (safety + 1e-3f < next.minSafety) needs.Add($"Safety {Mathf.CeilToInt(next.minSafety)}");
+
+            return $"{line} Next: {next.displayName} at {string.Join(" and ", needs)}.".Trim();
+        }
+
+        /// <summary>How many the next car brings: by the Safety Reputation and the level, never more
+        /// than there are free chairs and room on the street for.</summary>
         int RollPartySize()
         {
-            int room = Mathf.Min(seats.FreeChairCount, profile.maxConcurrent - active.Count);
+            int room = Mathf.Min(seats.FreeChairCount, MaxOnStreet - active.Count);
             if (composition == null || room <= 1) return 1;
 
-            return composition.Reputation.RollPartySize(room, Random.value);
+            return composition.Reputation.RollPartySize(room, Random.value, Level);
         }
 
         /// <summary>
@@ -271,7 +319,7 @@ namespace FoodStreet.Visitors
             if (parking.Capacity == 0) return "there is nowhere to park";
             if (!parking.HasFreeSlot) return "the car park is full";
 
-            if (active.Count >= profile.maxConcurrent) return "the street is as busy as it gets";
+            if (active.Count >= MaxOnStreet) return "the street is as busy as it gets";
 
             return null;
         }
@@ -510,7 +558,8 @@ namespace FoodStreet.Visitors
         /// </summary>
         void Arrive()
         {
-            VisitorDefinition who = profile.PickVisitor();
+            // Who is on the road depends on the level and how safe the place is believed to be.
+            VisitorDefinition who = profile.PickVisitor(Level, Safety);
             if (who == null)
             {
                 Debug.LogError("[Visitors] The traffic profile has no visitors with a weight " +
@@ -552,7 +601,7 @@ namespace FoodStreet.Visitors
             int boarded = 0;
             for (int i = 0; i < partySeats.Count; i++)
             {
-                VisitorDefinition passenger = i == 0 ? who : profile.PickVisitor();
+                VisitorDefinition passenger = i == 0 ? who : profile.PickVisitor(Level, Safety);
                 if (!Sendable(passenger)) passenger = who;
 
                 Visitor visitor = pool.Take<Visitor>(passenger.prefab, roads.RoadStart);
@@ -566,6 +615,7 @@ namespace FoodStreet.Visitors
                 visitor.Begin(passenger, roads, parking, seats, car, partySeats[i]);
 
                 visitor.OnServed += HandleServed;
+                visitor.OnMealFinished += HandleMealFinished;
                 visitor.OnJourneyEnded += HandleJourneyEnded;
 
                 active.Add(visitor);
@@ -639,7 +689,18 @@ namespace FoodStreet.Visitors
         {
             if (payment <= 0) return;
 
+            // The coins - and the stars the meal earns, in the same frame - fly up from the table.
+            LastOrders.Economy.RewardSource.At(visitor.transform.position + Vector3.up * 2f);
             CurrenciesController.AddCurrency(CurrencyType.Coins, payment);
+        }
+
+        /// <summary>A delighted diner sometimes leaves a gem on the way out; it flies up from their table.</summary>
+        void HandleMealFinished(Visitor visitor, MealVerdict verdict)
+        {
+            if (verdict != MealVerdict.Delighted || UnityEngine.Random.value >= gemTipChance) return;
+
+            LastOrders.Economy.RewardSource.At(visitor.transform.position + Vector3.up * 2f);
+            CurrenciesController.AddCurrency(CurrencyType.Gems, 1);
         }
 
         void HandleJourneyEnded(Visitor visitor) => finished.Add(visitor);
@@ -665,6 +726,7 @@ namespace FoodStreet.Visitors
             if (visitor == null) return;
 
             visitor.OnServed -= HandleServed;
+            visitor.OnMealFinished -= HandleMealFinished;
             visitor.OnJourneyEnded -= HandleJourneyEnded;
 
             active.Remove(visitor);

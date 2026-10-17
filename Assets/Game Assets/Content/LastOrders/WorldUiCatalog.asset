@@ -19,6 +19,7 @@ MonoBehaviour:
   expansionProgress: {fileID: 7336598851654928872, guid: f8396501258fdb44ea3c8795928a326e, type: 3}
   healthBar: {fileID: 2126699118096306741, guid: 8ed8c619e74df3044bf0e74df9fa4761, type: 3}
   repairPrompt: {fileID: 7314308589240109059, guid: 041aa32722236414d9c9b5dddfbefded, type: 3}
+  cropCard: {fileID: 3712515137649185329, guid: 46d700189d0e75b4ea41d8962be1dfea, type: 3}
   expansionPopup: {fileID: 8668487145177493296, guid: fd3eb7857128088448eddbcd50b2f626, type: 3}
   defensePopup: {fileID: 3588304140186053790, guid: 4c83d7fbff10e944997db2f1f9d84314, type: 3}
   shelterPopup: {fileID: 8852779331363052094, guid: 0598ceae00a36ec40b0418a04bd5b2bc, type: 3}
@@ -32,5 +33,6 @@ MonoBehaviour:
   expansionProgressOffset: {x: 0, y: 2.2, z: 0}
   repairPromptOffset: {x: 0, y: 0.9, z: 0}
   healthBarOffset: {x: 0, y: 2.35, z: 0}
+  cropCardOffset: {x: 0, y: 1.25, z: 0}
   experienceTextColour: {r: 1, g: 0.86, b: 0.3, a: 1}
   dangerTextColour: {r: 1, g: 0.38, b: 0.3, a: 1}

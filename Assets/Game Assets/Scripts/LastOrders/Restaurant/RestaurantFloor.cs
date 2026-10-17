@@ -50,6 +50,21 @@ namespace LastOrders.Restaurant
         /// <summary>How deep the kitchen strip along the back wall is: where its tiles meet the dining room's floor.</summary>
         public float KitchenDepth => kitchenDepth;
 
+        /// <summary>The room between the walls' inner faces as last laid (x, y = world X, Z).</summary>
+        public Rect Inner { get; private set; }
+
+        /// <summary>The dining room's part of the floor as last laid, threshold excluded.</summary>
+        public Rect DiningArea { get; private set; }
+
+        /// <summary>The kitchen strip as last laid; empty when the room has none.</summary>
+        public Rect KitchenArea { get; private set; }
+
+        /// <summary>From the room toward the kitchen wall, along world X or Z.</summary>
+        public Vector2 Back { get; private set; } = Vector2.up;
+
+        /// <summary>True once the floor has been laid this session, so the areas above mean something.</summary>
+        public bool IsFitted { get; private set; }
+
         /// <summary>Editor wiring, for the setup tool.</summary>
         public void Configure(Material diningMaterial, Material kitchenMaterial, float diningMetres, float kitchenMetres,
                               float kitchenStripDepth)
@@ -155,6 +170,12 @@ namespace LastOrders.Restaurant
                     diningRect.yMin += w;
                 }
             }
+
+            Inner = inner;
+            DiningArea = diningRect;
+            KitchenArea = hasKitchen ? kitchenRect : default;
+            Back = alongX ? new Vector2(Mathf.Sign(back.x), 0f) : new Vector2(0f, Mathf.Sign(back.y));
+            IsFitted = true;
 
             var vertices = new System.Collections.Generic.List<Vector3>();
             var normals = new System.Collections.Generic.List<Vector3>();

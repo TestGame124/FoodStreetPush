@@ -34,6 +34,40 @@ public class CookeryStation : MonoBehaviour, IInteractableObject
     /// </summary>
     public CookingRecipe[] Recipes => recipies;
 
+    /// <summary>Raised when a station's cooking speed changes - somebody came to help, or left.</summary>
+    public static Action<CookeryStation> OnBoostChanged;
+
+    // Who is speeding this station up, and by how much: 0.15 is 15% faster.
+    readonly Dictionary<object, float> boosts = new Dictionary<object, float>();
+
+    /// <summary>How fast this station cooks: 1, plus every boost on it. A cook's seconds pass this much quicker.</summary>
+    public float CookSpeed
+    {
+        get
+        {
+            float speed = 1f;
+            foreach (float boost in boosts.Values) speed += boost;
+            return Mathf.Max(0.1f, speed);
+        }
+    }
+
+    public bool IsBoosted => boosts.Count > 0;
+
+    /// <summary>Speeds the station up by <paramref name="amount"/> (0.15 = 15% faster) for as long as
+    /// <paramref name="source"/> keeps it - a helper standing at it. Setting it again replaces it.</summary>
+    public void AddBoost(object source, float amount)
+    {
+        if (source == null) return;
+
+        boosts[source] = Mathf.Max(0f, amount);
+        OnBoostChanged?.Invoke(this);
+    }
+
+    public void RemoveBoost(object source)
+    {
+        if (source != null && boosts.Remove(source)) OnBoostChanged?.Invoke(this);
+    }
+
     private void Start()
     {
         foreach (CookingRecipe recipe in recipies)

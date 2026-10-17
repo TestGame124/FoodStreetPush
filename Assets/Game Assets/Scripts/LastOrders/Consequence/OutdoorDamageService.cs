@@ -9,6 +9,22 @@ using UnityEngine;
 namespace LastOrders.Consequence
 {
     /// <summary>
+    /// Something a zombie can be sent to smash instead of going for the restaurant: a bed or a pen in
+    /// the yard, a defense. All the zombie needs of it is where to walk to.
+    /// </summary>
+    public interface IRaidTarget
+    {
+        /// <summary>The nearest point of it to <paramref name="from"/>, flat.</summary>
+        Vector3 ClosestPoint(Vector3 from);
+
+        float FlatDistance(Vector3 from);
+
+        /// <summary>True when a zombie sent at it smashes through a wall or barricade in its way;
+        /// false when it lets the target go and leaves the way to the flow field.</summary>
+        bool WorthBreakingThroughFor { get; }
+    }
+
+    /// <summary>
     /// What a zombie inside the walls asks before it goes after something in the yard. Kept narrow
     /// so the agent never needs the whole service, and a test can stand in for it.
     /// </summary>
@@ -93,6 +109,13 @@ namespace LastOrders.Consequence
 
         /// <summary>A repair put every wreck back, with how many there were.</summary>
         public event Action<int> OnRepaired;
+
+        /// <summary>
+        /// True when the defenses are the horde's business, not the yard's: no raider is sent at a
+        /// defense from here, and a defense knocked out does not use up the yard's cap. Whoever set
+        /// this reports the defenses it wrecks with <see cref="ReportDefenseWrecked"/>.
+        /// </summary>
+        public bool DefensesTargetedElsewhere { get; set; }
 
         // --- What is out there -----------------------------------------------------------------
 
@@ -192,6 +215,7 @@ namespace LastOrders.Consequence
             {
                 OutdoorWreck candidate = objects[i];
                 if (!InTheWorld(candidate) || candidate.IsWrecked) continue;
+                if (DefensesTargetedElsewhere && candidate.IsDefense) continue;
                 if (onlyThoseUnderAttack && !underAttack.Contains(candidate)) continue;
                 if (AttackersOf(candidate) >= Mathf.Max(1, tuning.maxRaidersPerObject)) continue;
 
@@ -256,6 +280,22 @@ namespace LastOrders.Consequence
             assignments.Clear();
             underAttack.Clear();
             OnCapReached?.Invoke();
+        }
+
+        /// <summary>
+        /// A defense standing on the ground was knocked out by the horde: it stops firing, and it
+        /// waits for the same repair kit as the yard - but it is not one of the yard's wrecks and
+        /// does not count toward the yard's cap.
+        /// </summary>
+        public void ReportDefenseWrecked(OutdoorWreck wreck)
+        {
+            if (wreck == null) return;
+
+            Register(wreck);
+            SetDefenseWrecked(wreck, true);
+
+            Debug.Log($"[Last Orders] Zombies knocked out the {wreck.DisplayName.ToLowerInvariant()}.");
+            OnWrecked?.Invoke(wreck);
         }
 
         /// <summary>Standing in the world, switched on: not destroyed, hidden or pooled away.</summary>

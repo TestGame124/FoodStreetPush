@@ -22,7 +22,7 @@ namespace FoodStreet.Visitors
     /// instead of leaning back, and every bubble in view reads the same.
     /// </summary>
     [DefaultExecutionOrder(20)]
-    public sealed class OrderBubble : MonoBehaviour
+    public sealed class OrderBubble : OrderBubbleBase
     {
         [Tooltip("The whole bubble. Hidden until the visitor sits down.")]
         [SerializeField] GameObject panel;
@@ -48,7 +48,7 @@ namespace FoodStreet.Visitors
         Camera view;
         float flashTimer;
 
-        public bool IsShowing => panel != null && panel.activeSelf;
+        public override bool IsShowing => panel != null && panel.activeSelf;
 
         void Awake() => Hide();
 
@@ -79,7 +79,7 @@ namespace FoodStreet.Visitors
         /// out of the kitchen and a waiting visitor becomes servable, and a disc that only
         /// updates on a tap would hide it.
         /// </summary>
-        public void Show(Sprite item, int count, bool affordable)
+        public override void Show(Sprite item, int count, bool affordable)
         {
             if (panel != null) panel.SetActive(true);
 
@@ -102,14 +102,14 @@ namespace FoodStreet.Visitors
             amount.gameObject.SetActive(count > 1);
         }
 
-        public void SetAffordable(bool affordable)
+        public override void SetAffordable(bool affordable)
         {
             if (backing == null) return;
 
             backing.color = affordable ? Affordable : Short;
         }
 
-        public void Hide()
+        public override void Hide()
         {
             flashTimer = 0f;
             if (panel != null) panel.SetActive(false);
@@ -126,7 +126,7 @@ namespace FoodStreet.Visitors
         /// on the HUD says what is missing; this says which bubble it was about, which the
         /// message alone cannot once there are four of them.
         /// </summary>
-        public void FlashShort()
+        public override void FlashShort()
         {
             SetAffordable(false);
             flashTimer = 0.6f;

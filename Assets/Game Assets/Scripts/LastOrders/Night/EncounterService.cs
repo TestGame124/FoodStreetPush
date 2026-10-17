@@ -21,6 +21,7 @@ namespace LastOrders.Night
     {
         public int Day;
         public int EncounterNumber;
+        public bool IsBigWave;
         public EncounterOutcome Outcome;
         public EncounterResultKind Kind;
         public string ThreatName;
@@ -31,6 +32,10 @@ namespace LastOrders.Night
 
         public bool Breached;
         public int Wrecks;
+
+        /// <summary>Defenses the zombies knocked out - a gun's bastion brought down, a turret on the ground smashed.</summary>
+        public int DefensesKnockedOut;
+
         public float RestaurantHealthFraction = 1f;
 
         public float ReputationDelta;
@@ -54,6 +59,10 @@ namespace LastOrders.Night
                     case EncounterResultKind.CleanVictory: return "Not one zombie got inside the walls.";
                     case EncounterResultKind.BreachedVictory: return "Zombies got inside the walls, but nothing was wrecked.";
                     case EncounterResultKind.WreckedVictory:
+                        if (Wrecks == 0)
+                            return DefensesKnockedOut == 1 ? "The restaurant held. The zombies knocked out a defense."
+                                                           : $"The restaurant held. The zombies knocked out {DefensesKnockedOut} defenses.";
+
                         return Wrecks == 1 ? "The restaurant held. One thing in the yard was wrecked."
                                            : $"The restaurant held. {Wrecks} things in the yard were wrecked.";
                     default: return "The zombies broke into the restaurant.";
@@ -93,9 +102,13 @@ namespace LastOrders.Night
     /// The zombie attack cycle as the rules see it: which days end in an attack, how hard the next
     /// one is, what happened during it, and what it was worth.
     ///
-    /// Difficulty is decided by the Safety Reputation, and decided once: when the warning appears,
-    /// the threat band and the number of zombies are locked, and nothing the player does in the
-    /// next sixty seconds changes them. Three rules keep it fair. The band may climb only one step
+    /// Zombies come every night: a small pack most nights, and every few days a big wave.
+    ///
+    /// Difficulty is decided by three things - the Safety Reputation, the player's level, and how
+    /// damaged the compound still is - and decided once: when the warning appears, the threat band
+    /// and the number of zombies are locked, and nothing the player does during the warning changes
+    /// them. Safety and level push it up; damage left standing pulls it down, so a compound on its
+    /// knees is given room to recover. Three rules keep it fair. The band may climb only one step
     /// from one attack to the next; the number of zombies may grow only a little; and after defeats
     /// in a row the next attacks are lightened until the restaurant wins one again.
     ///
@@ -135,16 +148,29 @@ namespace LastOrders.Night
         /// <summary>Each side in the player's words - "the west" - as the spawner names them.</summary>
         public string[] LaneNames { get; set; }
 
+        /// <summary>The player's level. Level 1 when nothing is wired.</summary>
+        public Func<int> PlayerLevel { get; set; }
+
+        /// <summary>How damaged the compound is right now, 0 to 1. None when nothing is wired.</summary>
+        public Func<float> ZoneDamage { get; set; }
+
+        /// <summary>Defenses the zombies have knocked out in the attack under way. None when nothing is wired.</summary>
+        public Func<int> DefensesKnockedOut { get; set; }
+
         // --- History, which the next attack is measured against ----------------------------------
 
         public int EncountersFought { get; private set; }
+
+        /// <summary>Big waves fought: what a band's per-attack growth counts.</summary>
+        public int BigWavesFought { get; private set; }
 
         public int ConsecutiveDefeats { get; private set; }
 
         /// <summary>The band the last attack came from, or -1 before the first.</summary>
         public int LastTier { get; private set; } = -1;
 
-        /// <summary>How many zombies the last attack sent, or -1 before the first.</summary>
+        /// <summary>How many zombies a big wave would have sent at the last attack, or -1 before the
+        /// first. A nightly attack sends a share of it.</summary>
         public int LastEnemies { get; private set; } = -1;
 
         public EncounterResult LastResult { get; private set; }
@@ -156,6 +182,9 @@ namespace LastOrders.Night
 
         /// <summary>The locked attack, while one is on.</summary>
         public WavePlan Current { get; private set; }
+
+        /// <summary>What the locked attack was decided from.</summary>
+        public EncounterRequest CurrentRequest { get; private set; }
 
         /// <summary>The restaurant's health ran out: the attack is lost and over.</summary>
         public bool IsDefeated { get; private set; }
@@ -184,30 +213,65 @@ namespace LastOrders.Night
 
         public bool IsAttackDay(int day) => Tuning.IsAttackDay(day);
 
+        public bool IsBigWaveDay(int day) => Tuning.IsBigWaveDay(day);
+
         public int NextAttackDay(int day) => Tuning.NextAttackDay(day);
+
+        public int NextBigWaveDay(int day) => Tuning.NextBigWaveDay(day);
 
         /// <summary>Whole days until the next attack: zero means tonight.</summary>
         public int DaysUntilAttack(int day) => Mathf.Max(0, NextAttackDay(day) - day);
 
+        /// <summary>Whole days until the next big wave: zero means tonight.</summary>
+        public int DaysUntilBigWave(int day) => Mathf.Max(0, NextBigWaveDay(day) - day);
+
+        /// <summary>Seconds of warning before tonight's attack: shorter for a nightly one.</summary>
+        public float PreparationSeconds(int day) => Tuning.PreparationSeconds(day);
+
         // --- Difficulty -----------------------------------------------------------------------------
 
+        /// <summary>The level, as the attack is measured by it: 1 when nothing says otherwise.</summary>
+        public int CurrentLevel => Mathf.Max(1, PlayerLevel != null ? PlayerLevel() : 1);
+
+        /// <summary>How damaged the compound is, 0 to 1, as the attack is measured by it.</summary>
+        public float CurrentZoneDamage => Mathf.Clamp01(ZoneDamage != null ? ZoneDamage() : 0f);
+
         /// <summary>The attack <paramref name="day"/> would bring, were it locked now. Pure: the
-        /// morning's preview and the evening's lock agree unless the reputation moved between them.</summary>
+        /// morning's preview and the evening's lock agree unless the reputation, the level or the
+        /// damage moved between them.</summary>
         public EncounterRequest RequestFor(int day)
         {
             EncounterTuning tuning = Tuning;
-            float safety = reputation != null ? reputation.Current : 0f;
+            ThreatScalingTuning scaling = tuning.Scaling;
+            NightlyAttackTuning nightly = tuning.Nightly;
 
-            int tierIndex = tuning.TierFor(safety);
+            bool big = tuning.IsBigWaveDay(day);
+            float safety = reputation != null ? reputation.Current : 0f;
+            int level = CurrentLevel;
+            float damage = CurrentZoneDamage;
+
+            // Safety and the level pick the band; damage still standing takes it down.
+            float score = Mathf.Max(0f, safety + scaling.LevelBandPoints(level) - scaling.DamageBandPoints(damage));
+            int tierIndex = tuning.TierFor(score);
             if (LastTier >= 0) tierIndex = Mathf.Min(tierIndex, LastTier + Mathf.Max(0, tuning.maxTierRisePerEncounter));
 
             ThreatTierTuning tier = tuning.Tier(tierIndex);
 
-            int enemies = tier.EnemiesAfter(EncountersFought);
-            if (LastEnemies > 0) enemies = Mathf.Min(enemies, LastEnemies + Mathf.Max(0, tuning.maxEnemyRisePerEncounter));
+            // What a big wave would send: the band's number, more for every level, held to a small
+            // rise on the last attack, lightened after defeats and with the compound still broken.
+            int full = tier.EnemiesAfter(BigWavesFought) + scaling.LevelEnemies(level);
+            if (LastEnemies > 0) full = Mathf.Min(full, LastEnemies + Mathf.Max(0, tuning.maxEnemyRisePerEncounter));
 
             float relief = tuning.ReliefAfter(ConsecutiveDefeats);
-            if (relief < 1f) enemies = Mathf.Max(1, Mathf.RoundToInt(enemies * relief));
+            if (relief < 1f) full = Mathf.Max(1, Mathf.RoundToInt(full * relief));
+
+            float damageRelief = scaling.DamageRelief(damage);
+            if (damageRelief < 1f) full = Mathf.Max(1, Mathf.RoundToInt(full * damageRelief));
+
+            // A nightly attack is a share of it.
+            int enemies = big
+                ? full
+                : Mathf.Max(Mathf.Min(nightly.minEnemies, full), Mathf.RoundToInt(full * nightly.enemyShare));
 
             return new EncounterRequest
             {
@@ -217,8 +281,16 @@ namespace LastOrders.Night
                 Tier = tier,
                 Enemies = enemies,
                 LaneCount = Mathf.Max(1, LaneCount),
-                Relief = relief,
+                Relief = relief * damageRelief,
                 Seed = balance.campaignSeed,
+                IsBigWave = big,
+                MaxWaves = big ? 0 : nightly.maxWaves,
+                MaxTypesPerWave = big ? 0 : nightly.maxTypesPerWave,
+                Safety = safety,
+                PlayerLevel = level,
+                ZoneDamage = damage,
+                BandScore = score,
+                FullEnemies = full,
             };
         }
 
@@ -232,7 +304,10 @@ namespace LastOrders.Night
         /// </summary>
         public WavePlan Lock(int day)
         {
-            Current = Preview(day);
+            // Measured before the yard is made whole below: the damage the last attack left is part
+            // of what tonight is decided from.
+            CurrentRequest = RequestFor(day);
+            Current = EncounterPlanner.Build(CurrentRequest, Tuning, Roster());
 
             IsActive = true;
             IsDefeated = false;
@@ -241,11 +316,13 @@ namespace LastOrders.Night
             WavesBeaten = 0;
 
             restaurant?.BeginEncounter(Tuning.restaurantHealth);
-            outdoor?.BeginEncounter(Tuning.maxOutdoorWrecks);
+            outdoor?.BeginEncounter(CurrentRequest.IsBigWave ? Tuning.maxOutdoorWrecks : Tuning.Nightly.maxOutdoorWrecks);
 
-            Debug.Log($"[Last Orders] Attack {Current.EncounterNumber} locked for day {day}: {Current.ThreatName} threat, " +
-                      $"{Current.EnemyCount} zombies in {Current.Waves.Count} wave{(Current.Waves.Count == 1 ? "" : "s")}" +
-                      (Current.Relief < 1f ? $" (lightened to {Current.Relief:P0} after {ConsecutiveDefeats} defeats)." : "."));
+            EncounterRequest r = CurrentRequest;
+            Debug.Log($"[Last Orders] Attack {Current.EncounterNumber} locked for day {day} ({(r.IsBigWave ? "big wave" : "nightly")}): " +
+                      $"{Current.ThreatName} threat, {Current.EnemyCount} zombies in {Current.Waves.Count} wave{(Current.Waves.Count == 1 ? "" : "s")}. " +
+                      $"Safety {r.Safety:0}, level {r.PlayerLevel}, zone damage {r.ZoneDamage:P0} -> band score {r.BandScore:0}" +
+                      (Current.Relief < 1f ? $"; lightened to {Current.Relief:P0} ({ConsecutiveDefeats} defeats in a row, damage)." : "."));
 
             OnLocked?.Invoke(Current);
             return Current;
@@ -313,15 +390,20 @@ namespace LastOrders.Night
 
             bool defeated = IsDefeated;
             int wrecks = outdoor != null ? outdoor.WrecksThisEncounter : 0;
+            int knockedOut = DefensesKnockedOut != null ? Mathf.Max(0, DefensesKnockedOut()) : 0;
             float health = restaurant != null ? restaurant.HealthFraction : 1f;
 
-            EncounterResultKind kind = ReputationService.Classify(defeated, Breached, wrecks);
-            float delta = reputation != null ? reputation.ApplyEncounterResult(kind, 1f - health) : 0f;
+            // A defense knocked out is damage done, the same as a wreck in the yard.
+            bool big = CurrentRequest.IsBigWave;
+            EncounterResultKind kind = ReputationService.Classify(defeated, Breached, wrecks + knockedOut);
+            float share = big ? 1f : Tuning.Nightly.reputationShare;
+            float delta = reputation != null ? reputation.ApplyEncounterResult(kind, 1f - health, share) : 0f;
 
             var result = new EncounterResult
             {
                 Day = day,
                 EncounterNumber = Current.EncounterNumber,
+                IsBigWave = big,
                 Outcome = defeated ? EncounterOutcome.Defeat : EncounterOutcome.Victory,
                 Kind = kind,
                 ThreatName = Current.ThreatName,
@@ -330,6 +412,7 @@ namespace LastOrders.Night
                 Enemies = Current.EnemyCount,
                 Breached = Breached,
                 Wrecks = wrecks,
+                DefensesKnockedOut = knockedOut,
                 RestaurantHealthFraction = health,
                 ReputationDelta = delta,
                 ReputationAfter = reputation != null ? reputation.Current : 0f,
@@ -338,9 +421,10 @@ namespace LastOrders.Night
             if (!defeated) PayVictory(result);
 
             EncountersFought++;
+            if (big) BigWavesFought++;
             ConsecutiveDefeats = defeated ? ConsecutiveDefeats + 1 : 0;
             LastTier = Current.Tier;
-            LastEnemies = Current.EnemyCount;
+            LastEnemies = Mathf.Max(Current.EnemyCount, CurrentRequest.FullEnemies);
 
             IsActive = false;
             outdoor?.EndEncounter();
@@ -361,9 +445,11 @@ namespace LastOrders.Night
         {
             ThreatTierTuning tier = Tuning.Tier(Current.Tier);
 
-            result.Coins = tier.victoryCoins;
-            result.Experience = tier.victoryExperience;
-            result.RepairKits = tier.victoryRepairKits;
+            // A nightly attack pays a share of the band's reward and no kits: those are the big wave's.
+            float share = result.IsBigWave ? 1f : Tuning.Nightly.rewardShare;
+            result.Coins = Mathf.RoundToInt(tier.victoryCoins * share);
+            result.Experience = Mathf.RoundToInt(tier.victoryExperience * share);
+            result.RepairKits = result.IsBigWave ? tier.victoryRepairKits : 0;
 
             if (result.Coins > 0) payCoins?.Invoke(result.Coins);
             if (result.Experience > 0) addExperience?.Invoke(result.Experience);

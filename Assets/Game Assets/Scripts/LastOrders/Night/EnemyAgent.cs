@@ -6,6 +6,7 @@ using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Defense;
 using LastOrders.Perimeter;
+using LastOrders.Restaurant;
 using UnityEngine;
 
 namespace LastOrders.Night
@@ -31,10 +32,12 @@ namespace LastOrders.Night
     /// on it - until it falls or opens. The restaurant's walls never do: a zombie at them keeps
     /// hitting them, and in an attack every blow costs the restaurant health.
     ///
-    /// One decision is made, and only once a zombie is over the wall: whether there is something
-    /// in the yard to smash on the way to the restaurant. The attack's yard service answers it, and
-    /// stops answering once the night's cap on wrecks is reached - after that every zombie goes for
-    /// the restaurant.
+    /// One decision is made, every so often, and not by the zombie: whether there is something other
+    /// than the restaurant to go and smash - a defense, or once it is over the wall something in the
+    /// yard. The horde's <see cref="ZombieDirector"/> answers it, by rules of its own about who goes
+    /// for what and how many, and stops answering once the night's caps are reached - after that every
+    /// zombie goes for the restaurant. On its way to a defense a zombie smashes through whatever
+    /// barricade or wall is in the way; on its way to a bed in the yard it lets the bed go instead.
     ///
     /// Dying is seen, not a blink: the body falls - by its own animation when it has one, toppled
     /// whole when it does not - lies there a moment and sinks away, and only then is the instance
@@ -93,11 +96,11 @@ namespace LastOrders.Night
         float slowMultiplier = 1f;
         float slowUntil;
 
-        /// <summary>The yard during an attack, which hands out things to smash. Set by the spawner.</summary>
-        IOutdoorRaids raids;
+        /// <summary>The horde's brain during an attack, which hands out things to smash. Set by the spawner.</summary>
+        IZombieOrders orders;
 
-        /// <summary>What it is on its way to smash, or smashing, in the yard.</summary>
-        OutdoorWreck raidTarget;
+        /// <summary>What it is on its way to smash, or smashing, instead of the restaurant.</summary>
+        IRaidTarget raidTarget;
 
         PathFollower pathFollower;
         float raidLookIn;
@@ -124,19 +127,22 @@ namespace LastOrders.Night
         /// <summary>Turned for home as the morning comes. Off every list; nothing shoots at it.</summary>
         public bool IsRetreating => state == State.Retreating;
 
-        /// <summary>Going for something in the yard, or smashing it.</summary>
+        /// <summary>Going for something other than the restaurant - a defense, something in the yard - or smashing it.</summary>
         public bool IsRaiding => raidTarget != null;
+
+        /// <summary>What it is going for instead of the restaurant, or null.</summary>
+        public IRaidTarget RaidTarget => raidTarget;
 
         public Vector3 Position => transform.position;
 
         public string DisplayName => definition != null ? definition.displayName : name;
 
-        /// <summary>The attack's yard. The spawner hands it over as it takes the agent from its pool;
+        /// <summary>The horde's brain. The spawner hands it over as it takes the agent from its pool;
         /// without one the zombie goes straight for the restaurant, as it always did.</summary>
-        public IOutdoorRaids Raids
+        public IZombieOrders Orders
         {
-            get => raids;
-            set => raids = value;
+            get => orders;
+            set => orders = value;
         }
 
         void Awake()
@@ -194,11 +200,18 @@ namespace LastOrders.Night
             }
         }
 
-        /// <summary>How long it keeps trying to reach a raid target before giving up on it.</summary>
-        public void ConfigureRaids(IOutdoorRaids yard, float giveUpSeconds)
+        /// <summary>Who hands it things to smash, and how long it keeps trying to reach one before giving up on it.</summary>
+        public void ConfigureOrders(IZombieOrders horde, float giveUpSeconds)
         {
-            raids = yard;
+            orders = horde;
             raidGiveUpSeconds = Mathf.Max(1f, giveUpSeconds);
+        }
+
+        /// <summary>Where it heads whenever the flow field cannot say - off the field's reach, or with
+        /// no field at all: the restaurant's door. A zombie never just stands where it appeared.</summary>
+        public void SetObjective(Vector3 point)
+        {
+            if (follower != null) follower.SetFallback(point);
         }
 
         void Update()
@@ -237,8 +250,8 @@ namespace LastOrders.Night
             // have to go through? The flow field has already decided the direction.
             if (definition.isNonCombatant) return;
 
-            // Over the wall, the yard comes first: something to smash on the way, while the
-            // night still allows it.
+            // A defense to go for, or over the wall something in the yard to smash on the way -
+            // while the night still allows it.
             if (TryStartRaid(deltaTime)) return;
 
             DamageableStructure blocker = FindBlockingStructure();
@@ -272,15 +285,25 @@ namespace LastOrders.Night
 
         void TickAttacking(float deltaTime)
         {
-            if (raidTarget != null)
+            // A barricade or wall between it and the defense it was sent at comes first.
+            if (breaking != null)
             {
-                TickSmashing(deltaTime);
+                // Battering the compound wall on its own account, it can still be sent at a defense -
+                // the gun on the bastion beside it, shooting at it. Never from the restaurant's walls:
+                // a zombie at the door stays at the door.
+                if (raidTarget == null && !(breaking is RestaurantService) && TryStartRaid(deltaTime))
+                {
+                    breaking = null;
+                    return;
+                }
+
+                TickBreaking(deltaTime);
                 return;
             }
 
-            if (breaking != null)
+            if (raidTarget != null)
             {
-                TickBreaking(deltaTime);
+                TickSmashing(deltaTime);
                 return;
             }
 
@@ -324,7 +347,7 @@ namespace LastOrders.Night
         {
             if (breaking == null || (breaking is UnityEngine.Object o && o == null) || !breaking.IsInTheWay)
             {
-                ResumeMoving();
+                BrokeThrough();
                 return;
             }
 
@@ -337,7 +360,23 @@ namespace LastOrders.Night
 
             if (body != null) body.Pound();
 
-            if (breaking.TakeHit(definition.structureDps * BlowInterval, transform.position)) ResumeMoving();
+            if (breaking.TakeHit(definition.structureDps * BlowInterval, transform.position)) BrokeThrough();
+        }
+
+        /// <summary>The wall or barricade in the way is down or open: on to the defense it was sent at,
+        /// if that is still wanted, or back to the flow field.</summary>
+        void BrokeThrough()
+        {
+            breaking = null;
+
+            if (raidTarget != null && orders != null && orders.StillWanted(this, raidTarget, transform.position))
+            {
+                state = State.Raiding;
+                if (pathFollower != null) pathFollower.SetDestination(raidTarget.ClosestPoint(transform.position));
+                return;
+            }
+
+            ResumeMoving();
         }
 
         void ResumeMoving()
@@ -367,22 +406,26 @@ namespace LastOrders.Night
             if (fire != null) fire.Ignite();
         }
 
-        // --- The yard ----------------------------------------------------------------------------
+        // --- Something other than the restaurant --------------------------------------------------
 
-        /// <summary>Asks the yard for something to smash, every so often. True when it has set off for it.</summary>
+        /// <summary>Asks the horde for something to smash, every so often. True when it has set off for it.</summary>
         bool TryStartRaid(float deltaTime)
         {
-            if (raids == null || pathFollower == null) return false;
+            if (orders == null || pathFollower == null) return false;
 
             raidLookIn -= deltaTime;
             if (raidLookIn > 0f) return false;
 
             raidLookIn = RaidLookSeconds;
 
-            if (!raids.TryAssign(this, transform.position, out OutdoorWreck found) || found == null) return false;
+            if (!orders.TryAssign(this, transform.position, out IRaidTarget found) || found == null) return false;
 
             raidTarget = found;
-            raidGiveUpAt = Time.time + raidGiveUpSeconds;
+
+            // Time enough to walk there at its own pace with room to spare, and never less than the
+            // night allows: a hunter can see a gun thirty metres off.
+            float pace = Mathf.Max(0.1f, definition.moveSpeed);
+            raidGiveUpAt = Time.time + Mathf.Max(raidGiveUpSeconds, found.FlatDistance(transform.position) / pace * 1.5f + 4f);
             state = State.Raiding;
 
             if (follower != null) follower.active = false;
@@ -393,7 +436,9 @@ namespace LastOrders.Night
         /// <summary>On its way to the thing it means to smash.</summary>
         void TickRaiding()
         {
-            if (raids == null || !raids.StillWanted(this, raidTarget))
+            Vector3 here = transform.position;
+
+            if (orders == null || !orders.StillWanted(this, raidTarget, here))
             {
                 ResumeMoving();
                 return;
@@ -406,8 +451,6 @@ namespace LastOrders.Night
                 return;
             }
 
-            Vector3 here = transform.position;
-
             if (raidTarget.FlatDistance(here) <= RaidReach + (definition != null ? definition.agentRadius : 0.35f))
             {
                 blowCooldown = UnityEngine.Random.Range(0.1f, 0.5f);
@@ -415,25 +458,38 @@ namespace LastOrders.Night
                 return;
             }
 
-            // Walked into a wall on the way - the restaurant's, or the compound's from inside: the
-            // yard can wait, the flow field knows the way from here.
             if (steering != null && steering.BlockedBy is IBreakable wall && wall.IsInTheWay)
             {
+                // Sent at a defense, it smashes through whatever barricade or wall is in the way and
+                // carries on. The restaurant never falls, so that is never worth it; nor is a bed in
+                // the yard - the flow field knows the way from here.
+                if (raidTarget.WorthBreakingThroughFor && !(wall is RestaurantService))
+                {
+                    breaking = wall;
+                    blowCooldown = UnityEngine.Random.Range(0.15f, 0.6f);
+                    StartAttacking();
+                    return;
+                }
+
                 GiveUpRaid();
                 return;
             }
 
-            // The route ends at the nearest spot it fits, which can be short of the thing itself
-            // when it fills its cells: the last stretch is straight at it.
+            // Off the nav grid there is no route, and the route ends at the nearest spot it fits,
+            // which can be short of the thing itself when it fills its cells: the rest of the way is
+            // straight at it - at a walk while it is far, slowing in at the end.
             if (pathFollower.HasArrived && steering != null)
-                steering.SetDesiredDirection(raidTarget.ClosestPoint(here) - here, 0.6f);
+            {
+                Vector3 toward = raidTarget.ClosestPoint(here) - here;
+                steering.SetDesiredDirection(toward, toward.sqrMagnitude > 4f ? 1f : 0.6f);
+            }
         }
 
-        /// <summary>Smashing something in the yard: a blow a second, like a wall, until it is a wreck
-        /// or the night's cap says the rest is the restaurant's.</summary>
+        /// <summary>Smashing what it was sent at: a blow a second, like a wall, until it is down or the
+        /// night's caps say the rest is the restaurant's.</summary>
         void TickSmashing(float deltaTime)
         {
-            if (raids == null || !raids.StillWanted(this, raidTarget))
+            if (orders == null || !orders.StillWanted(this, raidTarget, transform.position))
             {
                 ResumeMoving();
                 return;
@@ -448,12 +504,13 @@ namespace LastOrders.Night
 
             if (body != null) body.Pound();
 
-            if (raids.Strike(this, raidTarget, definition.structureDps * BlowInterval, transform.position))
+            if (orders.Strike(this, raidTarget, definition.structureDps * BlowInterval, transform.position))
                 ResumeMoving();
         }
 
         void GiveUpRaid()
         {
+            orders?.GaveUp(this, raidTarget);
             ResumeMoving();
             raidLookIn = RaidRetrySeconds;
         }
@@ -462,7 +519,7 @@ namespace LastOrders.Night
         {
             if (raidTarget == null) return;
 
-            raids?.Release(this);
+            orders?.Release(this);
             raidTarget = null;
             if (pathFollower != null) pathFollower.Stop();
         }
@@ -676,8 +733,8 @@ namespace LastOrders.Night
             // Every reference to another pooled or scene object is dropped here. A retained
             // target is the classic leak: it keeps a destroyed structure alive and makes the
             // next occupant of this instance attack a wall that no longer exists.
-            raids?.Release(this);
-            raids = null;
+            orders?.Release(this);
+            orders = null;
             raidTarget = null;
             target = null;
             breaking = null;

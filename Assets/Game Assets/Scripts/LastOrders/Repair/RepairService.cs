@@ -54,7 +54,15 @@ namespace LastOrders.Repair
         public IReadOnlyList<IRepairable> All => repairables;
 
         /// <summary>Who does the work, in the player's words.</summary>
-        public string WorkerName => tuning.role == WorkerRole.MainCharacter ? "Main Character" : tuning.role.ToString();
+        /// <summary>Who will come: the repair role, or the main character while nobody of that role is on duty.</summary>
+        public string WorkerName
+        {
+            get
+            {
+                WorkerRole who = jobs != null && jobs.Covers(WorkerRole.MainCharacter, tuning.role) ? WorkerRole.MainCharacter : tuning.role;
+                return who == WorkerRole.MainCharacter ? "Main Character" : who.ToString();
+            }
+        }
 
         /// <summary>A repair has been paid for and a worker asked to go.</summary>
         public event Action<IRepairable> OnRepairQueued;

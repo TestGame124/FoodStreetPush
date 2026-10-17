@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
 using Pose = LastOrders.EditorTools.WorkerAnimations.Pose;
+using Walk = LastOrders.EditorTools.WorkerAnimations.WalkCycle;
 
 namespace LastOrders.EditorTools
 {
@@ -286,29 +287,6 @@ namespace LastOrders.EditorTools
         }
 
         // --- The walks -----------------------------------------------------------------------------
-
-        /// <summary>The stock walk's curves, to be read at any moment.</summary>
-        sealed class Walk
-        {
-            readonly List<(string name, AnimationCurve curve)> curves = new List<(string, AnimationCurve)>();
-            public readonly float Length;
-
-            public Walk(AnimationClip clip)
-            {
-                Length = clip.length;
-                foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(clip))
-                    curves.Add((binding.propertyName, AnimationUtility.GetEditorCurve(clip, binding)));
-            }
-
-            /// <summary>The walk at <paramref name="cycle"/> (0 to 1) of its cycle.</summary>
-            public Pose At(float cycle)
-            {
-                var pose = Start();
-                float t = Mathf.Repeat(cycle, 1f) * Length;
-                foreach ((string name, AnimationCurve curve) in curves) pose[name] = curve.Evaluate(t);
-                return pose;
-            }
-        }
 
         /// <summary>Scales <paramref name="name"/>'s swing about <paramref name="middle"/>.</summary>
         static void Scale(Pose pose, string name, float middle, float by)

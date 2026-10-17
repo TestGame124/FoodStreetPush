@@ -134,6 +134,13 @@ namespace LastOrders.Core
         /// waves, and the one result it leaves on the Safety Reputation.</summary>
         public readonly EncounterService Encounters;
 
+        /// <summary>The horde's brain in an attack: which zombies go for the defenses, which for the
+        /// yard and which for the restaurant, and how many go for each.</summary>
+        public readonly ZombieDirector Horde;
+
+        /// <summary>Finds the defenses the horde can go for.</summary>
+        public readonly DefenseObjectiveScanner DefenseObjectives;
+
         public readonly BuildContext BuildContext;
         public readonly BuildCommandStack Commands;
 
@@ -254,10 +261,68 @@ namespace LastOrders.Core
                                               LastOrdersBridge.NotifyCoinsPaid, LastOrdersBridge.AddExperience);
             Context.Encounters = Encounters;
 
+            // The horde decides who goes for the defenses - wherever they stand - so the yard's raiders
+            // leave them alone, and a defense knocked out does not use up the yard's cap.
+            Outdoor.DefensesTargetedElsewhere = true;
+            DefenseObjectives = new DefenseObjectiveScanner(Outdoor, () => encounter.Targeting.groundDefenseHealth,
+                                                            at => Compound.HasInterior && Compound.IsInside(at));
+
+            Horde = new ZombieDirector(() => Balance.encounter, Outdoor,
+                                       at => Compound.HasInterior && Compound.IsInside(at),
+                                       at => Restaurant.HasFootprint ? RestaurantService.DistanceTo(Restaurant.Footprint, at) : float.MaxValue,
+                                       () => Night.LiveEnemyCount)
+            {
+                Scanner = DefenseObjectives.Scan,
+            };
+
+            // The next attack is measured by the player's level and by what the last one left broken.
+            Encounters.PlayerLevel = () => LastOrdersBridge.PlayerLevel;
+            Encounters.ZoneDamage = MeasureZoneDamage;
+            Encounters.DefensesKnockedOut = () => Horde.IsActive ? Horde.KnockedOut : 0;
+
             // The morning forecast reads the next attack rather than guessing at it.
             ThreatProfile.Planner = day => Encounters.Preview(Encounters.NextAttackDay(day));
 
             WireCrossCuttingEvents();
+        }
+
+        /// <summary>
+        /// How damaged the compound is, 0 to 1: the wall and gates' missing health, the wrecks still
+        /// standing in the yard, and the defenses knocked out - each weighted by the tuning.
+        /// </summary>
+        public float MeasureZoneDamage()
+        {
+            ThreatScalingTuning scaling = (Balance.encounter ?? new EncounterTuning()).Scaling;
+
+            float missing = 0f;
+            int walls = 0, fallen = 0;
+            IReadOnlyList<ICompoundStructure> structures = Compound.Structures;
+            for (int i = 0; i < structures.Count; i++)
+            {
+                ICompoundStructure part = structures[i];
+                if (part == null || part.MaxHealth <= 0f) continue;
+
+                walls++;
+                if (part.IsDestroyed) fallen++;
+                missing += part.IsDestroyed ? 1f : 1f - Mathf.Clamp01(part.Health / part.MaxHealth);
+            }
+
+            // A long wall averages one gap away to nothing, so a few sections down count in full.
+            float wall = walls > 0 ? Mathf.Max(missing / walls, fallen / (float)Mathf.Max(1, scaling.fallenSectionsForFullWallDamage)) : 0f;
+
+            float yard = Mathf.Clamp01(Outdoor.WreckedCount / (float)Mathf.Max(1, scaling.wrecksForFullYardDamage));
+
+            int built = 0, down = 0;
+            IReadOnlyList<DefenseUnit> units = Defense.All;
+            for (int i = 0; i < units.Count; i++)
+            {
+                if (units[i] == null || !units[i].IsBuilt) continue;
+
+                built++;
+                if (units[i].IsWrecked || units[i].IsOutOfAction) down++;
+            }
+
+            return scaling.ZoneDamage(wall, yard, built > 0 ? down / (float)built : 0f);
         }
 
         readonly List<IDefenseTarget> defenseTargets = new List<IDefenseTarget>();
@@ -323,6 +388,44 @@ namespace LastOrders.Core
             // Whether a zombie ever got inside the walls is one of the things an attack's result
             // is measured by.
             Compound.OnBreached += Encounters.NoteBreach;
+
+            // The horde is told about the attack as it is locked in, each wave as it sets off - which
+            // of its zombies hunt the defenses - and lets go when the morning settles it.
+            Encounters.OnLocked += _ =>
+            {
+                DefenseObjectives.PrepareForAttack();
+                Horde.BeginAttack(Encounters.CurrentRequest.IsBigWave);
+            };
+            Encounters.OnWaveStarted += (_, __, wave) => Horde.PlanWave(wave);
+            Encounters.OnResolved += _ => Horde.EndAttack();
+
+            // With no door on the build grid, the night's zombies make for the restaurant's own doorway.
+            // Seeded again as dusk falls, whatever order the scene came up in: a field with no objective
+            // is a night of zombies standing where they appeared.
+            Perimeter.FallbackEntrances = RestaurantEntrances;
+            Restaurant.OnEntranceChanged += _ => Perimeter.SeedNavigationFields();
+            Machine.OnPhaseChanged += (_, current) =>
+            {
+                if (current == DayPhase.Dusk) Perimeter.SeedNavigationFields();
+            };
+        }
+
+        readonly List<Vector3> entrances = new List<Vector3>(3);
+
+        /// <summary>The ground just outside the restaurant's door, and a step either side of it along
+        /// the front wall, so a crowd at the door spreads across it. Empty before the walls are measured.</summary>
+        IReadOnlyList<Vector3> RestaurantEntrances()
+        {
+            entrances.Clear();
+            if (!Restaurant.HasEntrance) return entrances;
+
+            Vector3 door = Restaurant.Entrance;
+            Vector3 along = new Vector3(-Restaurant.Front.y, 0f, Restaurant.Front.x);
+
+            entrances.Add(door);
+            entrances.Add(door + along);
+            entrances.Add(door - along);
+            return entrances;
         }
 
         /// <summary>Rolls for the night's injury and writes the night's danger into the report.</summary>

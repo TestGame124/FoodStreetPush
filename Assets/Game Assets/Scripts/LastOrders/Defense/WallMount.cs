@@ -62,6 +62,9 @@ namespace LastOrders.Defense
         /// <summary>Up on a bastion over the wall, rather than on the ground.</summary>
         public bool IsMounted => mounted;
 
+        /// <summary>The wall piece it stands on while mounted: what a zombie has to bring down to get at it.</summary>
+        public CompoundWall Bastion => mounted ? bastionWall : null;
+
         public WallFooting.Result Footing { get; private set; }
 
         Vector3 FootprintMiddle => transform.TransformPoint(new Vector3(footprint.x * 0.5f, 0f, footprint.y * 0.5f));

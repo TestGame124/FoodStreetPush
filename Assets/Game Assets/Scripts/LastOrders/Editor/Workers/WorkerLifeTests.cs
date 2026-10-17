@@ -53,9 +53,12 @@ public class WorkerLifeTests
         foreach (string name in expected)
             Assert.That(System.Array.Exists(controller.parameters, p => p.name == name), Is.True, name);
 
-        Assert.That(controller.layers.Length, Is.EqualTo(2));
+        // Base, gestures, and the crew's plate-carrying arms at weight 0.
+        Assert.That(controller.layers.Length, Is.EqualTo(3));
         Assert.That(controller.layers[0].iKPass, Is.True, "the look-at needs the base layer's IK pass");
         Assert.That(controller.layers[1].avatarMask, Is.Not.Null, "gestures move the upper body only");
+        Assert.That(controller.layers[2].name, Is.EqualTo(WorkerGestures.CarryLayerName));
+        Assert.That(controller.layers[2].defaultWeight, Is.EqualTo(0f), "workers do not carry plates");
     }
 
     [Test]

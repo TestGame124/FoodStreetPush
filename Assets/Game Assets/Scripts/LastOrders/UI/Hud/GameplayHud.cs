@@ -1,6 +1,7 @@
 using System;
 using LastOrders.Core;
 using LastOrders.Data;
+using LastOrders.Economy;
 using LastOrders.DayCycle;
 using LastOrders.DayCycle.States;
 using LastOrders.Debugging;
@@ -208,6 +209,7 @@ namespace LastOrders.UI.Hud
             wallet.coins?.Set(CurrenciesController.GetCurrencyAmount(CurrencyType.Coins), false);
             wallet.gems?.Set(CurrenciesController.GetCurrencyAmount(CurrencyType.Gems), false);
             DrawXp(LevelUpSystem.GetLevel(), LevelUpSystem.GetCurrentXP(), LevelUpSystem.GetXPToNextLevel(), false);
+            SetUpFlights();
 
             CurrenciesController.OnCurrencyAmountChanged += HandleCurrency;
             LevelUpSystem.OnXpChanged += HandleXp;
@@ -388,13 +390,93 @@ namespace LastOrders.UI.Hud
 
         // --- Wallet, level, resources --------------------------------------------------------------
 
-        void HandleCurrency(CurrencyType type, int amount)
+        // --- Rewards flying in -------------------------------------------------------------------------
+
+        RewardFlights flights;
+        int routedCoins, routedGems, xpLevel;
+        float xpAt, xpToNext;
+
+        /// <summary>Coins, gems and stars earned somewhere in the world fly to their counters (see <see cref="RewardFlights"/>).</summary>
+        void SetUpFlights()
         {
-            if (type == CurrencyType.Coins) wallet.coins?.Set(amount);
-            else if (type == CurrencyType.Gems) wallet.gems?.Set(amount);
+            flights = GetComponent<RewardFlights>();
+            if (flights == null) flights = gameObject.AddComponent<RewardFlights>();
+            flights.Configure(skin, () => groups.everything == null || groups.everything.alpha > 0.5f);
+
+            if (skin != null)
+            {
+                flights.SetTarget(RewardKind.Coins, Target(wallet.coins, skin[HudSprites.IconCoin], HudPalette.Gold, 5, 7));
+                flights.SetTarget(RewardKind.Gems, Target(wallet.gems, skin[HudSprites.IconGem], HudPalette.TealLight, 1, 5));
+
+                Transform badge = profile.levelMotion != null ? profile.levelMotion.transform : profile.level != null ? profile.level.transform : null;
+                flights.SetTarget(RewardKind.Stars, new RewardFlights.Target
+                {
+                    icon = badge as RectTransform,
+                    kick = profile.levelMotion,
+                    sprite = skin[HudSprites.IconStar],
+                    tint = HudPalette.Gold,
+                    perIcon = 1,
+                    maxIcons = 5,
+                });
+            }
+
+            routedCoins = CurrenciesController.GetCurrencyAmount(CurrencyType.Coins);
+            routedGems = CurrenciesController.GetCurrencyAmount(CurrencyType.Gems);
+            xpLevel = LevelUpSystem.GetLevel();
+            xpAt = LevelUpSystem.GetCurrentXP();
+            xpToNext = LevelUpSystem.GetXPToNextLevel();
         }
 
-        void HandleXp(int level, float xp, float toNext) => DrawXp(level, xp, toNext, true);
+        static RewardFlights.Target Target(HudCounter counter, Sprite sprite, Color tint, int perIcon, int maxIcons)
+        {
+            // The counter's own icon, so the coins land in the coin.
+            Transform icon = counter != null ? counter.transform.Find("Icon") : null;
+            if (icon == null && counter != null) icon = counter.transform;
+
+            return new RewardFlights.Target
+            {
+                icon = icon as RectTransform,
+                kick = counter != null ? counter.GetComponent<HudMotion>() : null,
+                sprite = sprite,
+                tint = tint,
+                perIcon = perIcon,
+                maxIcons = maxIcons,
+            };
+        }
+
+        void HandleCurrency(CurrencyType type, int amount)
+        {
+            if (type == CurrencyType.Coins)
+            {
+                int gained = amount - routedCoins;
+                routedCoins = amount;
+                Route(RewardKind.Coins, gained, () => wallet.coins?.Set(CurrenciesController.GetCurrencyAmount(CurrencyType.Coins)));
+            }
+            else if (type == CurrencyType.Gems)
+            {
+                int gained = amount - routedGems;
+                routedGems = amount;
+                Route(RewardKind.Gems, gained, () => wallet.gems?.Set(CurrenciesController.GetCurrencyAmount(CurrencyType.Gems)));
+            }
+        }
+
+        void HandleXp(int level, float xp, float toNext)
+        {
+            // Experience resets at each level, so what was gained is measured across the level-up.
+            float gained = level == xpLevel ? xp - xpAt : level > xpLevel ? xpToNext - xpAt + xp : 0f;
+            xpLevel = level;
+            xpAt = xp;
+            xpToNext = toNext;
+
+            Route(RewardKind.Stars, Mathf.RoundToInt(gained),
+                  () => DrawXp(LevelUpSystem.GetLevel(), LevelUpSystem.GetCurrentXP(), LevelUpSystem.GetXPToNextLevel(), true));
+        }
+
+        void Route(RewardKind kind, int gained, Action show)
+        {
+            if (flights != null) flights.Route(kind, gained, show);
+            else show();
+        }
 
         void DrawXp(int level, float xp, float toNext, bool animate)
         {
@@ -567,7 +649,10 @@ namespace LastOrders.UI.Hud
                     if (plan != null)
                     {
                         string waves = plan.Waves.Count == 1 ? "1 wave" : $"{plan.Waves.Count} waves";
-                        banner.Show("ZOMBIES INCOMING", $"{plan.ThreatName} threat  ·  {waves}  ·  get ready!", HudPalette.Red);
+                        if (plan.IsBigWave)
+                            banner.Show("BIG WAVE INCOMING", $"{plan.ThreatName} threat  ·  {waves}  ·  get ready!", HudPalette.Red);
+                        else
+                            banner.Show("ZOMBIES INCOMING", $"A small pack  ·  {plan.EnemyCount} zombies  ·  get ready!", HudPalette.Red);
                     }
                     else
                     {
@@ -667,8 +752,12 @@ namespace LastOrders.UI.Hud
             if (composition == null) return;
 
             int value = Mathf.RoundToInt(composition.Reputation.Current);
-            Toast($"Safety {value}/100. A safer diner draws more visitors and bigger parties - and tougher attacks. " +
-                  "Winning defenses raises it; losing one costs it.", HudTone.Info);
+            // Who comes and how hard the night is both ride on Safety and the level, so the tap says both.
+            var visitors = FindFirstObjectByType<FoodStreet.Visitors.VisitorManager>();
+            string clientele = visitors != null ? visitors.DescribeClientele() : string.Empty;
+
+            Toast($"Safety {value}/100. Safety and your level bring more visitors - and tougher zombies. " +
+                  $"{clientele} {HudNarrator.ThreatBreakdown(composition)}", HudTone.Info);
         }
 
         // --- The restaurant under attack -----------------------------------------------------------

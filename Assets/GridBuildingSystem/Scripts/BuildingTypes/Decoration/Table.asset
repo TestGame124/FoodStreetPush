@@ -20,7 +20,7 @@ MonoBehaviour:
   PriceAmount: 40
   Sellable: 1
   prefab: {fileID: 4782235985580720507, guid: 4782ee6b5de75974e9ec2f10bcae7921, type: 3}
-  visual: {fileID: 2499414142690952232, guid: 01d60c1d39e43f84ba7d13a8a0879ac6, type: 3}
+  visual: {fileID: 4782235985580720507, guid: 4782ee6b5de75974e9ec2f10bcae7921, type: 3}
   width: 3
   height: 3
   placementProfile: {fileID: 0}

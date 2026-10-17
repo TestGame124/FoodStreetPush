@@ -10,21 +10,33 @@ namespace FoodStreet.Visitors
     /// Shared by the people and the cars, so a visitor stepping out of a car that stopped
     /// somewhere else is impossible: both read the same points and arrive by the same test.
     ///
-    /// Deliberately NOT PathFollower. The walls in this level are plain scene cubes that were
-    /// never registered on the build grid, so grid pathing cannot see them and would route
-    /// straight through the restaurant; and a car steered by A* with avoidance wanders on the
-    /// straight of a road, because the grid has no notion of a lane. Six authored points do the
-    /// job exactly and fail visibly when they are wrong.
+    /// Deliberately NOT PathFollower: a car steered by A* with avoidance wanders on the straight of
+    /// a road, because the grid has no notion of a lane, and a handful of authored points - the
+    /// gate, the door, the chair - do the job exactly and fail visibly when they are wrong.
     ///
     /// The one thing it does respect is a gate. Every step tells the gates where it is heading,
     /// so the one on its line opens in time, and a step into a gate that is still shut is not
     /// taken - the car or the person waits at it until it has opened.
+    ///
+    /// People also go round things: with a <see cref="GridRadius"/>, each leg between two points is
+    /// walked as the turns of a route round whatever stands on the nav grid - other diners' tables
+    /// and chairs, the counters, the walls - found once per leg (<see cref="GridRoute"/>). The points
+    /// themselves, and <see cref="Remaining"/>, are unchanged by it. Cars leave it at 0 and keep to
+    /// their lanes.
     /// </summary>
     public sealed class WaypointWalker
     {
+        /// <summary>How close to a turn counts as having made it.</summary>
+        const float TurnRadius = 0.15f;
+
         readonly List<Vector3> points = new List<Vector3>();
+        readonly List<Vector3> turns = new List<Vector3>();
 
         int next;
+        int turn, turnsFor = -1, turnsVersion = -1;
+
+        /// <summary>Metres of body kept clear of what stands on the nav grid; 0 walks each leg straight.</summary>
+        public float GridRadius { get; set; }
 
         /// <summary>How far the mover reaches ahead of its own position, in metres: half a car's
         /// length, nothing for a person. A shut gate holds them back by this much more, so a car's
@@ -50,6 +62,7 @@ namespace FoodStreet.Visitors
         {
             points.Clear();
             next = 0;
+            turnsFor = -1;
 
             if (path == null) return;
 
@@ -68,6 +81,7 @@ namespace FoodStreet.Visitors
         {
             points.Clear();
             next = 0;
+            turnsFor = -1;
         }
 
         /// <summary>
@@ -82,13 +96,25 @@ namespace FoodStreet.Visitors
             if (mover == null || Arrived) return false;
 
             Vector3 here = mover.position;
-            Vector3 goal = points[next];
+            Vector3 point = points[next];
+            point.y = here.y;
+
+            // Round what is in the way: the next turn of this leg, until only the point is left.
+            Vector3 via = point;
+            bool turning = GridRadius > 0f && NextTurn(here, out via);
+            Vector3 goal = turning ? via : point;
             goal.y = here.y;
 
             Vector3 offset = goal - here;
             float distance = offset.magnitude;
 
-            if (distance <= arriveRadius)
+            if (turning && distance <= TurnRadius)
+            {
+                turn++;
+                return false;
+            }
+
+            if (!turning && distance <= arriveRadius)
             {
                 next++;
                 return Arrived;
@@ -100,7 +126,7 @@ namespace FoodStreet.Visitors
             // Asked every step rather than once per leg: a gate that is locked shut while a
             // zombie is at it opens the moment it is gone, and whoever is waiting has to be
             // asking then.
-            RequestGatesAhead(here, goal);
+            RequestGatesAhead(here, point);
 
             if (MovementBarriers.FindBlocking(here, step, BodyRadius, MoverKind.Friendly) == null)
                 mover.position = step;
@@ -146,6 +172,31 @@ namespace FoodStreet.Visitors
         /// <summary>Metres of route ahead a gate is told about. Far enough that a car at road speed
         /// finds it fully open, and a person just finds it open a little early.</summary>
         const float GateLookAhead = 16f;
+
+        /// <summary>
+        /// The next turn on the way to the current point, planned when the leg starts and again if the
+        /// grid changes under it (something built, or sold). False once only the point itself is left,
+        /// or when the leg is walked straight.
+        /// </summary>
+        bool NextTurn(Vector3 here, out Vector3 via)
+        {
+            via = default;
+
+            int version = GridRoute.Version;
+            if (turnsFor != next || turnsVersion != version)
+            {
+                turnsFor = next;
+                turnsVersion = version;
+                turn = 0;
+                if (!GridRoute.Plan(here, points[next], GridRadius, turns)) turns.Clear();
+            }
+
+            // The last entry is the point itself: walked to, and arrived at, as any point is.
+            if (turn >= turns.Count - 1) return false;
+
+            via = turns[turn];
+            return true;
+        }
 
         /// <summary>Faces a direction immediately. Used on arrival, where a seat or a bay has a
         /// facing of its own that the approach does not.</summary>

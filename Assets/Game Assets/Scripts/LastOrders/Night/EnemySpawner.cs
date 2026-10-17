@@ -134,6 +134,14 @@ namespace LastOrders.Night
                 if (leaving[i] != null && leaving[i].isActiveAndEnabled) leaving[i].Retreat(home);
         }
 
+        /// <summary>What every zombie is ultimately after: the restaurant's door, or its middle before
+        /// the door has been measured.</summary>
+        Vector3 Objective()
+        {
+            var restaurant = composition.Restaurant;
+            return restaurant != null && restaurant.HasEntrance ? restaurant.Entrance : RestaurantCentre();
+        }
+
         Vector3 RestaurantCentre()
         {
             var restaurant = composition.Restaurant;
@@ -189,9 +197,15 @@ namespace LastOrders.Night
             agent.Configure(definition, position);
             if (definition.tintBody) Tint(agent, definition.silhouetteColour);
 
-            // Over the wall, it goes for the yard first - until the night's cap on wrecks is reached.
-            agent.ConfigureRaids(composition.Outdoor,
-                                 composition.Encounters != null ? composition.Encounters.Tuning.raidGiveUpSeconds : 20f);
+            // The horde decides whether it hunts the defenses, smashes the yard once over the wall,
+            // or keeps on for the restaurant - and lets go of it all once the night's caps are reached.
+            EncounterTuning tuning = composition.Encounters != null ? composition.Encounters.Tuning : null;
+            agent.ConfigureOrders(composition.Horde,
+                                  tuning != null ? Mathf.Max(tuning.raidGiveUpSeconds, tuning.Targeting.giveUpSeconds) : 20f);
+            composition.Horde.Enlist(agent, definition);
+
+            // Wherever the flow field cannot say, it makes for the restaurant's door.
+            agent.SetObjective(Objective());
 
             laneOf[agent] = lane;
             night.Register(agent);

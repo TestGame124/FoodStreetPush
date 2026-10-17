@@ -1,50 +1,42 @@
-using FoodStreet.Navigation;
+using System.Collections.Generic;
 using FoodStreet.Visitors;
+using LastOrders.Crew;
+using LastOrders.Jobs;
 using LastOrders.Kitchen;
 using UnityEngine;
 
 namespace LastOrders.Restaurant
 {
     /// <summary>
-    /// Waiting staff: carries dishes from the serving pass to the customers who ordered them.
+    /// Waiting tables: carries dishes from the serving pass to the customers who ordered them.
     ///
-    /// Waits at its place in front of the pass. When a seated customer's order is ready on the pass it
-    /// takes the order on - one waiter per customer, the dish promised to them so no other waiter walks
-    /// for it - goes to the pass, lifts the plate, carries it in both hands to the side of the table
-    /// and sets it down in front of them; then the meal is served and paid for, as a tapped serve
-    /// always was. Customers the player taps are seen to first, then whoever has waited longest.
+    /// When a seated customer's order is ready on the pass it takes the order on - one waiter per
+    /// customer, the dish promised to them so no other waiter walks for it - goes to the pass, lifts the
+    /// plate, carries it in both hands to the side of the table and sets it down in front of them; then
+    /// the meal is served and paid for, as a tapped serve always was. Customers the player taps are seen
+    /// to first, then whoever has waited longest.
     ///
     /// If the customer is gone by the time the plate gets there, it goes back on the pass. While a
-    /// waiter is on duty a tap on a customer calls one over rather than serving on the spot
+    /// waiter is free to serve, a tap on a customer calls one over rather than serving on the spot
     /// (<see cref="OnDuty"/>), so the dish is always seen to come from the kitchen.
     ///
-    /// Looks for work a few times a second, not every frame, and walks the nav grid round the tables
-    /// and the counter.
+    /// One of a crew member's duties (<see cref="ICrewDuty"/>): it has the body while there is an order
+    /// to bring, and lets a more important duty - helping at a station - take it. With nothing to
+    /// bring, a crew member who also has chores goes off to them; one who has not walks back to their
+    /// place at the pass and waits there.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class Waiter : MonoBehaviour
+    [RequireComponent(typeof(NavWalker))]
+    public sealed class Waiter : MonoBehaviour, ICrewDuty
     {
         enum Step { AtHome, ToPass, Lifting, ToTable, SettingDown, BringingBack, GoingHome }
 
-        static readonly int MoveId = Animator.StringToHash("Move");
+        static readonly List<Waiter> everyone = new List<Waiter>();
 
-        /// <summary>The furthest a walker stopped short is stepped the rest of the way, ignoring the grid.</summary>
-        const float MaxStepIn = 1.6f;
-
-        /// <summary>Close enough to the spot walked to.</summary>
-        const float ArriveRadius = 0.12f;
-
-        static int onDuty;
-
-        [SerializeField] Animator animator;
-
-        [Tooltip("The animator layer that holds the arms up round the plate.")]
+        [Tooltip("The animator layer that holds the arms up round the plate, when it has none called 'Carry'.")]
         [SerializeField] int carryLayer = 1;
 
-        [Header("Walking")]
-        [SerializeField] float walkSpeed = 2.2f;
-        [SerializeField] float bodyRadius = 0.28f;
-        [SerializeField] float turnSpeed = 600f;
+        [SerializeField] int priority = 20;
 
         [Header("Serving")]
         [SerializeField] float liftSeconds = 0.32f;
@@ -56,16 +48,16 @@ namespace LastOrders.Restaurant
         [Tooltip("Where the plate rides: this far in front of the hands, and this far above them.")]
         [SerializeField] Vector2 carryOffset = new Vector2(0.06f, 0.05f);
 
-        PathFollower mover;
-        SteeringAgent body;
+        NavWalker legs;
+        CrewBrain brain;
+        Animator animator;
         VisitorManager visitors;
         Transform leftHand, rightHand;
 
         Step step;
-        float nextLook, carryWeight, stepping;
-        Vector3 home, facing, target;
-        Vector3? steppedInFrom, stepOutTo;
-        int retries;
+        float nextLook, readyAt, carryWeight;
+        bool ready;
+        Vector3 home;
         Quaternion homeTurn;
 
         Visitor guest;
@@ -75,44 +67,87 @@ namespace LastOrders.Restaurant
         PassDish carried;
         Transform pickUp;
 
-        /// <summary>How many waiters are working. Taps call one over while there are any.</summary>
-        public static int OnDuty => onDuty;
+        /// <summary>How many waiters are free to serve - on duty, and not taken off it to help in the
+        /// kitchen. Taps call one over while there are any; with none, a tap serves on the spot.</summary>
+        public static int OnDuty
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < everyone.Count; i++)
+                    if (everyone[i] != null && everyone[i].Serving) n++;
+                return n;
+            }
+        }
 
         /// <summary>True while it has nobody to serve.</summary>
         public bool IsFree => step == Step.AtHome || step == Step.GoingHome;
 
+        /// <summary>On duty and free to serve: no more important duty has the crew member.</summary>
+        public bool Serving => isActiveAndEnabled && (brain == null || brain.IsFreeFor(this));
+
+        public int Priority => priority;
+
+        /// <summary>An order in hand, or one up on the pass for somebody nobody is bringing it to.</summary>
+        public bool HasWork => !IsFree || OrderWaiting();
+
+        public string Activity
+        {
+            get
+            {
+                switch (step)
+                {
+                    case Step.ToPass:
+                    case Step.Lifting: return "Fetching an order from the pass";
+                    case Step.ToTable:
+                    case Step.SettingDown: return guest != null ? $"Serving {guest.DisplayName}" : "Serving";
+                    case Step.BringingBack: return "Taking a plate back to the pass";
+                    case Step.GoingHome: return "Heading back to the pass";
+                    default: return "Waiting at the pass";
+                }
+            }
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => onDuty = 0;
+        static void ResetStatics() => everyone.Clear();
 
         void Awake()
         {
-            mover = NavAgentSetup.Ensure(gameObject);
-            body = GetComponent<SteeringAgent>();
-            if (body != null) body.ConfigureBody(walkSpeed, bodyRadius);
-            mover.StoppingDistance = 0.12f;
+            // A waiter set up before the crew had legs of their own gets them here.
+            legs = GetComponent<NavWalker>();
+            if (legs == null) legs = gameObject.AddComponent<NavWalker>();
+            brain = GetComponent<CrewBrain>();
+            if (brain == null) brain = gameObject.AddComponent<CrewBrain>();
 
-            if (animator == null) animator = GetComponentInChildren<Animator>();
+            animator = legs.Animator != null ? legs.Animator : GetComponentInChildren<Animator>();
             if (animator != null && animator.isHuman)
             {
                 leftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
                 rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
             }
+
+            if (animator != null)
+            {
+                int named = animator.GetLayerIndex(WorkerGestures.CarryLayerName);
+                if (named > 0) carryLayer = named;
+            }
+
+            home = transform.position;
+            homeTurn = transform.rotation;
         }
 
         void OnEnable()
         {
-            onDuty++;
-            home = transform.position;
-            homeTurn = transform.rotation;
+            everyone.Add(this);
             step = Step.AtHome;
             nextLook = Time.time + Random.Range(0f, lookInterval);
         }
 
         void OnDisable()
         {
-            onDuty--;
+            everyone.Remove(this);
             Drop();
-            if (mover != null) mover.Stop();
+            step = Step.AtHome;
         }
 
         /// <summary>Its place at the pass, where it waits for the next dish.</summary>
@@ -128,18 +163,28 @@ namespace LastOrders.Restaurant
             home = position;
             homeTurn = rotation;
 
-            if (Application.isPlaying && isActiveAndEnabled && step == Step.AtHome) GoHome();
+            if (Application.isPlaying && isActiveAndEnabled && step == Step.AtHome && brain != null && brain.Active == (ICrewDuty)this)
+                GoHome();
         }
 
-        // --- The round ------------------------------------------------------------------------------
+        // --- The duty --------------------------------------------------------------------------------
 
-        void Update()
+        public void SetActive(bool active)
+        {
+            if (active) return;
+
+            // Taken off it - sent to the kitchen, or picked up - with an order in hand: the order goes
+            // back for somebody else, the plate back on the pass.
+            Drop();
+            step = Step.AtHome;
+        }
+
+        public void Tick(float dt)
         {
             switch (step)
             {
                 case Step.AtHome:
-                    Turn(homeTurn * Vector3.forward);
-                    LookForWork();
+                    if (!LookForWork()) legs.Turn(homeTurn * Vector3.forward);
                     break;
 
                 case Step.ToPass:
@@ -148,7 +193,7 @@ namespace LastOrders.Restaurant
                         Drop();
                         GoHome();
                     }
-                    else if (Reached() && Turn(facing)) Lift();
+                    else if (legs.Arrive()) Lift();
 
                     break;
 
@@ -158,21 +203,19 @@ namespace LastOrders.Restaurant
 
                 case Step.ToTable:
                     if (!StillWanted()) BringBack();
-                    else if (Reached() && Turn(facing)) SetDown();
+                    else if (legs.Arrive()) SetDown();
                     break;
 
                 case Step.BringingBack:
-                    if (Reached() && Turn(facing)) PutBack();
+                    if (legs.Arrive()) PutBack();
                     break;
 
                 case Step.GoingHome:
                     // Taken by the next order on the way, rather than walking back to stand still.
                     if (LookForWork()) break;
-                    if (Reached()) step = Step.AtHome;
+                    if (legs.Arrive()) step = Step.AtHome;
                     break;
             }
-
-            Animate();
         }
 
         void LateUpdate()
@@ -182,16 +225,34 @@ namespace LastOrders.Restaurant
                 Pose hands = CarryPose();
                 carried.transform.SetPositionAndRotation(hands.position, hands.rotation);
             }
+
+            // The arms come up as the plate is lifted and down as it is set on the table.
+            if (animator == null) return;
+            float want = carried != null && step != Step.SettingDown ? 1f : 0f;
+            carryWeight = Mathf.MoveTowards(carryWeight, want, Time.deltaTime / 0.25f);
+            if (carryLayer > 0 && carryLayer < animator.layerCount) animator.SetLayerWeight(carryLayer, carryWeight);
+        }
+
+        // --- The round ------------------------------------------------------------------------------
+
+        /// <summary>Is any order up and waiting for a waiter? Looked at a few times a second, not every frame.</summary>
+        bool OrderWaiting()
+        {
+            if (Time.time < readyAt) return ready;
+
+            readyAt = Time.time + lookInterval;
+            ready = FindGuest(out _, out _);
+            return ready;
         }
 
         /// <summary>
-        /// Picks the next customer to bring a dish to: one the player tapped, else whoever has waited
-        /// longest, among those whose whole order is on the pass and no other waiter has taken on.
+        /// The next customer to bring a dish to: one the player tapped, else whoever has waited longest,
+        /// among those whose whole order is on the pass and no other waiter has taken on.
         /// </summary>
-        bool LookForWork()
+        bool FindGuest(out Visitor best, out VisitorOrder order)
         {
-            if (Time.time < nextLook) return false;
-            nextLook = Time.time + lookInterval;
+            best = null;
+            order = default;
 
             ServingPassBoard board = ServingPassBoard.Instance;
             if (board == null) return false;
@@ -199,12 +260,10 @@ namespace LastOrders.Restaurant
             if (visitors == null) visitors = FindFirstObjectByType<VisitorManager>();
             if (visitors == null) return false;
 
-            Visitor best = null;
-            var order = default(VisitorOrder);
-            var everyone = visitors.Active;
-            for (int i = 0; i < everyone.Count; i++)
+            IReadOnlyList<Visitor> everybody = visitors.Active;
+            for (int i = 0; i < everybody.Count; i++)
             {
-                Visitor v = everyone[i];
+                Visitor v = everybody[i];
                 if (v == null || !v.IsWaitingToBeServed || v.HasWaiter || v.IsAlarmed) continue;
 
                 VisitorOrder wants = v.Order;
@@ -218,7 +277,19 @@ namespace LastOrders.Restaurant
                 }
             }
 
-            if (best == null || !best.ClaimWaiter(this)) return false;
+            return best != null;
+        }
+
+        /// <summary>Takes on the next customer's order, if there is one, and sets off for the pass.</summary>
+        bool LookForWork()
+        {
+            if (Time.time < nextLook) return false;
+            nextLook = Time.time + lookInterval;
+
+            if (!FindGuest(out Visitor best, out VisitorOrder order)) return false;
+
+            ServingPassBoard board = ServingPassBoard.Instance;
+            if (!best.ClaimWaiter(this)) return false;
             if (!board.Reserve(order.Item, order.Amount))
             {
                 best.ReleaseWaiter(this);
@@ -229,6 +300,7 @@ namespace LastOrders.Restaurant
             dish = order.Item;
             amount = order.Amount;
             promised = true;
+            ready = false;
 
             pickUp = board.PickUpPoint(dish, transform.position);
             if (pickUp == null)
@@ -237,7 +309,7 @@ namespace LastOrders.Restaurant
                 return false;
             }
 
-            WalkTo(pickUp.position, pickUp.forward);
+            legs.WalkTo(pickUp.position, pickUp.forward);
             step = Step.ToPass;
             return true;
         }
@@ -267,7 +339,7 @@ namespace LastOrders.Restaurant
             Vector3 stand = guest.ServicePoint(transform.position);
             Vector3 toTable = guest.TableEdge - stand;
             toTable.y = 0f;
-            WalkTo(stand, toTable);
+            legs.WalkTo(stand, toTable);
             step = Step.ToTable;
         }
 
@@ -314,7 +386,7 @@ namespace LastOrders.Restaurant
                 return;
             }
 
-            WalkTo(pickUp.position, pickUp.forward);
+            legs.WalkTo(pickUp.position, pickUp.forward);
             step = Step.BringingBack;
         }
 
@@ -334,7 +406,7 @@ namespace LastOrders.Restaurant
 
         void GoHome()
         {
-            WalkTo(home, homeTurn * Vector3.forward);
+            legs.WalkTo(home, homeTurn * Vector3.forward);
             step = Step.GoingHome;
         }
 
@@ -360,117 +432,6 @@ namespace LastOrders.Restaurant
         }
 
         bool StillWanted() => guest != null && guest.isActiveAndEnabled && guest.IsServedBy(this) && guest.IsWaitingToBeServed;
-
-        // --- The body -------------------------------------------------------------------------------
-
-        /// <summary>
-        /// Sets off for <paramref name="point"/>, to face <paramref name="thenFace"/> there. Stepped in
-        /// beside a table, it first steps back out the way it came: the table's cells are solid, and a
-        /// route asked for from inside them goes nowhere.
-        /// </summary>
-        void WalkTo(Vector3 point, Vector3 thenFace)
-        {
-            target = point;
-            facing = thenFace;
-            retries = 0;
-
-            if (steppedInFrom.HasValue)
-            {
-                stepOutTo = steppedInFrom;
-                steppedInFrom = null;
-                mover.Stop();
-                return;
-            }
-
-            mover.SetDestination(point);
-        }
-
-        /// <summary>
-        /// True once at the spot walked to. The nav grid stops a walker at the edge of the cells a
-        /// table stands on, a stride short of the chair's side: that last stride is stepped straight
-        /// in, as the customers do, and remembered so it can be stepped out again. A route that could
-        /// not be found is asked for again, and in the end walked straight.
-        /// </summary>
-        bool Reached()
-        {
-            stepping = 0f;
-
-            if (stepOutTo.HasValue)
-            {
-                if (StepToward(stepOutTo.Value))
-                {
-                    stepOutTo = null;
-                    mover.SetDestination(target);
-                }
-
-                return false;
-            }
-
-            if (!mover.HasArrived) return false;
-
-            Vector3 to = target - transform.position;
-            to.y = 0f;
-            float distance = to.magnitude;
-            if (distance <= ArriveRadius) return true;
-
-            if (distance <= MaxStepIn)
-            {
-                if (!steppedInFrom.HasValue) steppedInFrom = transform.position;
-                StepToward(target);
-                return false;
-            }
-
-            // The nav grid says "arrived" when it finds no route at all, so callers are never left
-            // waiting. Here that is a failure: ask again, then walk it.
-            if (retries < 2)
-            {
-                retries++;
-                mover.SetDestination(target);
-                return false;
-            }
-
-            StepToward(target, walkSpeed);
-            return false;
-        }
-
-        /// <summary>A stride straight toward <paramref name="point"/>, ignoring the grid; true once there.</summary>
-        bool StepToward(Vector3 point, float pace = 0f)
-        {
-            Vector3 to = point - transform.position;
-            to.y = 0f;
-            float distance = to.magnitude;
-            if (distance <= 0.04f) return true;
-
-            if (pace <= 0f) pace = walkSpeed * 0.6f;
-            transform.position += to / distance * Mathf.Min(distance, pace * Time.deltaTime);
-            Turn(to);
-            stepping = pace;
-            return false;
-        }
-
-        /// <summary>Turns toward <paramref name="direction"/> on the spot; true once it is facing it.</summary>
-        bool Turn(Vector3 direction)
-        {
-            direction.y = 0f;
-            if (direction.sqrMagnitude < 1e-4f) return true;
-
-            Quaternion want = Quaternion.LookRotation(direction, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, want, turnSpeed * Time.deltaTime);
-            return Quaternion.Angle(transform.rotation, want) < 4f;
-        }
-
-        void Animate()
-        {
-            if (animator == null) return;
-
-            float speed = Mathf.Max(body != null ? body.Velocity.magnitude : 0f, stepping);
-            animator.SetFloat(MoveId, Mathf.Clamp01(speed / Mathf.Max(0.1f, walkSpeed)), 0.1f, Time.deltaTime);
-
-            // The arms come up as the plate is lifted and down as it is set on the table.
-            float want = carried != null && step != Step.SettingDown ? 1f : 0f;
-            carryWeight = Mathf.MoveTowards(carryWeight, want, Time.deltaTime / 0.25f);
-            if (carryLayer > 0 && carryLayer < animator.layerCount) animator.SetLayerWeight(carryLayer, carryWeight);
-        }
 
         /// <summary>Between the hands, a little in front and above them, level and facing the way they walk.</summary>
         Pose CarryPose()

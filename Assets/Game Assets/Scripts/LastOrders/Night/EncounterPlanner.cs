@@ -24,6 +24,29 @@ namespace LastOrders.Night
 
         public float Relief;
         public int Seed;
+
+        /// <summary>A big wave - every few days - rather than the small pack of the nights between.</summary>
+        public bool IsBigWave;
+
+        /// <summary>Waves and kinds per wave at most, over the band's own. Zero leaves the band's.</summary>
+        public int MaxWaves;
+        public int MaxTypesPerWave;
+
+        // --- What it was measured from, for the HUD to explain ----------------------------------
+
+        public float Safety;
+        public int PlayerLevel;
+
+        /// <summary>How damaged the compound was, 0 to 1.</summary>
+        public float ZoneDamage;
+
+        /// <summary>The Safety Reputation with the level's points added and the damage's taken off:
+        /// what picked the band.</summary>
+        public float BandScore;
+
+        /// <summary>What a big wave would have sent tonight - the number the next attack's growth is
+        /// limited against, whichever kind tonight is.</summary>
+        public int FullEnemies;
     }
 
     /// <summary>
@@ -86,6 +109,7 @@ namespace LastOrders.Night
                 EncounterNumber = request.EncounterNumber,
                 Relief = request.Relief <= 0f ? 1f : request.Relief,
                 LaneCount = Mathf.Max(1, request.LaneCount),
+                IsBigWave = request.IsBigWave,
             };
 
             List<EnemyDefinition> kinds = Unlocked(roster, request.Day, tier.maxThreatCost);
@@ -93,7 +117,9 @@ namespace LastOrders.Night
 
             var rng = DeterministicRandom.ForNight(request.Day, request.EncounterNumber, request.Seed, Salt);
 
-            int waves = Mathf.Clamp(tier.waves, 1, Mathf.Min(3, request.Enemies));
+            int waveLimit = request.MaxWaves > 0 ? Mathf.Min(3, request.MaxWaves) : 3;
+            int typesPerWave = request.MaxTypesPerWave > 0 ? Mathf.Min(tier.typesPerWave, request.MaxTypesPerWave) : tier.typesPerWave;
+            int waves = Mathf.Clamp(tier.waves, 1, Mathf.Min(waveLimit, request.Enemies));
             int[] sizes = Split(request.Enemies, waves);
             List<int> sides = ShuffledLanes(plan.LaneCount, ref rng);
             var used = new HashSet<EnemyDefinition>();
@@ -110,7 +136,7 @@ namespace LastOrders.Night
                     if (!wave.Lanes.Contains(second)) wave.Lanes.Add(second);
                 }
 
-                PickKinds(kinds, Mathf.Max(1, tier.typesPerWave), w, used, wave.Kinds, ref rng);
+                PickKinds(kinds, Mathf.Max(1, typesPerWave), w, used, wave.Kinds, ref rng);
 
                 List<EnemyDefinition> members = Fill(wave.Kinds, sizes[w], ref rng);
                 Schedule(wave, members, tuning, ref rng);

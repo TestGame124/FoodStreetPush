@@ -74,6 +74,16 @@ namespace LastOrders.Perimeter
         public IReadOnlyList<Vector2Int> PantryTiles => pantryTiles;
 
         /// <summary>
+        /// The restaurant's way in, in world space, for when no door stands on the build grid - a
+        /// restaurant whose walls and door are scene pieces rather than placed objects. Three of the
+        /// four fields seed from doors; with no door and nothing here they had no objective at all,
+        /// and every zombie stood where it appeared for the whole night.
+        /// </summary>
+        public Func<IReadOnlyList<Vector3>> FallbackEntrances { get; set; }
+
+        readonly List<Vector2Int> entranceTiles = new List<Vector2Int>();
+
+        /// <summary>
         /// Rescans the grid. Driven by the build command stack's executed event rather than
         /// by Update, because the grid only changes when a command changes it.
         /// </summary>
@@ -218,16 +228,36 @@ namespace LastOrders.Perimeter
         public void SeedNavigationFields()
         {
             NavigationSystem nav = NavigationSystem.Instance;
-            if (nav == null) return;
+            if (nav == null || nav.Grid == null) return;
 
-            nav.SetFlowFieldSeeds(FlowFieldId.Doors, doorTiles);
-            nav.SetFlowFieldSeeds(FlowFieldId.Breach, doorTiles);
-            nav.SetFlowFieldSeeds(FlowFieldId.WeakestPoint, doorTiles);
+            IReadOnlyList<Vector2Int> doors = doorTiles.Count > 0 ? doorTiles : EntranceTiles(nav);
+
+            nav.SetFlowFieldSeeds(FlowFieldId.Doors, doors);
+            nav.SetFlowFieldSeeds(FlowFieldId.Breach, doors);
+            nav.SetFlowFieldSeeds(FlowFieldId.WeakestPoint, doors);
 
             // The Glutton ignores people entirely and beelines for the stores, so its field
             // seeds somewhere else completely. With no pantry built it has nothing to want,
             // and falls back to behaving like everything else.
-            nav.SetFlowFieldSeeds(FlowFieldId.Pantry, pantryTiles.Count > 0 ? pantryTiles : doorTiles);
+            nav.SetFlowFieldSeeds(FlowFieldId.Pantry, pantryTiles.Count > 0 ? pantryTiles : doors);
+        }
+
+        /// <summary>The build tiles under <see cref="FallbackEntrances"/>, those on the grid.</summary>
+        List<Vector2Int> EntranceTiles(NavigationSystem nav)
+        {
+            entranceTiles.Clear();
+
+            IReadOnlyList<Vector3> points = FallbackEntrances?.Invoke();
+            if (points == null) return entranceTiles;
+
+            NavGrid grid = nav.Grid.Grid;
+            for (int i = 0; i < points.Count; i++)
+            {
+                Vector2Int tile = grid.WorldToBuildTile(points[i]);
+                if (grid.BuildTileInBounds(tile.x, tile.y) && !entranceTiles.Contains(tile)) entranceTiles.Add(tile);
+            }
+
+            return entranceTiles;
         }
     }
 }

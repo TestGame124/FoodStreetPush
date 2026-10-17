@@ -61,10 +61,10 @@ namespace LastOrders.DayCycle.States
 
         public void OnEnter(DayPhase previous)
         {
-            // An attack's warning is the attack cycle's preparation countdown; the old timed
-            // night keeps its own.
+            // An attack's warning is the attack cycle's preparation countdown - shorter before a
+            // nightly attack than before a big wave; the old timed night keeps its own.
             remaining = context.Encounters != null
-                ? context.Encounters.Tuning.preparationSeconds
+                ? context.Encounters.PreparationSeconds(context.Time.CurrentDay)
                 : context.Balance.duskWarningSeconds;
 
             CloseAllDoors();

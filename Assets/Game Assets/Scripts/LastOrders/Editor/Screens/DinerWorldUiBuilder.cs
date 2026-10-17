@@ -37,6 +37,26 @@ namespace LastOrders.EditorTools.Screens
         [MenuItem("Last Orders/UI/Restore Previous World UI", priority = 215)]
         static void RestoreFromMenu() => Debug.Log($"[Last Orders] {RestorePrevious()}");
 
+        [MenuItem("Last Orders/UI/Build Crop Card UI", priority = 216)]
+        static void BuildCropUiFromMenu() => Debug.Log($"[Last Orders] {BuildCropUi()}");
+
+        /// <summary>The card a tap on a growing crop opens - progress bar, time left, gem button - into the UI catalog.</summary>
+        public static string BuildCropUi()
+        {
+            Load();
+            Directory.CreateDirectory(Folder);
+
+            var catalog = AssetDatabase.LoadAssetAtPath<WorldUiCatalog>(WorldUiPrefabGenerator.CatalogPath);
+            if (catalog == null) return $"No UI catalog at {WorldUiPrefabGenerator.CatalogPath} - run the world UI setup first.";
+
+            Undo.RecordObject(catalog, "Build Crop Card UI");
+            catalog.cropCard = Save<CropCardView>(CropCard(), "WorldUI_CropCard");
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssetIfDirty(catalog);
+
+            return $"Crop card built in {Folder}; the UI catalog uses it.";
+        }
+
         public static string Build()
         {
             Load();
@@ -65,7 +85,9 @@ namespace LastOrders.EditorTools.Screens
             var bubble = Save<ProduceBubbleView>(ProduceBubble(), "WorldUI_ProduceBubble");
             int pens = PointPens(card, bubble);
 
-            return $"Diner world UI built in {Folder} (9 prefabs); the UI catalog and {pens} livestock prefabs use them. " +
+            BuildCropUi();
+
+            return $"Diner world UI built in {Folder} (10 prefabs); the UI catalog and {pens} livestock prefabs use them. " +
                    $"The old ones are kept in {OldFolder}.";
         }
 
@@ -334,6 +356,65 @@ namespace LastOrders.EditorTools.Screens
             Set(view, "hungryColour", HudPalette.Red);
             Set(view, "asleepColour", HudPalette.Night);
             Set(view, "fullColour", HudPalette.Gold);
+            return root;
+        }
+
+        // --- The plant beds ---------------------------------------------------------------------------
+
+        /// <summary>
+        /// The card a tap on a growing crop opens: the crop in a round badge, its name and the timer on
+        /// dark glass, and the teal gem button on the right with the price on it - FINISH under it.
+        /// A little beak points down at the pot.
+        /// </summary>
+        static GameObject CropCard()
+        {
+            GameObject root = CanvasRoot("WorldUI_CropCard", new Vector2(360f, 160f), raycaster: true);
+            RectTransform body = Body(root);
+
+            var panelSize = new Vector2(300f, 100f);
+            RectTransform beak = Center("Beak", body, new Vector2(-6f, -58f), new Vector2(40f, 40f));
+            beak.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            Paint(beak, HudSprites.AlertPointer, HudPalette.Glass);
+
+            RectTransform panel = Center("Panel", body, new Vector2(10f, 0f), panelSize);
+            Paint(panel, HudSprites.GlassCard, Color.white, raycast: true, size: panelSize);
+
+            RectTransform badge = Center("Badge", body, new Vector2(-128f, 4f), new Vector2(104f, 104f));
+            Paint(badge, HudSprites.RoundCream, Color.white);
+            Image icon = Paint(Center("Icon", badge, new Vector2(0f, 4f), new Vector2(70f, 70f)), HudSprites.IconSprout, Color.white);
+
+            TextMeshProUGUI caption = Label(Center("Caption", body, new Vector2(-6f, 24f), new Vector2(150f, 34f)), "Tomato", Face.Display,
+                                            26f, Color.white, TextAlignmentOptions.MidlineLeft, Style.Shadow).Fit(15f);
+
+            Image fill = Track(body, "Track", new Vector2(-6f, -18f), new Vector2(150f, 30f), out RectTransform track);
+            TextMeshProUGUI time = Label(Fill("Time", track, 4f, 1f, 4f, 0f), "45s", Face.Display, 21f, Color.white,
+                                         TextAlignmentOptions.Center, Style.Outline);
+
+            // The gem button: the price on top, FINISH under it.
+            var buttonSize = new Vector2(98f, 90f);
+            RectTransform buttonRect = Center("Finish", body, new Vector2(118f, 0f), buttonSize);
+            Image face = Paint(buttonRect, HudSprites.ButtonTeal, Color.white, raycast: true, size: buttonSize);
+            Button button = MakeButton(buttonRect, face);
+            HudMotion motion = Motion(buttonRect);
+
+            Image gem = Paint(Center("Gem", buttonRect, new Vector2(-17f, 16f), new Vector2(42f, 42f)), HudSprites.IconGem, Color.white);
+            TextMeshProUGUI cost = Label(Center("Cost", buttonRect, new Vector2(20f, 16f), new Vector2(44f, 40f)), "2", Face.Display, 32f,
+                                         Color.white, TextAlignmentOptions.MidlineLeft, Style.Shadow);
+            Label(Center("Label", buttonRect, new Vector2(0f, -22f), new Vector2(90f, 26f)), "FINISH", Face.Display, 19f, Color.white,
+                  TextAlignmentOptions.Center, Style.Shadow).Fit(12f);
+
+            // Over everything, for the sparkles: takes no raycasts.
+            RectTransform fx = Fill("Fx", body);
+            fx.SetAsLastSibling();
+
+            NoRaycasts(root);
+            panel.GetComponent<Image>().raycastTarget = true;
+            face.raycastTarget = true;
+
+            var view = root.AddComponent<CropCardView>();
+            view.Configure(body, icon, caption, fill, time, button, face, motion, cost, gem, fx);
+            Set(view, "growingColour", HudPalette.Mint);
+            Set(view, "stoppedColour", HudPalette.Disabled);
             return root;
         }
 

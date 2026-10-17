@@ -12,8 +12,9 @@ using NUnit.Framework;
 using UnityEngine;
 
 /// <summary>
-/// The zombie attack cycle and the Safety Reputation, without a scene: an attack every third day;
-/// difficulty from the reputation, locked when the warning appears, climbing a step at a time and
+/// The zombie attack cycle and the Safety Reputation, without a scene: zombies every night and a big
+/// wave every third day; difficulty from the reputation, the player's level and the compound's
+/// damage, locked when the warning appears, climbing a step at a time and
 /// lightened after defeats in a row; up to three short waves from different sides, using only what
 /// progression has unlocked; the restaurant's health ending an attack; a cap on what the yard can
 /// lose; one repair kit mending every wreck; one reputation result per attack; and customers
@@ -154,33 +155,136 @@ public class EncounterTests
     // --- The schedule --------------------------------------------------------------------------
 
     [Test]
-    public void AnAttackEndsEveryThirdDayStartingOnTheThird()
+    public void ZombiesComeEveryNightWithABigWaveEveryThirdDay()
     {
         EncounterTuning tuning = balance.encounter;
 
-        Assert.IsFalse(tuning.IsAttackDay(1));
-        Assert.IsFalse(tuning.IsAttackDay(2));
-        Assert.IsTrue(tuning.IsAttackDay(3));
-        Assert.IsFalse(tuning.IsAttackDay(4));
-        Assert.IsFalse(tuning.IsAttackDay(5));
-        Assert.IsTrue(tuning.IsAttackDay(6));
-        Assert.IsTrue(tuning.IsAttackDay(9));
+        for (int day = 1; day <= 9; day++) Assert.IsTrue(tuning.IsAttackDay(day), $"Day {day} ends in an attack.");
 
-        Assert.AreEqual(3, tuning.NextAttackDay(1));
-        Assert.AreEqual(3, tuning.NextAttackDay(3));
-        Assert.AreEqual(6, tuning.NextAttackDay(4));
-        Assert.AreEqual(9, tuning.NextAttackDay(7));
+        Assert.IsFalse(tuning.IsBigWaveDay(1));
+        Assert.IsFalse(tuning.IsBigWaveDay(2));
+        Assert.IsTrue(tuning.IsBigWaveDay(3));
+        Assert.IsFalse(tuning.IsBigWaveDay(4));
+        Assert.IsFalse(tuning.IsBigWaveDay(5));
+        Assert.IsTrue(tuning.IsBigWaveDay(6));
+        Assert.IsTrue(tuning.IsBigWaveDay(9));
+
+        Assert.AreEqual(1, tuning.NextAttackDay(1));
+        Assert.AreEqual(4, tuning.NextAttackDay(4));
+
+        Assert.AreEqual(3, tuning.NextBigWaveDay(1));
+        Assert.AreEqual(3, tuning.NextBigWaveDay(3));
+        Assert.AreEqual(6, tuning.NextBigWaveDay(4));
+        Assert.AreEqual(9, tuning.NextBigWaveDay(7));
     }
 
     [Test]
-    public void TheDaysUntilTheNextAttackCountDownToTonight()
+    public void AttacksStartOnTheirFirstDay()
+    {
+        EncounterTuning tuning = balance.encounter;
+        tuning.firstNightlyAttackDay = 2;
+
+        Assert.IsFalse(tuning.IsAttackDay(1), "Before the first nightly attack the night is quiet.");
+        Assert.IsTrue(tuning.IsAttackDay(2));
+        Assert.AreEqual(2, tuning.NextAttackDay(1));
+    }
+
+    [Test]
+    public void TheDaysUntilTheNextBigWaveCountDownToTonight()
     {
         Game game = NewGame();
 
-        Assert.AreEqual(2, game.Encounters.DaysUntilAttack(1));
-        Assert.AreEqual(1, game.Encounters.DaysUntilAttack(2));
-        Assert.AreEqual(0, game.Encounters.DaysUntilAttack(3), "Zero means tonight.");
-        Assert.AreEqual(2, game.Encounters.DaysUntilAttack(4));
+        Assert.AreEqual(0, game.Encounters.DaysUntilAttack(1), "Zombies every night.");
+        Assert.AreEqual(2, game.Encounters.DaysUntilBigWave(1));
+        Assert.AreEqual(1, game.Encounters.DaysUntilBigWave(2));
+        Assert.AreEqual(0, game.Encounters.DaysUntilBigWave(3), "Zero means tonight.");
+        Assert.AreEqual(2, game.Encounters.DaysUntilBigWave(4));
+    }
+
+    // --- Nightly attacks -----------------------------------------------------------------------
+
+    [Test]
+    public void ANightlyAttackIsASmallPackInOneWaveWithAShorterWarning()
+    {
+        Game game = NewGame(90f);
+
+        EncounterRequest nightly = game.Encounters.RequestFor(4);
+        EncounterRequest big = game.Encounters.RequestFor(6);
+        WavePlan pack = game.Encounters.Preview(4);
+
+        Assert.IsFalse(nightly.IsBigWave);
+        Assert.IsTrue(big.IsBigWave);
+        Assert.Less(nightly.Enemies, big.Enemies, "A share of a big wave.");
+        Assert.GreaterOrEqual(nightly.Enemies, balance.encounter.nightly.minEnemies);
+        Assert.AreEqual(1, pack.Waves.Count);
+        Assert.IsFalse(pack.IsBigWave);
+        Assert.IsTrue(game.Encounters.Preview(6).IsBigWave);
+        Assert.Less(game.Encounters.PreparationSeconds(4), game.Encounters.PreparationSeconds(6));
+    }
+
+    [Test]
+    public void ANightlyAttackPaysAShareMovesSafetyLessAndGivesNoKits()
+    {
+        Game game = NewGame(10f);
+        EncounterTuning tuning = balance.encounter;
+
+        game.Encounters.Lock(4);
+        EncounterResult result = game.Encounters.Resolve(4);
+
+        Assert.IsFalse(result.IsBigWave);
+        Assert.AreEqual(Mathf.RoundToInt(tuning.Tier(0).victoryCoins * tuning.nightly.rewardShare), result.Coins);
+        Assert.AreEqual(0, result.RepairKits, "Kits are the big wave's reward.");
+        Assert.AreEqual(balance.safety.cleanVictory * tuning.nightly.reputationShare, result.ReputationDelta, 0.051f);
+        Assert.AreEqual(0, game.Encounters.BigWavesFought);
+        Assert.AreEqual(1, game.Encounters.EncountersFought);
+    }
+
+    // --- Level and damage ----------------------------------------------------------------------
+
+    [Test]
+    public void AHigherLevelSendsMoreZombiesFromAHigherBand()
+    {
+        Game low = NewGame(30f);
+        Game high = NewGame(30f);
+        high.Encounters.PlayerLevel = () => 10;
+
+        EncounterRequest a = low.Encounters.RequestFor(6);
+        EncounterRequest b = high.Encounters.RequestFor(6);
+
+        Assert.AreEqual(1, a.PlayerLevel, "Level 1 when nothing is wired.");
+        Assert.Greater(b.BandScore, a.BandScore);
+        Assert.Greater(b.TierIndex, a.TierIndex, "Safety 30 plus nine levels' points is past the Medium line.");
+        Assert.Greater(b.Enemies, a.Enemies);
+    }
+
+    [Test]
+    public void ADamagedZoneLightensTheNextAttack()
+    {
+        Game whole = NewGame(80f);
+        Game broken = NewGame(80f);
+        broken.Encounters.ZoneDamage = () => 1f;
+
+        EncounterRequest a = whole.Encounters.RequestFor(6);
+        EncounterRequest b = broken.Encounters.RequestFor(6);
+
+        Assert.AreEqual(1f, b.ZoneDamage);
+        Assert.Less(b.BandScore, a.BandScore);
+        Assert.Less(b.Enemies, a.Enemies);
+        Assert.Less(b.Relief, 1f);
+    }
+
+    [Test]
+    public void ZoneDamageWeighsWallsYardAndDefenses()
+    {
+        ThreatScalingTuning scaling = balance.encounter.scaling;
+
+        Assert.AreEqual(0f, scaling.ZoneDamage(0f, 0f, 0f));
+        Assert.AreEqual(1f, scaling.ZoneDamage(1f, 1f, 1f), 1e-4f);
+        Assert.AreEqual(0.5f, scaling.ZoneDamage(1f, 0f, 0f), 1e-4f, "Walls weigh half.");
+        Assert.AreEqual(1f, scaling.ZoneDamage(5f, 5f, 5f), 1e-4f, "Clamped.");
+        Assert.AreEqual(1f - scaling.enemyReliefAtFullDamage, scaling.DamageRelief(1f), 1e-4f);
+        Assert.AreEqual(0f, scaling.LevelBandPoints(1));
+        Assert.AreEqual(scaling.maxBandPointsFromLevel, scaling.LevelBandPoints(999));
     }
 
     // --- Difficulty -----------------------------------------------------------------------------
@@ -679,6 +783,65 @@ public class EncounterTests
             Assert.GreaterOrEqual(size, 1);
             Assert.LessOrEqual(size, 2);
         }
+    }
+
+    // --- Customers and the player's level -------------------------------------------------------
+
+    [Test]
+    public void AHigherLevelBringsCarsMoreOftenAndBiggerParties()
+    {
+        var reputation = new ReputationService(balance);
+        reputation.Set(50f);
+        SafetyReputationTuning tuning = balance.safety;
+
+        Assert.AreEqual(1f, reputation.LevelArrivalScale(1), "Level 1 is the Safety pace alone.");
+        Assert.AreEqual(reputation.ArrivalIntervalScale, reputation.ArrivalIntervalScaleAt(1), 1e-5f);
+        Assert.Less(reputation.ArrivalIntervalScaleAt(5), reputation.ArrivalIntervalScaleAt(1), "Shorter waits at level 5.");
+        Assert.AreEqual(tuning.minLevelArrivalScale, reputation.LevelArrivalScale(99), 1e-5f, "Never under the floor.");
+
+        Assert.AreEqual(reputation.PartySizeRange, reputation.PartySizeRangeAt(1));
+        Assert.AreEqual(reputation.PartySizeRange.y + 1, reputation.PartySizeRangeAt(1 + tuning.levelsPerExtraGuest).y);
+        Assert.AreEqual(reputation.PartySizeRange.y + tuning.maxExtraGuestsFromLevel, reputation.PartySizeRangeAt(99).y, "Capped.");
+    }
+
+    [Test]
+    public void WhoComesDependsOnTheLevelAndSafety()
+    {
+        var regular = Make<FoodStreet.Visitors.VisitorDefinition>();
+        regular.displayName = "Regular";
+        var family = Make<FoodStreet.Visitors.VisitorDefinition>();
+        family.displayName = "Family";
+        family.minLevel = 4;
+        family.minSafety = 45f;
+
+        var profile = Make<FoodStreet.Visitors.VisitorTrafficProfile>();
+        profile.visitors = new[] { regular, family };
+
+        Assert.IsFalse(family.ComesAt(3, 90f), "Too early.");
+        Assert.IsFalse(family.ComesAt(6, 30f), "Not safe enough for the children.");
+        Assert.IsTrue(family.ComesAt(4, 45f));
+
+        CollectionAssert.AreEqual(new[] { regular }, profile.Coming(1, 30f));
+        CollectionAssert.AreEqual(new[] { regular, family }, profile.Coming(5, 60f));
+
+        for (float roll = 0f; roll <= 1f; roll += 0.1f)
+            Assert.AreSame(regular, profile.PickVisitor(1, 30f, roll), "Only those who come are drawn.");
+
+        regular.minLevel = 10;
+        Assert.IsNotNull(profile.PickVisitor(1, 0f, 0.5f), "Nobody matching: anyone at all rather than an empty road.");
+    }
+
+    [Test]
+    public void TheStreetHoldsMoreVisitorsAsTheLevelClimbs()
+    {
+        var profile = Make<FoodStreet.Visitors.VisitorTrafficProfile>();
+        profile.maxConcurrent = 8;
+        profile.extraConcurrentPerLevel = 0.5f;
+        profile.maxExtraConcurrent = 6;
+
+        Assert.AreEqual(8, profile.MaxConcurrent(1));
+        Assert.AreEqual(10, profile.MaxConcurrent(5));
+        Assert.AreEqual(14, profile.MaxConcurrent(99), "Capped.");
     }
 }
 #endif

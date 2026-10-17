@@ -174,6 +174,8 @@ namespace FoodStreet.Visitors
         {
             Rescan();
 
+            // A clean place first: one the last diner left crumbs at only once there is no other.
+            for (int pass = 0; pass < 2; pass++)
             for (int i = 0; i < tables.Count; i++)
             {
                 TableBehaviour table = tables[i];
@@ -183,6 +185,7 @@ namespace FoodStreet.Visitors
                 for (int c = 0; c < chairs.Length; c++)
                 {
                     if (chairs[c] == null || chairs[c].isBusy) continue;
+                    if (pass == 0 && LastOrders.Crew.TableMess.IsDirtyAt(table, c)) continue;
 
                     chairs[c].isBusy = true;
                     chairs[c].isSitted = false;
@@ -208,12 +211,15 @@ namespace FoodStreet.Visitors
             int claimed = 0;
             size = Mathf.Max(1, size);
 
-            // A table with room for everyone first: a party sits together when it can.
+            // A table with room for everyone first: a party sits together when it can - at a clean one
+            // if there is one.
+            for (int pass = 0; pass < 2 && claimed == 0; pass++)
             for (int i = 0; i < tables.Count && claimed == 0; i++)
             {
                 TableBehaviour table = tables[i];
                 TableBehaviour.Chair[] chairs = table != null ? table.Chairs : null;
                 if (chairs == null || FreeAt(chairs) < size) continue;
+                if (pass == 0 && Messy(table)) continue;
 
                 claimed += ReserveAt(table, chairs, size, into);
             }
@@ -229,6 +235,14 @@ namespace FoodStreet.Visitors
             }
 
             return claimed;
+        }
+
+        static bool Messy(TableBehaviour table)
+        {
+            for (int i = 0; i < LastOrders.Crew.TableMess.All.Count; i++)
+                if (LastOrders.Crew.TableMess.All[i] != null && LastOrders.Crew.TableMess.All[i].Table == table) return true;
+
+            return false;
         }
 
         static int FreeAt(TableBehaviour.Chair[] chairs)

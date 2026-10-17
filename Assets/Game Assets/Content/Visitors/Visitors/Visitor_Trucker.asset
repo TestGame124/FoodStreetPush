@@ -17,6 +17,8 @@ MonoBehaviour:
   headwear: SM_Chr_Attach_CowboyHat_01
   vehicle: {fileID: 11400000, guid: 1f526ce785fa32f46b3bbfaf54905292, type: 2}
   spawnWeight: 3
+  minLevel: 2
+  minSafety: 0
   orders:
   - item: 10
     amountRange: {x: 2, y: 3}

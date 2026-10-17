@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using LastOrders.Crew;
 using LastOrders.Interaction;
+using LastOrders.Jobs;
 using LastOrders.Kitchen;
 using LastOrders.Medical;
 using LastOrders.Restaurant;
@@ -76,7 +78,6 @@ namespace FoodStreet.Visitors
     [DefaultExecutionOrder(-10)]
     public sealed class Visitor : MonoBehaviour, IInteractableObject, ITappable, IPatient
     {
-        static readonly int MoveHash = Animator.StringToHash("Move");
         static readonly int SitHash = Animator.StringToHash("Sit");
         static readonly int EatHash = Animator.StringToHash("Eat");
 
@@ -109,10 +110,10 @@ namespace FoodStreet.Visitors
         enum Seating { None, SitDown, ScootIn, Settled, ScootOut, StandUp }
 
         [SerializeField] VisitorDefinition definition;
-        [SerializeField] OrderBubble bubble;
+        [SerializeField] OrderBubbleBase bubble;
         [SerializeField] Animator animator;
 
-        readonly WaypointWalker walker = new WaypointWalker();
+        readonly WaypointWalker walker = new WaypointWalker { GridRadius = 0.25f };
 
         Seating seating;
         float seatingClock;
@@ -132,6 +133,19 @@ namespace FoodStreet.Visitors
         GameObject plate;
         float eatRemaining;
         bool lastAffordable;
+
+        /// <summary>Eaten, and reacting to it at the table before getting up.</summary>
+        bool afterMeal;
+        float afterMealLeft;
+
+        /// <summary>Seconds from sitting down to being served, for how they feel about it.</summary>
+        float waitedFor;
+
+        GestureDriver gestures;
+        Animator gesturesFor;
+
+        /// <summary>Where they were last frame, for how fast they are really walking.</summary>
+        Vector3 lastPosition;
 
         /// <summary>Whoever is bringing their order, while somebody is.</summary>
         object waiter;
@@ -190,6 +204,9 @@ namespace FoodStreet.Visitors
         /// <summary>Raised when an order is filled, with what it paid. The manager turns this
         /// into coins; the visitor does not know what a wallet is.</summary>
         public event Action<Visitor, int> OnServed;
+
+        /// <summary>Raised as they finish eating, with how they felt about it - a tip, perhaps.</summary>
+        public event Action<Visitor, MealVerdict> OnMealFinished;
 
         // --- The journey -----------------------------------------------------------------
 
@@ -256,6 +273,8 @@ namespace FoodStreet.Visitors
 
         void Update()
         {
+            Gestures?.Tick(Time.deltaTime);
+
             // Sitting down, scooting in and getting up again have the body to themselves while
             // they last; what the visitor is there for picks up once they are sat, or up.
             if (StepSeating(Time.deltaTime))
@@ -344,6 +363,10 @@ namespace FoodStreet.Visitors
 
             TableBehaviour.Chair chair = seat.Chair;
             if (chair != null) chair.isSitted = true;
+
+            // Crumbs the last diner left, pushed aside as they sit down to it.
+            TableMess mess = TableMess.At(seat.Table, seat.Index);
+            if (mess != null) mess.Clean(quietly: true);
 
             ShowOrder();
         }
@@ -483,9 +506,23 @@ namespace FoodStreet.Visitors
 
             ItemDataSO data = order.Data;
             lastAffordable = CanAfford();
+            lastWaiterComing = HasWaiter;
 
-            bubble.Show(data != null ? data.itemImage : null, order.Amount, lastAffordable);
+            bubble.Show(data != null ? data.itemImage : null, order.Amount, lastAffordable, OrderPayment);
+            bubble.SetWaiterComing(lastWaiterComing);
         }
+
+        /// <summary>What serving the order pays, as <see cref="BeginEating"/> pays it.</summary>
+        int OrderPayment
+        {
+            get
+            {
+                ItemDataSO meal = order.Data;
+                return meal != null ? meal.coinsReward * Mathf.Max(1, order.Amount) : (definition != null ? definition.payment : 0);
+            }
+        }
+
+        bool lastWaiterComing;
 
         /// <summary>
         /// Keeps the disc honest while they sit there.
@@ -497,6 +534,13 @@ namespace FoodStreet.Visitors
         /// </summary>
         void RefreshAffordable()
         {
+            bool coming = HasWaiter;
+            if (coming != lastWaiterComing)
+            {
+                lastWaiterComing = coming;
+                bubble?.SetWaiterComing(coming);
+            }
+
             bool affordable = CanAfford();
             if (affordable == lastAffordable) return;
 
@@ -509,19 +553,75 @@ namespace FoodStreet.Visitors
             // The fork goes down until the compound is clear; the meal waits on the table.
             if (alarmed) return;
 
-            eatRemaining -= Time.deltaTime;
-            if (eatRemaining > 0f) return;
-
-            ReturnPlate();
-
-            // Finished after dark: they stay where it is safe until morning.
-            if (holdDeparture)
+            if (afterMeal)
             {
-                Stage = VisitorStage.Sheltering;
+                afterMealLeft -= Time.deltaTime;
+                if (afterMealLeft > 0f) return;
+
+                afterMeal = false;
+                Gestures?.LetGo();
+
+                // Finished after dark: they stay where it is safe until morning.
+                if (holdDeparture)
+                {
+                    Stage = VisitorStage.Sheltering;
+                    return;
+                }
+
+                LeaveTable();
                 return;
             }
 
-            LeaveTable();
+            eatRemaining -= Time.deltaTime;
+            if (eatRemaining > 0f) return;
+
+            FinishMeal();
+        }
+
+        /// <summary>
+        /// The plate is clear: it goes, leaving its crumbs on the table for the crew, and they show
+        /// how it was - a chef's kiss for a quick dinner, a pat of the belly, the mouth wiped - before
+        /// they get up.
+        /// </summary>
+        void FinishMeal()
+        {
+            LeaveMess();
+            ReturnPlate();
+
+            MealVerdict verdict = VisitorReactions.Judge(waitedFor);
+            Gesture reaction = VisitorReactions.Pick(verdict, UnityEngine.Random.value);
+
+            afterMeal = true;
+            afterMealLeft = Gestures != null && Gestures.Play(reaction) ? WorkerGestures.Seconds(reaction) + 0.25f : 0.35f;
+
+            OnMealFinished?.Invoke(this, verdict);
+        }
+
+        /// <summary>Crumbs and a napkin where the plate was, on the table top.</summary>
+        void LeaveMess()
+        {
+            if (!SeatIsMeasured) return;
+
+            Transform platePoint = seat.PlatePoint;
+            Vector3 at = plate != null ? plate.transform.position : platePoint != null ? platePoint.position : seat.Seating.EdgePoint(seat.Index);
+            at.y = seat.Seating.TableTop;
+            TableMess.Leave(seat.Table, seat.Index, at);
+        }
+
+        /// <summary>The gestures on this visitor's character, made for whichever model they are wearing.</summary>
+        GestureDriver Gestures
+        {
+            get
+            {
+                if (animator == null) return null;
+                if (gestures == null || gesturesFor != animator)
+                {
+                    gestures = new GestureDriver(animator);
+                    gesturesFor = animator;
+                }
+
+                return gestures;
+            }
         }
 
         void LeaveTable()
@@ -660,6 +760,8 @@ namespace FoodStreet.Visitors
         void LeaveEverything()
         {
             ReturnPlate();
+            afterMeal = false;
+            Gestures?.LetGo();
             bubble?.Hide();
             walker.Clear();
 
@@ -850,7 +952,7 @@ namespace FoodStreet.Visitors
         /// </summary>
         public void ServeBrought(GameObject dish)
         {
-            bubble?.Hide();
+            bubble?.Served();
 
             plate = dish;
             Transform at = seat.PlatePoint;
@@ -861,7 +963,7 @@ namespace FoodStreet.Visitors
 
         void Serve()
         {
-            bubble?.Hide();
+            bubble?.Served();
             ShowPlate();
             BeginEating();
         }
@@ -875,10 +977,12 @@ namespace FoodStreet.Visitors
             if (chair != null) chair.foodServed = true;
 
             eatRemaining = definition != null ? definition.RollEatSeconds() : 4f;
+            waitedFor = Time.time - WaitingSince;
+            afterMeal = false;
             Stage = VisitorStage.Eating;
 
             ItemDataSO meal = order.Data;
-            int payment = meal != null ? meal.coinsReward * Mathf.Max(1, order.Amount) : (definition != null ? definition.payment : 0);
+            int payment = OrderPayment;
             if (payment > 0) OnServed?.Invoke(this, payment);
             if (meal != null) LastOrders.Core.LastOrdersBridge.AddExperience(meal.starsReward * Mathf.Max(1, order.Amount));
         }
@@ -1001,9 +1105,14 @@ namespace FoodStreet.Visitors
             bool sitting = (seating == Seating.SitDown && seatingClock >= TurnSeconds) ||
                            seating == Seating.ScootIn || seating == Seating.Settled || seating == Seating.ScootOut;
 
-            bool eating = Stage == VisitorStage.Eating && !alarmed && seating == Seating.Settled;
+            bool eating = Stage == VisitorStage.Eating && !alarmed && seating == Seating.Settled && !afterMeal;
 
-            animator.SetFloat(MoveHash, moving ? 1f : 0f, MoveDamping, Time.deltaTime);
+            // The legs keep pace with the ground actually covered - a limp to the tent is slower than a walk in.
+            Vector3 moved = transform.position - lastPosition;
+            moved.y = 0f;
+            lastPosition = transform.position;
+            float speed = moving && Time.deltaTime > 0f ? Mathf.Min(moved.magnitude / Time.deltaTime, WalkSpeed * 1.5f) : 0f;
+            CharacterLocomotion.Drive(animator, speed, Time.deltaTime, MoveDamping);
             animator.SetBool(SitHash, sitting);
             animator.SetBool(EatHash, eating);
 
@@ -1044,7 +1153,8 @@ namespace FoodStreet.Visitors
             {
                 seated = seated,
                 lean = lean,
-                handsOnTable = seating == Seating.ScootIn || seating == Seating.Settled,
+                // Off the table while they react to the meal: the arms are the gesture's.
+                handsOnTable = seating == Seating.ScootIn || (seating == Seating.Settled && !(gestures != null && gestures.Busy)),
                 eating = eating,
                 tableEdge = seat.Seating.EdgePoint(seat.Index),
                 inward = seat.SitForward,
@@ -1077,6 +1187,8 @@ namespace FoodStreet.Visitors
             seats = null;
             order = default;
             eatRemaining = 0f;
+            afterMeal = false;
+            gestures?.Reset();
             lastAffordable = false;
             holdDeparture = false;
             alarmed = false;
@@ -1089,9 +1201,10 @@ namespace FoodStreet.Visitors
 
             OnJourneyEnded = null;
             OnServed = null;
+            OnMealFinished = null;
         }
 
-        public void Configure(OrderBubble orderBubble, Animator characterAnimator)
+        public void Configure(OrderBubbleBase orderBubble, Animator characterAnimator)
         {
             bubble = orderBubble;
             animator = characterAnimator;

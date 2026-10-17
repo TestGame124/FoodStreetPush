@@ -10,10 +10,11 @@ namespace LastOrders.Jobs
     /// component's swing can be switched off - the strike timing is the only part worth
     /// keeping, and the clip can raise that from an animation event instead.
     ///
-    /// The prop is built from primitives on first use. By default it swings from the shoulder,
-    /// overhead and down into whatever is in front: with no work clip the arm hangs still, and a
-    /// hammer parented to a still hand only twitches at hip height. With a clip, parent it to
-    /// the hand instead and let the animation carry it.
+    /// The prop is built from primitives on first use. With no work clip it swings from the
+    /// shoulder, overhead and down into whatever is in front: the arm hangs still, and a hammer
+    /// parented to a still hand only twitches at hip height. On the worker controller, which has
+    /// the swing clip, it is gripped in the right hand instead and the clip's arms carry it -
+    /// swinging it again on top made the hammer and the hands go their separate ways.
     /// </summary>
     [RequireComponent(typeof(WorkerAgent))]
     public sealed class WorkerToolSwing : MonoBehaviour
@@ -53,8 +54,16 @@ namespace LastOrders.Jobs
             agent = GetComponent<WorkerAgent>();
         }
 
+        /// <summary>The worker controller swings the arms with its own clip: the tool rides in the hand, and
+        /// is not swung again on top of it.</summary>
+        bool clipSwings;
+
         void Start()
         {
+            Animator animator = GetComponentInChildren<Animator>();
+            clipSwings = WorkerGestures.CanGesture(animator) && animator.isHuman;
+            if (clipSwings) attachToHand = true;
+
             pivot = BuildPivot();
             pivot.gameObject.SetActive(false);
         }
@@ -78,8 +87,11 @@ namespace LastOrders.Jobs
 
             // A slow lift and a fast drop. A symmetric sine reads as waving, not hammering.
             float lift = t < 0.7f ? Mathf.SmoothStep(0f, 1f, t / 0.7f) : 1f - (t - 0.7f) / 0.3f;
-            float pitch = attachToHand ? -lift * swingArc : Mathf.Lerp(struckPitch, raisedPitch, lift);
-            pivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            if (!clipSwings)
+            {
+                float pitch = attachToHand ? -lift * swingArc : Mathf.Lerp(struckPitch, raisedPitch, lift);
+                pivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            }
 
             if (t < 0.7f)
             {
@@ -107,12 +119,16 @@ namespace LastOrders.Jobs
 
         Transform BuildPivot()
         {
-            Transform hand = attachToHand ? FindBone(transform) : null;
+            Animator animator = GetComponentInChildren<Animator>();
+            Transform hand = null;
+            if (attachToHand && animator != null && animator.isHuman) hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            if (attachToHand && hand == null) hand = FindBone(transform);
 
             var host = new GameObject("ToolPivot").transform;
             host.SetParent(hand != null ? hand : transform, false);
 
             if (hand == null) host.localPosition = shoulder;
+            else if (clipSwings) Grip(host, hand, animator);
 
             // Bone scale differs by rig; the prop is sized in world metres regardless.
             Vector3 lossy = host.lossyScale;
@@ -126,6 +142,25 @@ namespace LastOrders.Jobs
 
             BuildHammer(host);
             return host;
+        }
+
+        /// <summary>
+        /// The handle through the fist, held as a hammer is: across the palm, out past the thumb, the head
+        /// beyond it. Found from where the fingers and the thumb are, so it fits any rig's hand bone.
+        /// </summary>
+        static void Grip(Transform host, Transform hand, Animator animator)
+        {
+            Transform middle = animator.GetBoneTransform(HumanBodyBones.RightMiddleProximal);
+            Transform thumb = animator.GetBoneTransform(HumanBodyBones.RightThumbProximal);
+            if (middle == null || thumb == null) return;
+
+            Vector3 fingers = middle.position - hand.position;
+            Vector3 across = Vector3.ProjectOnPlane(thumb.position - hand.position, fingers.normalized);
+            if (across.sqrMagnitude < 1e-6f) return;
+            across.Normalize();
+
+            // The fist a little way up the handle from its end.
+            host.SetPositionAndRotation(hand.position + fingers * 0.6f - across * 0.08f, Quaternion.LookRotation(across, fingers.normalized));
         }
 
         Transform FindBone(Transform root)

@@ -53,7 +53,9 @@ public class CookRecipeData
         {
             while (!active || LastOrders.Consequence.OutdoorWreck.IsWreckedOn(manager)) yield return null;
             UpdateTimer?.Invoke(timer, this);
-            yield return new WaitForSeconds(1);
+
+            // A second of cooking, shorter while somebody helps at the station.
+            yield return new WaitForSeconds(manager != null ? 1f / manager.CookSpeed : 1f);
             if (active && !LastOrders.Consequence.OutdoorWreck.IsWreckedOn(manager)) timer--;
         }
         UpdateTimer?.Invoke(timer, this);
@@ -90,6 +92,7 @@ public class CookRecipeData
         // The serving count is what reaches the customer system: each plate produced here is a
         // meal on the pass, and the pass is what travellers on the road are deciding about.
         LastOrders.Core.LastOrdersBridge.NotifyDishCooked(servings: servings);
+        if (manager != null) LastOrders.Economy.RewardSource.At(PassOrigin(manager) + Vector3.up * 0.6f);
         LastOrders.Core.LastOrdersBridge.AddExperience(completionExperience);
 
         manager.RemoveCookRecipeData(this);

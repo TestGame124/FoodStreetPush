@@ -36,6 +36,16 @@ namespace FoodStreet.Visitors
                  "how a visitor is shelved without deleting the asset.")]
         [Min(0f)] public float spawnWeight = 1f;
 
+        [Tooltip("The player's level from which this kind of visitor starts turning up.")]
+        [Min(1)] public int minLevel = 1;
+
+        [Tooltip("The Safety Reputation from which this kind of visitor trusts the road here. A " +
+                 "family will not bring the children to a diner the zombies keep overrunning.")]
+        [Range(0f, 100f)] public float minSafety;
+
+        /// <summary>Whether this kind comes at <paramref name="level"/> and <paramref name="safety"/>.</summary>
+        public bool ComesAt(int level, float safety) => level >= minLevel && safety + 1e-3f >= minSafety;
+
         [Header("Order")]
         [Tooltip("What this visitor might ask for, weighted within this list. An empty list " +
                  "means they can never be served, which is logged rather than left silent.")]

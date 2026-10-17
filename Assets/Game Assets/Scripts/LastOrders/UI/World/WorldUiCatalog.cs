@@ -35,6 +35,9 @@ namespace LastOrders.UI.World
         [Tooltip("The standing wrench over anything broken. Pressing it sends a worker to fix it.")]
         public ActionPromptView repairPrompt;
 
+        [Tooltip("The card a tap on a growing crop opens: the progress bar, the time left and the gem button that finishes it now.")]
+        public CropCardView cropCard;
+
         [Header("Popups (screen space)")]
         [Tooltip("What expanding into a piece of land needs.")]
         public Popups.ExpansionPopupView expansionPopup;
@@ -67,6 +70,9 @@ namespace LastOrders.UI.World
 
         [Tooltip("Above a worker's feet: clear of the head and of a hammer held overhead.")]
         public Vector3 healthBarOffset = new Vector3(0f, 2.35f, 0f);
+
+        [Tooltip("Above the middle of a pot's soil, for the tap card: clear of the crop.")]
+        public Vector3 cropCardOffset = new Vector3(0f, 1.25f, 0f);
 
         [Header("Colours")]
         public Color experienceTextColour = new Color(1f, 0.86f, 0.3f);

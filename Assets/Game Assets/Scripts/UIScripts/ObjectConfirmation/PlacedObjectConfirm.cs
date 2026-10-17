@@ -30,6 +30,7 @@ public class PlacedObjectConfirm : ConfirmationUiPanel
         if (gridBuildingSystem.selectedObject == null || gridBuildingSystem.Placement == null ||
             !gridBuildingSystem.Placement.CanRemove(gridBuildingSystem.selectedObject)) return;
         Debug.Log("Sold !!");
+        LastOrders.Economy.RewardSource.At(gridBuildingSystem.selectedObject.transform.position + Vector3.up);
         CurrenciesController.AddCurrency(CurrencyType.Coins, gridBuildingSystem.selectedObject.sellingPrice);
         
         gridBuildingSystem.RemoveObject(gridBuildingSystem.selectedObject.transform.position);

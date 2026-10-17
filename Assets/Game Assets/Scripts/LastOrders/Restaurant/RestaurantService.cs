@@ -102,6 +102,14 @@ namespace LastOrders.Restaurant
         /// <summary>The walls moved: the footprint they now stand round.</summary>
         public event Action<Rect> OnFootprintChanged;
 
+        /// <summary>The way in moved, or was first measured: the point just outside the door.</summary>
+        public event Action<Vector3> OnEntranceChanged;
+
+        /// <summary>The point just outside the doorway, on the ground. What the night's zombies make for.</summary>
+        public Vector3 Entrance { get; private set; }
+
+        public bool HasEntrance { get; private set; }
+
         /// <summary>A side grew, with the strip of ground it took in.</summary>
         public event Action<RestaurantSide, Rect> OnExpanded;
 
@@ -118,6 +126,17 @@ namespace LastOrders.Restaurant
             front = Snap(frontDirection);
             HasFootprint = area.width > 0f && area.height > 0f;
             OnFootprintChanged?.Invoke(footprint);
+        }
+
+        /// <summary>Where the way in is: the point on the ground just outside the doorway.</summary>
+        public void SetEntrance(Vector3 outsideTheDoor)
+        {
+            outsideTheDoor.y = 0f;
+            if (HasEntrance && (Entrance - outsideTheDoor).sqrMagnitude < 1e-4f) return;
+
+            Entrance = outsideTheDoor;
+            HasEntrance = true;
+            OnEntranceChanged?.Invoke(Entrance);
         }
 
         // --- Growing --------------------------------------------------------------------------

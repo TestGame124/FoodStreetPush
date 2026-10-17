@@ -963,6 +963,7 @@ namespace LastOrders.Restaurant
         void Refit()
         {
             PlaceExpandAnchor();
+            restaurant.SetEntrance(MeasureEntrance());
 
             if (shelter == null) return;
 
@@ -1085,6 +1086,39 @@ namespace LastOrders.Restaurant
                 : new Vector2(door.x, back.y > 0f ? inner.yMax : inner.yMin);
 
             floor.Fit(inner, back, anchor);
+        }
+
+        /// <summary>
+        /// The point on the ground just outside the doorway - the gap between the two front pieces -
+        /// a step out from the front wall. Where the night's zombies make for. With only one front
+        /// piece, the night shelter's outside door, or else the middle of the front wall.
+        /// </summary>
+        Vector3 MeasureEntrance()
+        {
+            const float StepOut = 0.8f;
+
+            Rect area = restaurant.Footprint;
+            Vector2 front = restaurant.Front;
+
+            Vector2 door;
+            if (frontLeftWall != null && frontRightWall != null)
+            {
+                Bounds l = BoundsOf(frontLeftWall), r = BoundsOf(frontRightWall);
+                door = new Vector2((Mathf.Min(l.max.x, r.max.x) + Mathf.Max(l.min.x, r.min.x)) * 0.5f,
+                                   (Mathf.Min(l.max.z, r.max.z) + Mathf.Max(l.min.z, r.min.z)) * 0.5f);
+            }
+            else if (shelter != null)
+            {
+                return shelter.DoorOutside;
+            }
+            else
+            {
+                door = area.center;
+            }
+
+            return Mathf.Abs(front.x) > Mathf.Abs(front.y)
+                ? new Vector3((front.x > 0f ? area.xMax : area.xMin) + Mathf.Sign(front.x) * StepOut, 0f, door.y)
+                : new Vector3(door.x, 0f, (front.y > 0f ? area.yMax : area.yMin) + Mathf.Sign(front.y) * StepOut);
         }
 
         /// <summary>Out through the front wall: from the middle of the building toward it.</summary>

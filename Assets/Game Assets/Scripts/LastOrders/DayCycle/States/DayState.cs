@@ -64,8 +64,9 @@ namespace LastOrders.DayCycle.States
 
         /// <summary>
         /// Where the day goes when it runs out. An attack day goes to the warning and the night
-        /// after it; any other day ends quietly, straight into the morning's tally. Attacks come
-        /// every few in-game days, and in-game days only pass while the game is played.
+        /// after it; any other day ends quietly, straight into the morning's tally. Zombies come
+        /// every night once the attacks have started - a big wave every few in-game days - and
+        /// in-game days only pass while the game is played.
         /// </summary>
         DayPhase EveningAfter(int day) =>
             context.Encounters == null || context.Encounters.IsAttackDay(day) ? DayPhase.Dusk : DayPhase.Resolution;

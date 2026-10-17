@@ -26,7 +26,8 @@ namespace LastOrders.Reputation
     /// It moves once per zombie attack, by how that attack went, and nothing else nudges it from
     /// day to day. That is what makes it readable: the player can always say why it changed. In
     /// return it decides two things - how often customer cars turn up, and which threat band the
-    /// next attack is drawn from. Safety draws trade, and trade draws the dead.
+    /// next attack is drawn from. Safety draws trade, and trade draws the dead. The player's level
+    /// adds to both: a restaurant that has grown is better known on the road.
     ///
     /// It can fall all the way to zero. That is not a dead end: at zero, cars still come now and
     /// then with one or two customers, and the next attacks are the lightest there are, so a
@@ -127,10 +128,15 @@ namespace LastOrders.Reputation
 
         /// <summary>Applies an attack's result and returns how far the meter actually moved, which
         /// can be less than the delta at either end of it.</summary>
-        public float ApplyEncounterResult(EncounterResultKind kind, float restaurantDamageFraction)
+        public float ApplyEncounterResult(EncounterResultKind kind, float restaurantDamageFraction) =>
+            ApplyEncounterResult(kind, restaurantDamageFraction, 1f);
+
+        /// <summary>As above, with the delta scaled by <paramref name="share"/>: a small nightly attack
+        /// moves the meter by less than a big wave does.</summary>
+        public float ApplyEncounterResult(EncounterResultKind kind, float restaurantDamageFraction, float share)
         {
             float before = current;
-            Add(ResultDelta(kind, restaurantDamageFraction));
+            Add(Mathf.Round(ResultDelta(kind, restaurantDamageFraction) * Mathf.Max(0f, share) * 10f) / 10f);
             return current - before;
         }
 
@@ -180,11 +186,44 @@ namespace LastOrders.Reputation
 
         /// <summary>How many customers the next car brings, never more than
         /// <paramref name="room"/> - the free chairs - and always at least one.</summary>
-        public int RollPartySize(int room, float roll01)
+        public int RollPartySize(int room, float roll01) => RollPartySize(room, roll01, 1);
+
+        /// <summary>As above, with the biggest party a little bigger at a higher <paramref name="level"/>.</summary>
+        public int RollPartySize(int room, float roll01, int level)
         {
-            Vector2Int range = PartySizeRange;
+            Vector2Int range = PartySizeRangeAt(level);
             int size = range.x + Mathf.FloorToInt(Mathf.Clamp01(roll01) * (range.y - range.x + 1) * 0.9999f);
             return Mathf.Clamp(size, 1, Mathf.Max(1, room));
+        }
+
+        // --- Customers and the player's level ------------------------------------------------------
+
+        /// <summary>
+        /// Multiplier on the time between cars from the level alone: one at level 1, a little less
+        /// for every level above it, never under the tuning's floor.
+        /// </summary>
+        public float LevelArrivalScale(int level)
+        {
+            SafetyReputationTuning tuning = Tuning;
+            float scale = 1f - Mathf.Max(0f, tuning.arrivalFasterPerLevel) * Mathf.Max(0, level - 1);
+            return Mathf.Max(Mathf.Clamp(tuning.minLevelArrivalScale, 0.1f, 1f), scale);
+        }
+
+        /// <summary>The time between cars from Safety and the level together. Lower is more often.</summary>
+        public float ArrivalIntervalScaleAt(int level) => ArrivalIntervalScale * LevelArrivalScale(level);
+
+        /// <summary>Extra customers the biggest party may bring at <paramref name="level"/>.</summary>
+        public int ExtraGuestsAt(int level)
+        {
+            SafetyReputationTuning tuning = Tuning;
+            return Mathf.Min(Mathf.Max(0, tuning.maxExtraGuestsFromLevel), Mathf.Max(0, level - 1) / Mathf.Max(1, tuning.levelsPerExtraGuest));
+        }
+
+        /// <summary>The smallest and largest party at today's Safety and <paramref name="level"/>.</summary>
+        public Vector2Int PartySizeRangeAt(int level)
+        {
+            Vector2Int range = PartySizeRange;
+            return new Vector2Int(range.x, range.y + ExtraGuestsAt(level));
         }
     }
 }

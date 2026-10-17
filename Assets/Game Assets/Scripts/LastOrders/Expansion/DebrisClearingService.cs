@@ -360,6 +360,7 @@ namespace LastOrders.Expansion
             record.Job = null;
             progression.Set(ExpansionIds.DebrisCleared(record.Id));
 
+            if (record.Target != null) LastOrders.Economy.RewardSource.At(record.Target.position + Vector3.up * 1.5f);
             bool paid = rewards.Grant(ExpansionIds.DebrisReward(record.Id), record.Definition.reward);
 
             SetState(record, DebrisState.Cleared);

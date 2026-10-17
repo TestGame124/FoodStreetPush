@@ -19,7 +19,7 @@ namespace LastOrders.Consequence
     /// kitchen, the stores, the walls - is never given one.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class OutdoorWreck : MonoBehaviour
+    public sealed class OutdoorWreck : MonoBehaviour, IRaidTarget
     {
         const float TiltDegrees = 8f;
         const float SinkMetres = 0.06f;
@@ -57,6 +57,13 @@ namespace LastOrders.Consequence
 
         public string DisplayName => !string.IsNullOrEmpty(displayName) ? displayName : name;
 
+        /// <summary>The body of a defense - a turret on the ground - rather than something in the yard.
+        /// The horde decides who goes for these; the yard's raiders leave them alone.</summary>
+        public bool IsDefense { get; private set; }
+
+        /// <summary>A raider sent into the yard lets a bed go rather than smash a wall to get to it.</summary>
+        public bool WorthBreakingThroughFor => false;
+
         /// <summary>Raised the moment it becomes a wreck.</summary>
         public event Action<OutdoorWreck> OnWrecked;
 
@@ -71,10 +78,11 @@ namespace LastOrders.Consequence
         public static bool IsWreckedOn(Component component) =>
             component != null && component.TryGetComponent(out OutdoorWreck wreck) && wreck.IsWrecked;
 
-        public void Configure(float health, string name)
+        public void Configure(float health, string name, bool isDefense = false)
         {
             maxHealth = Mathf.Max(1f, health);
             displayName = name;
+            IsDefense = isDefense;
 
             // Configured as an attack is locked in, when anything merely dented has long since been
             // mended: whole, unless it is still a wreck from an earlier night.

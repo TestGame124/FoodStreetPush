@@ -139,6 +139,10 @@ namespace LastOrders.UI.World
             return Spawn(catalog.expansionProgress, anchor, catalog.expansionProgressOffset);
         }
 
+        /// <summary>The card over a crop that was tapped while growing. Null, quietly, until the crop UI is built.</summary>
+        public CropCardView ShowCropCard(Transform anchor) =>
+            catalog != null && catalog.cropCard != null ? Spawn(catalog.cropCard, anchor, catalog.cropCardOffset) : null;
+
         /// <summary>The health bar over a worker in a fight.</summary>
         public HealthBarView ShowHealthBar(Transform anchor)
         {

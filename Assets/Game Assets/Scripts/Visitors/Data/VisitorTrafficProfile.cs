@@ -29,38 +29,76 @@ namespace FoodStreet.Visitors
         [Tooltip("Real seconds after the scene loads before the first car sets off.")]
         public Vector2 firstArrivalDelay = new Vector2(2f, 4f);
 
-        [Tooltip("Hard ceiling on visitors on the map at once, whatever the chairs and bays " +
-                 "say. A safety net, not the main gate.")]
+        [Tooltip("Hard ceiling on visitors on the map at once at level 1, whatever the chairs and " +
+                 "bays say. A safety net, not the main gate.")]
         [Min(1)] public int maxConcurrent = 8;
+
+        [Tooltip("Visitors added to the ceiling for each level above 1.")]
+        [Min(0f)] public float extraConcurrentPerLevel = 0.5f;
+
+        [Tooltip("Never more than this added to the ceiling from the level.")]
+        [Min(0)] public int maxExtraConcurrent = 6;
 
         [Tooltip("Free-chair ratio (0 = full, 1 = empty) to a multiplier on the arrival " +
                  "interval. Left flat at 1 it has no effect.")]
         public AnimationCurve busySlowdown = new AnimationCurve(
             new Keyframe(0f, 2.5f), new Keyframe(0.5f, 1.4f), new Keyframe(1f, 1f));
 
-        public VisitorDefinition PickVisitor()
+        /// <summary>The ceiling on visitors on the map at once at <paramref name="level"/>.</summary>
+        public int MaxConcurrent(int level) =>
+            Mathf.Max(1, maxConcurrent) + Mathf.Min(Mathf.Max(0, maxExtraConcurrent),
+                                                   Mathf.FloorToInt(Mathf.Max(0, level - 1) * Mathf.Max(0f, extraConcurrentPerLevel)));
+
+        /// <summary>Anyone at all, whatever the level and Safety.</summary>
+        public VisitorDefinition PickVisitor() => Pick(v => true, Random.value);
+
+        /// <summary>
+        /// One of the kinds that come at <paramref name="level"/> and <paramref name="safety"/>, by
+        /// weight. When none of them does - a profile tuned past the start - anyone at all, so the
+        /// road is never empty for want of a match.
+        /// </summary>
+        public VisitorDefinition PickVisitor(int level, float safety, float roll01) =>
+            Pick(v => v.ComesAt(level, safety), roll01) ?? Pick(v => true, roll01);
+
+        public VisitorDefinition PickVisitor(int level, float safety) => PickVisitor(level, safety, Random.value);
+
+        /// <summary>The kinds that come at <paramref name="level"/> and <paramref name="safety"/>.</summary>
+        public System.Collections.Generic.List<VisitorDefinition> Coming(int level, float safety)
+        {
+            var coming = new System.Collections.Generic.List<VisitorDefinition>();
+            if (visitors == null) return coming;
+
+            for (int i = 0; i < visitors.Length; i++)
+                if (visitors[i] != null && visitors[i].spawnWeight > 0f && visitors[i].ComesAt(level, safety)) coming.Add(visitors[i]);
+
+            return coming;
+        }
+
+        VisitorDefinition Pick(System.Func<VisitorDefinition, bool> allowed, float roll01)
         {
             if (visitors == null || visitors.Length == 0) return null;
 
             float total = 0f;
             for (int i = 0; i < visitors.Length; i++)
             {
-                if (visitors[i] != null) total += Mathf.Max(0f, visitors[i].spawnWeight);
+                if (visitors[i] != null && allowed(visitors[i])) total += Mathf.Max(0f, visitors[i].spawnWeight);
             }
 
             if (total <= 0f) return null;
 
-            float pick = Random.value * total;
+            float pick = Mathf.Clamp01(roll01) * total;
+            VisitorDefinition last = null;
 
             for (int i = 0; i < visitors.Length; i++)
             {
-                if (visitors[i] == null) continue;
+                if (visitors[i] == null || !allowed(visitors[i]) || visitors[i].spawnWeight <= 0f) continue;
 
-                pick -= Mathf.Max(0f, visitors[i].spawnWeight);
+                last = visitors[i];
+                pick -= visitors[i].spawnWeight;
                 if (pick <= 0f) return visitors[i];
             }
 
-            return null;
+            return last;
         }
 
         /// <summary>Seconds until the next attempt, stretched by how full the room is.</summary>

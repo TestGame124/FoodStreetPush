@@ -108,8 +108,6 @@ namespace LastOrders.Jobs
                  "The body lies across their arms, head to the right.")]
         [SerializeField] Vector3 carryFeet = new Vector3(-0.85f, 1.05f, 0.45f);
 
-        static readonly int MoveParam = Animator.StringToHash("Move");
-
         /// <summary>Optional. A controller with a work clip gets it; one without is left alone
         /// rather than logging a missing-parameter warning every frame.</summary>
         static readonly int WorkingParam = Animator.StringToHash("Working");
@@ -118,7 +116,7 @@ namespace LastOrders.Jobs
         /// half in it.</summary>
         const float LyingHeight = 0.15f;
 
-        readonly WaypointWalker walker = new WaypointWalker();
+        readonly WaypointWalker walker = new WaypointWalker { GridRadius = 0.3f };
         readonly List<Vector3> path = new List<Vector3>();
         readonly List<Vector3> returnPath = new List<Vector3>();
 
@@ -291,6 +289,9 @@ namespace LastOrders.Jobs
             shelter = FindFirstObjectByType<NightShelter>();
             tent = FindFirstObjectByType<HospitalTent>();
 
+            // On duty: their role's work is theirs, not the main character's to cover.
+            composition.Jobs.ReportOnDuty(role, workerId, true);
+
             field = composition.Field;
             field.Register(this);
             field.OnCotReady += HandleCotReady;
@@ -308,10 +309,16 @@ namespace LastOrders.Jobs
             field.Unregister(this);
         }
 
+        void OnEnable()
+        {
+            composition?.Jobs?.ReportOnDuty(role, workerId, true);
+        }
+
         void OnDisable()
         {
             // 6: a phase transition returns unused reservations rather than losing the work.
             composition?.Jobs?.ReleaseAllFor(workerId);
+            composition?.Jobs?.ReportOnDuty(role, workerId, false);
             job = null;
             jobIsField = false;
 
@@ -612,10 +619,11 @@ namespace LastOrders.Jobs
         {
             if (animator == null) return;
 
-            float moved = (transform.position - before).magnitude;
-            float normalised = Time.deltaTime > 0f ? moved / (Time.deltaTime * moveSpeed) : 0f;
-
-            animator.SetFloat(MoveParam, Mathf.Clamp01(normalised));
+            // The legs keep pace with the ground covered: idle, walk or jog by real speed.
+            Vector3 moved = transform.position - before;
+            moved.y = 0f;
+            float speed = Time.deltaTime > 0f ? Mathf.Min(moved.magnitude / Time.deltaTime, moveSpeed * 1.5f) : 0f;
+            CharacterLocomotion.Drive(animator, speed, Time.deltaTime);
         }
 
         // --- The queue ---------------------------------------------------------------------------
@@ -782,8 +790,16 @@ namespace LastOrders.Jobs
 
         int idleFrame = -10;
 
+        /// <summary>Walks them home, or to a stroll or a chat, round whatever stands in the way: a walker of its
+        /// own, so the work queue's path is left as it is.</summary>
+        readonly WaypointWalker idleWalker = new WaypointWalker { GridRadius = 0.3f };
+
+        Vector3 idleGoal;
+        bool idleRouted;
+
         void Idle()
         {
+            bool resumed = idleFrame < Time.frameCount - 1;
             idleFrame = Time.frameCount;
 
             // Outside a wall with nothing left to do there: back in the way they came first.
@@ -805,14 +821,22 @@ namespace LastOrders.Jobs
             Vector3 target = IdleSpot ?? (idlePoint != null ? idlePoint.position : home);
             float pace = IdleSpot.HasValue ? Mathf.Clamp(IdlePace, 0.2f, 1f) : 1f;
 
-            // Home round the diner, one corner at a time. Asked afresh every frame, so it needs
-            // no path of its own for the work queue's path to trample.
-            idleDetour.Clear();
-            if (shelter == null) shelter = FindFirstObjectByType<NightShelter>();
-            if (shelter != null) shelter.AppendDetour(transform.position, target, idleDetour);
+            // Round the diner, and round anything on the way. Routed again whenever where they are
+            // headed moves, or they come back to idling from something else.
+            var goal = new Vector3(target.x, transform.position.y, target.z);
+            if (resumed || !idleRouted || (goal - idleGoal).sqrMagnitude > 0.04f)
+            {
+                idleGoal = goal;
+                idleRouted = true;
 
-            if (idleDetour.Count > 0) TravelTowards(idleDetour[0], 0.05f, pace);
-            else TravelTowards(target, arriveRadius, pace);
+                idleDetour.Clear();
+                if (shelter == null) shelter = FindFirstObjectByType<NightShelter>();
+                if (shelter != null) shelter.AppendDetour(transform.position, target, idleDetour);
+                idleDetour.Add(target);
+                idleWalker.Follow(idleDetour);
+            }
+
+            if (!idleWalker.Arrived) idleWalker.Advance(transform, moveSpeed * pace, turnSpeed, arriveRadius, Time.deltaTime);
         }
 
         readonly List<Vector3> idleDetour = new List<Vector3>(2);
@@ -1036,7 +1060,7 @@ namespace LastOrders.Jobs
             ReleaseHealthBar();
 
             if (casualty != null) PutDown();
-            if (animator != null) animator.SetFloat(MoveParam, 0f);
+            CharacterLocomotion.Set(animator, 0f);
 
             // Knocked backwards: the head goes the way their back was facing.
             LieAt(transform.position, -transform.forward);

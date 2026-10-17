@@ -17,6 +17,8 @@ MonoBehaviour:
   headwear: SM_Chr_Attach_Cap_02
   vehicle: {fileID: 11400000, guid: 1f526ce785fa32f46b3bbfaf54905292, type: 2}
   spawnWeight: 2.5
+  minLevel: 1
+  minSafety: 0
   orders:
   - item: 11
     amountRange: {x: 1, y: 2}

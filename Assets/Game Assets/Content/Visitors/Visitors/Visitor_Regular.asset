@@ -17,6 +17,8 @@ MonoBehaviour:
   headwear: 
   vehicle: {fileID: 11400000, guid: 887d0e61da830da47ac491d0b59381a4, type: 2}
   spawnWeight: 4
+  minLevel: 1
+  minSafety: 0
   orders:
   - item: 10
     amountRange: {x: 1, y: 1}

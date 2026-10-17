@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using LastOrders.Core;
+using LastOrders.Data;
 using LastOrders.DayCycle;
 using LastOrders.DayCycle.States;
 using LastOrders.Night;
@@ -88,6 +89,9 @@ namespace LastOrders.UI.Hud
             composition.Outdoor.OnWrecked += HandleWrecked;
             composition.Outdoor.OnCapReached += HandleCapReached;
             composition.Restaurant.OnHealthChanged += HandleRestaurantHealth;
+            composition.Horde.OnDefenseTargeted += HandleDefenseTargeted;
+            composition.Horde.OnDefenseKnockedOut += HandleDefenseKnockedOut;
+            composition.Horde.OnKnockOutCapReached += HandleCapReached;
         }
 
         public void Dispose()
@@ -104,6 +108,9 @@ namespace LastOrders.UI.Hud
             composition.Outdoor.OnWrecked -= HandleWrecked;
             composition.Outdoor.OnCapReached -= HandleCapReached;
             composition.Restaurant.OnHealthChanged -= HandleRestaurantHealth;
+            composition.Horde.OnDefenseTargeted -= HandleDefenseTargeted;
+            composition.Horde.OnDefenseKnockedOut -= HandleDefenseKnockedOut;
+            composition.Horde.OnKnockOutCapReached -= HandleCapReached;
         }
 
         void Say(string message, HudTone tone) => OnMessage?.Invoke(message, tone);
@@ -131,8 +138,19 @@ namespace LastOrders.UI.Hud
             if (AnnouncesWaves) Say("The restaurant has fallen! Defense failed.", HudTone.Danger);
         }
 
-        void HandleWrecked(Consequence.OutdoorWreck wreck) =>
+        void HandleWrecked(Consequence.OutdoorWreck wreck)
+        {
+            // A defense knocked out has its own line, from the horde.
+            if (wreck.IsDefense) return;
+
             Say($"Zombies wrecked the {wreck.DisplayName.ToLowerInvariant()}!", HudTone.Danger);
+        }
+
+        void HandleDefenseTargeted(Night.IDefenseObjective defense) =>
+            Say($"Zombies are going for the {defense.DisplayName.ToLowerInvariant()}!", HudTone.Warning);
+
+        void HandleDefenseKnockedOut(Night.IDefenseObjective defense) =>
+            Say($"Zombies knocked out the {defense.DisplayName.ToLowerInvariant()}!", HudTone.Danger);
 
         void HandleCapReached() => Say("The zombies have turned on the restaurant - hold the door!", HudTone.Danger);
 
@@ -229,17 +247,19 @@ namespace LastOrders.UI.Hud
         {
             WavePlan plan = composition.Context.TonightsWave;
             int coming = plan != null ? plan.Spawns.Count : 0;
+            bool big = plan != null && plan.IsEncounter && plan.IsBigWave;
 
             string forecast = coming switch
             {
                 0 => "Nothing on the road tonight, by the look of it.",
                 1 => "One zombie is coming.",
-                _ when plan != null && plan.IsEncounter =>
-                    $"{coming} zombies in {plan.Waves.Count} wave{(plan.Waves.Count == 1 ? "" : "s")}. Place and repair your defenses!",
+                _ when big =>
+                    $"A big wave: {coming} zombies in {plan.Waves.Count} wave{(plan.Waves.Count == 1 ? "" : "s")}. Place and repair your defenses!",
+                _ when plan != null && plan.IsEncounter => $"A small pack of {coming} zombies is coming. Check your defenses!",
                 _ => $"About {coming} zombies are drawn in by the lights.",
             };
 
-            return new HudObjective("Get Ready", Join(forecast, WatchLine()), HudSprites.IconZombie, HudTone.Danger);
+            return new HudObjective(big ? "Big Wave Tonight" : "Get Ready", Join(forecast, WatchLine()), HudSprites.IconZombie, HudTone.Danger);
         }
 
         HudObjective Night()
@@ -363,20 +383,60 @@ namespace LastOrders.UI.Hud
         /// <summary>The band the next attack would come from, as it stands: "Low", "Medium", "High".</summary>
         public static string ThreatName(GameComposition composition)
         {
-            EncounterRequest request = composition.Encounters.RequestFor(composition.Time.CurrentDay);
+            EncounterRequest request = NextRequest(composition);
             return request.Tier != null ? request.Tier.name : "Low";
         }
 
-        /// <summary>"Zombies attack tonight", "Next zombie attack in 2 days".</summary>
+        /// <summary>The next attack as it would be locked now.</summary>
+        static EncounterRequest NextRequest(GameComposition composition)
+        {
+            int day = Mathf.Max(1, composition.Time.CurrentDay);
+            return composition.Encounters.RequestFor(composition.Encounters.NextAttackDay(day));
+        }
+
+        /// <summary>"Big wave tonight!", "Zombies tonight · big wave in 2 days".</summary>
         public static string NextAttack(GameComposition composition)
         {
             int day = Mathf.Max(1, composition.Time.CurrentDay);
-            return composition.Encounters.DaysUntilAttack(day) switch
+            EncounterService encounters = composition.Encounters;
+
+            string big = encounters.DaysUntilBigWave(day) switch
             {
-                0 => "Zombies attack tonight",
-                1 => "Zombies attack tomorrow night",
-                int days => $"Next zombie attack in {days} days",
+                0 => "Big wave tonight!",
+                1 => "big wave tomorrow",
+                int days => $"big wave in {days} days",
             };
+
+            if (encounters.DaysUntilBigWave(day) == 0) return big;
+
+            return encounters.DaysUntilAttack(day) switch
+            {
+                0 => $"Zombies tonight  ·  {big}",
+                1 => $"Zombies tomorrow night  ·  {big}",
+                int days => $"Zombies in {days} days  ·  {big}",
+            };
+        }
+
+        /// <summary>
+        /// What the next attack is being measured from, in the player's words: "Medium threat from
+        /// Safety 52, level 4 (+9), damage 30% (-8)." So it is never a mystery why it got harder.
+        /// </summary>
+        public static string ThreatBreakdown(GameComposition composition)
+        {
+            EncounterRequest r = NextRequest(composition);
+            ThreatScalingTuning scaling = composition.Encounters.Tuning.Scaling;
+
+            string threat = r.Tier != null ? r.Tier.name : "Low";
+            var parts = new List<string> { $"Safety {Mathf.RoundToInt(r.Safety)}" };
+
+            float level = scaling.LevelBandPoints(r.PlayerLevel);
+            parts.Add(level > 0.5f ? $"level {r.PlayerLevel} (+{Mathf.RoundToInt(level)})" : $"level {r.PlayerLevel}");
+
+            if (r.ZoneDamage > 0.01f)
+                parts.Add($"damage {Mathf.RoundToInt(r.ZoneDamage * 100f)}% (-{Mathf.RoundToInt(scaling.DamageBandPoints(r.ZoneDamage))}, fewer zombies)");
+
+            string kind = r.IsBigWave ? "Big wave" : "Tonight's pack";
+            return $"{kind}: {threat} threat, about {r.Enemies} zombies - from {string.Join(", ", parts)}.";
         }
 
         /// <summary>"0:42" - the preparation countdown.</summary>
@@ -395,7 +455,7 @@ namespace LastOrders.UI.Hud
             if (plan == null) return $"ZOMBIES IN {clock}";
 
             string waves = plan.Waves.Count == 1 ? "1 wave" : $"{plan.Waves.Count} waves";
-            return $"ZOMBIES IN {clock}  ·  {plan.ThreatName} threat, {waves}";
+            return $"{(plan.IsBigWave ? "BIG WAVE" : "ZOMBIES")} IN {clock}  ·  {plan.ThreatName} threat, {waves}";
         }
 
         /// <summary>"WAVE 2/3  ·  from the north  ·  7 left", or the break between waves.</summary>

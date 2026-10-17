@@ -20,6 +20,7 @@ namespace LastOrders.EditorTools
             "Assets/PolygonFarm/Prefabs/Characters/SM_Chr_FarmGirl_01.prefab",
             "Assets/PolygonFarm/Prefabs/Characters/SM_Chr_Farmer_Male_01.prefab",
             "Assets/Game Assets/Prefabs/Characters/MainCharacter.prefab",
+            "Assets/Game Assets/Prefabs/Characters/Staff 1.prefab",
         };
 
         /// <summary>

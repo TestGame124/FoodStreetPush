@@ -88,6 +88,9 @@ namespace LastOrders.Night
         /// <summary>Share of the zombies sent after a run of defeats. One when nothing was taken off.</summary>
         public float Relief = 1f;
 
+        /// <summary>An attack's big wave - every few days - rather than the small pack of the nights between.</summary>
+        public bool IsBigWave;
+
         public bool IsEncounter => Waves.Count > 0;
 
         public int EnemyCount => Spawns.Count;

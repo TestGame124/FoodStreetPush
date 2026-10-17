@@ -41,6 +41,21 @@ namespace FoodStreet.Navigation
 
         SteeringAgent steering;
 
+        bool hasFallback;
+        Vector3 fallback;
+
+        /// <summary>
+        /// Where to head whenever the field cannot say: when it has no objective at all, or this
+        /// agent stands somewhere it never reached. Without one the agent stands still there.
+        /// </summary>
+        public void SetFallback(Vector3 point)
+        {
+            fallback = point;
+            hasFallback = true;
+        }
+
+        public void ClearFallback() => hasFallback = false;
+
         void Awake()
         {
             steering = GetComponent<SteeringAgent>();
@@ -51,10 +66,10 @@ namespace FoodStreet.Navigation
             if (!active) return;
 
             NavigationSystem nav = NavigationSystem.Instance;
-            if (nav == null) return;
+            if (nav == null || nav.Grid == null) return;
 
             FlowField flow = nav.GetFlowField(field);
-            if (flow == null || !flow.IsValid) return;
+            bool valid = flow != null && flow.IsValid;
 
             NavGrid grid = nav.Grid.Grid;
             Vector3 position = transform.position;
@@ -62,26 +77,39 @@ namespace FoodStreet.Navigation
 
             // Clearance treats off-grid as blocked, so the field never covers the outermost
             // cells: its reach starts this many cells in from every edge.
-            int inset = nav.Grid.ClearanceForRadius(flow.Settings.AgentRadius);
+            int inset = nav.Grid.ClearanceForRadius(valid ? flow.Settings.AgentRadius : steering.Radius);
 
-            if (!grid.InBounds(cell) || (IsOnRim(grid, cell, inset) && flow.GetIntegratedCost(cell) == FlowField.Unreachable))
+            if (!grid.InBounds(cell) || (IsOnRim(grid, cell, inset) && (!valid || flow.GetIntegratedCost(cell) == FlowField.Unreachable)))
             {
                 // Off the grid, or on the rim the field does not reach - which is where every
                 // enemy starts, because lanes are placed beyond the plot's edge so that they
                 // walk in. The field knows nothing out here, so head straight in to the nearest
                 // cell it does cover and pick it up from there. Doing nothing instead left every
-                // agent standing where it spawned for the whole night.
+                // agent standing where it spawned for the whole night. Needs no field at all, so
+                // it is asked before the field is.
                 HasArrived = false;
                 steering.SetDesiredDirection(grid.CellToWorld(Inset(grid, cell, inset)) - position);
+                return;
+            }
+
+            if (!valid)
+            {
+                // A field with no objective - nothing seeded it. Head for the fallback rather than
+                // stand there all night, which is what every zombie did when the restaurant's door
+                // stopped being a grid object.
+                HasArrived = false;
+                if (hasFallback) steering.SetDesiredDirection(fallback - position);
                 return;
             }
 
             int cost = flow.GetIntegratedCost(cell);
             if (cost == FlowField.Unreachable)
             {
-                // Standing somewhere the field never reached. Do nothing rather than guess:
-                // a guessed direction here is how agents end up jittering against a wall.
+                // Standing somewhere the field never reached. Rather than guess a direction - how
+                // agents end up jittering against a wall - head straight for the fallback when there
+                // is one: whatever stands in the way is then what a zombie starts hitting.
                 HasArrived = false;
+                if (hasFallback) steering.SetDesiredDirection(fallback - position);
                 return;
             }
 
