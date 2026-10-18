@@ -152,7 +152,7 @@ namespace LastOrders.EditorTools.Screens
 
         // --- Pieces -------------------------------------------------------------------------------
 
-        static GameObject CanvasRoot(string name, Vector2 size, bool raycaster)
+        internal static GameObject CanvasRoot(string name, Vector2 size, bool raycaster)
         {
             var root = new GameObject(name, typeof(RectTransform)) { layer = 5 };
             var canvas = root.AddComponent<Canvas>();
@@ -167,7 +167,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>The child every animation runs on, so the pooled root's scale never changes.</summary>
-        static RectTransform Body(GameObject root) => Fill("Body", root.transform);
+        internal static RectTransform Body(GameObject root) => Fill("Body", root.transform);
 
         /// <summary>A rounded track with a fill clipped to its shape, for a script that sets the fill's amount and colour.</summary>
         static Image Track(RectTransform parent, string name, Vector2 at, Vector2 size, out RectTransform track)
@@ -200,7 +200,7 @@ namespace LastOrders.EditorTools.Screens
         /// A round button over something in the world: the icon in a chunky disc with a little beak
         /// pointing down at the thing, a caption on a chip under it, breathing to be noticed.
         /// </summary>
-        static GameObject Prompt(string name, string round, string icon, string caption, Color chip, bool standing,
+        internal static GameObject Prompt(string name, string round, string icon, string caption, Color chip, bool standing,
                                  bool releaseOnPress = false)
         {
             bool captioned = !string.IsNullOrEmpty(caption);

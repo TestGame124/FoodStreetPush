@@ -5,6 +5,7 @@ using LastOrders.Data;
 using LastOrders.DayCycle;
 using LastOrders.DayCycle.States;
 using LastOrders.Defense;
+using LastOrders.Discovery;
 using LastOrders.Dispatch;
 using LastOrders.Economy;
 using LastOrders.Effects;
@@ -141,6 +142,27 @@ namespace LastOrders.Core
         /// <summary>Finds the defenses the horde can go for.</summary>
         public readonly DefenseObjectiveScanner DefenseObjectives;
 
+        /// <summary>The places found out on the land the restaurant expands into, and which are found.</summary>
+        public readonly DiscoveryService Discovery;
+
+        /// <summary>The drive-through window: cars in the lane and the bags they want.</summary>
+        public readonly TakeawayService Takeaway;
+
+        /// <summary>The food truck: its load, and the trip it is on.</summary>
+        public readonly FoodTruckService FoodTruck;
+
+        /// <summary>The shooting range: the round on now, the score, the rest before the next.</summary>
+        public readonly ShootingRangeService Range;
+
+        /// <summary>The security hut's noise maker: where it stands, and whether it is sounding.</summary>
+        public readonly NoiseMakerService NoiseMaker;
+
+        /// <summary>
+        /// What every night zombie asks about where to go: the noise maker while it sounds and the
+        /// zombie can hear it, the horde otherwise.
+        /// </summary>
+        public IZombieOrders ZombieOrders => NoiseMaker != null ? NoiseMaker : (IZombieOrders)Horde;
+
         public readonly BuildContext BuildContext;
         public readonly BuildCommandStack Commands;
 
@@ -275,6 +297,32 @@ namespace LastOrders.Core
                 Scanner = DefenseObjectives.Scan,
             };
 
+            // Found by claiming the land they stand on, so after the expansion loop. What each one does
+            // is wired here, below the rest, because it touches the kitchen, the day, the horde and the purse.
+            Discovery = new DiscoveryService(Progression, Expansion);
+
+            DiscoveryTuning discovery = balance.discovery ?? (balance.discovery = new DiscoveryTuning());
+            DishCatalogue dishes = DishCatalogue.ForGame(() => LastOrdersBridge.PlayerLevel);
+
+            // Open exactly when the dining room is: in the day, not closed for repairs, nothing inside the walls.
+            Takeaway = new TakeawayService(discovery.takeaway, Meals, dishes,
+                                           () => Machine.CurrentPhase == DayPhase.Day && !Context.ClosedForRepairs && !Compound.IsBreached,
+                                           () => Discovery.HasFeature(DiscoveryFeature.Takeaway), PayTakings, LastOrdersBridge.AddExperience,
+                                           balance.campaignSeed ^ 0x5A17);
+
+            FoodTruck = new FoodTruckService(discovery.foodTruck, Meals, dishes, () => Machine.CurrentPhase.AllowsBuilding(),
+                                             () => Discovery.HasFeature(DiscoveryFeature.FoodTruck), PayTakings, LastOrdersBridge.AddExperience);
+
+            Range = new ShootingRangeService(discovery.range, () => Machine.CurrentPhase.AllowsBuilding(),
+                                             () => Discovery.HasFeature(DiscoveryFeature.ShootingRange), PayTakings,
+                                             LastOrdersBridge.AddExperience);
+
+            // Set down in daylight or while the warning is up; sounded only once the zombies are on the map.
+            NoiseMaker = new NoiseMakerService(Horde, () => Balance.discovery?.noiseMaker,
+                                               () => Discovery.HasFeature(DiscoveryFeature.NoiseMaker),
+                                               () => Machine.CurrentPhase == DayPhase.Night && Encounters.IsActive,
+                                               () => Machine.CurrentPhase != DayPhase.Night, WhyNoNoiseMakerHere);
+
             // The next attack is measured by the player's level and by what the last one left broken.
             Encounters.PlayerLevel = () => LastOrdersBridge.PlayerLevel;
             Encounters.ZoneDamage = MeasureZoneDamage;
@@ -323,6 +371,31 @@ namespace LastOrders.Core
             }
 
             return scaling.ZoneDamage(wall, yard, built > 0 ? down / (float)built : 0f);
+        }
+
+        /// <summary>Takings from the window, the truck and the range: into the HUD's wallet, and onto the dawn report.</summary>
+        static void PayTakings(int coins)
+        {
+            LastOrdersBridge.NotifyCoinsPaid(coins);
+            LastOrdersBridge.NotifyCoinEarned(coins);
+        }
+
+        /// <summary>
+        /// Why the noise maker cannot stand at <paramref name="at"/>, or null when it can: out past the
+        /// walls, where the zombies are, and on ground they walk - off it they could never reach it.
+        /// </summary>
+        string WhyNoNoiseMakerHere(Vector3 at)
+        {
+            if (Compound.HasInterior && Compound.IsInside(at)) return "Set it outside the walls: that is where the zombies are.";
+
+            FoodStreet.Navigation.NavigationSystem navigation = FoodStreet.Navigation.NavigationSystem.Instance;
+            if (navigation == null || navigation.Grid == null) return null;
+
+            Vector2Int cell = navigation.Grid.Grid.WorldToCell(at);
+            if (!navigation.Grid.Grid.InBounds(cell)) return "Too far out: the zombies would never hear it from their path.";
+            if (!navigation.Grid.IsWalkable(cell)) return "Something is in the way there. Pick open ground.";
+
+            return null;
         }
 
         readonly List<IDefenseTarget> defenseTargets = new List<IDefenseTarget>();
@@ -398,6 +471,10 @@ namespace LastOrders.Core
             };
             Encounters.OnWaveStarted += (_, __, wave) => Horde.PlanWave(wave);
             Encounters.OnResolved += _ => Horde.EndAttack();
+
+            // The noise maker's battery is charged for each attack, and it falls silent when the morning settles it.
+            Encounters.OnLocked += _ => NoiseMaker.BeginAttack();
+            Encounters.OnResolved += _ => NoiseMaker.EndAttack();
 
             // With no door on the build grid, the night's zombies make for the restaurant's own doorway.
             // Seeded again as dusk falls, whatever order the scene came up in: a field with no objective
@@ -563,6 +640,13 @@ namespace LastOrders.Core
             GroundDefenses.Tick(deltaSeconds);
 
             Hospital.Tick(deltaSeconds);
+
+            // What the discovery sites run: cars waiting at the window, the truck's trip, a round on
+            // the range, the noise maker's wail. All on the game loop's clock, so they stop with it.
+            Takeaway.Tick(deltaSeconds);
+            FoodTruck.Tick(deltaSeconds);
+            Range.Tick(deltaSeconds);
+            NoiseMaker.Tick(deltaSeconds);
 
             if (Machine.CurrentPhase == DayPhase.Night) Danger.Tick(deltaSeconds);
 

@@ -113,6 +113,13 @@ namespace FoodStreet.Visitors
 
         VisitorVehicle.VehicleStage lastStage;
 
+        /// <summary>
+        /// Whoever is driving stays in their seat at every stop - a drive-through's lane, where the
+        /// car creeps up a place at a time and the order comes out of the window - so the door stays
+        /// shut and the engine ticks over.
+        /// </summary>
+        public bool DriverStaysIn { get; set; }
+
         // Scheduled moments, in Time.time; negative when nothing is due.
         float doorOpenAt = -1f, doorCloseAt = -1f, engineStartAt = -1f, engineStopAt = -1f;
 
@@ -233,6 +240,12 @@ namespace FoodStreet.Visitors
 
             if (stopDust != null) stopDust.Play();
 
+            if (DriverStaysIn)
+            {
+                doorOpenAt = doorCloseAt = engineStopAt = engineStartAt = -1f;
+                return;
+            }
+
             float now = Time.time;
             doorOpenAt = now + 0.2f;
             doorCloseAt = doorsOpenWhileParked ? -1f : now + 1.5f;
@@ -245,6 +258,13 @@ namespace FoodStreet.Visitors
         {
             float now = Time.time;
             float hold = vehicle.PullAwaySeconds;
+
+            if (DriverStaysIn)
+            {
+                doorOpenAt = doorCloseAt = engineStopAt = -1f;
+                engineStartAt = engineOn ? -1f : now + Mathf.Max(0f, hold - 0.45f);
+                return;
+            }
 
             if (doorsOpenWhileParked)
             {

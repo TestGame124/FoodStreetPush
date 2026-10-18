@@ -67,6 +67,13 @@ namespace LastOrders.Defense
             Position = position;
         }
 
+        /// <summary>
+        /// A built copy of <paramref name="definition"/> at its first level that belongs to no defense
+        /// service: for the shooting range, which ticks it itself with <see cref="TickCalled"/>.
+        /// </summary>
+        public static DefenseUnit ForPractice(string id, DefenseDefinition definition, Vector3 position) =>
+            new DefenseUnit(id, definition, position) { IsBuilt = true };
+
         /// <summary>The foot of the defense. Ranges are measured flat from here, not from the
         /// raised platform, so a taller tower does not quietly reach further.</summary>
         public Vector3 Position { get; set; }
@@ -189,13 +196,42 @@ namespace LastOrders.Defense
 
             Track(Nearest(Position, CurrentLevel.SpotRange, hostiles));
 
+            float range = weapon.rangeMetres;
+            bool inRange = Target != null && FlatDistanceSquared(Position, Target.Position) <= range * range;
+
+            Shoot(deltaSeconds, weapon, inRange, stores, hostiles, free: false);
+        }
+
+        /// <summary>
+        /// One step of the fire loop for a defense told what to shoot rather than choosing: a
+        /// practice copy on the shooting range, which fires only at the cardboard the player taps.
+        /// <paramref name="called"/> is shot as soon as the weapon is ready, wherever it stands; the
+        /// weapon's own timing, flight and splash - over <paramref name="around"/> - are as in a fight.
+        /// </summary>
+        public void TickCalled(float deltaSeconds, IDefenseTarget called, IReadOnlyList<IDefenseTarget> around)
+        {
+            Land(deltaSeconds, around);
+
+            WeaponDefinition weapon = Weapon;
+            if (!CanFire)
+            {
+                Target = null;
+                cooldown = 0f;
+                return;
+            }
+
+            // Practice rounds are cardboard and cost nothing.
+            Target = IsLiving(called) ? called : null;
+            Shoot(deltaSeconds, weapon, Target != null, null, around, free: true);
+        }
+
+        void Shoot(float deltaSeconds, WeaponDefinition weapon, bool inRange, ResourceLedger stores,
+                   IReadOnlyList<IDefenseTarget> hostiles, bool free)
+        {
             // Ready before this step began: whatever is shot now is shot the moment it arrived,
             // and none of the step's time was spent waiting on the weapon.
             bool wasReady = cooldown <= 0f;
             cooldown -= deltaSeconds;
-
-            float range = weapon.rangeMetres;
-            bool inRange = Target != null && FlatDistanceSquared(Position, Target.Position) <= range * range;
 
             if (!inRange)
             {
@@ -205,7 +241,7 @@ namespace LastOrders.Defense
 
             if (cooldown > 0f) return;
 
-            if (!TryPayForShot(weapon, stores))
+            if (!free && !TryPayForShot(weapon, stores))
             {
                 cooldown = 0f;
                 return;

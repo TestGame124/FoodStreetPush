@@ -199,8 +199,9 @@ namespace LastOrders.Night
 
             // The horde decides whether it hunts the defenses, smashes the yard once over the wall,
             // or keeps on for the restaurant - and lets go of it all once the night's caps are reached.
+            // Asked through the noise maker, which overrides it for any zombie in earshot while it sounds.
             EncounterTuning tuning = composition.Encounters != null ? composition.Encounters.Tuning : null;
-            agent.ConfigureOrders(composition.Horde,
+            agent.ConfigureOrders(composition.ZombieOrders,
                                   tuning != null ? Mathf.Max(tuning.raidGiveUpSeconds, tuning.Targeting.giveUpSeconds) : 20f);
             composition.Horde.Enlist(agent, definition);
 

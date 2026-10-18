@@ -19,7 +19,7 @@ namespace LastOrders.Kitchen
     /// that, two people order the same bowl, one of them is served, and the other waits at a
     /// table forever for food that was never theirs.
     /// </summary>
-    public sealed class MealStock
+    public sealed class MealStock : IDishStore
     {
         /// <summary>
         /// Which item types are MEALS rather than ingredients.
@@ -349,5 +349,64 @@ namespace LastOrders.Kitchen
         }
 
         int Held(ItemType dish) => reserved.TryGetValue(dish, out int count) ? count : 0;
+
+        // --- Out of the window and onto the truck --------------------------------------------------
+
+        /// <summary>What the level's stations cook - or, in a level with none, whatever has been put on the pass.</summary>
+        public IReadOnlyCollection<ItemType> Menu =>
+            cookedHere.Count > 0 ? (IReadOnlyCollection<ItemType>)cookedHere.Keys : standalone.Keys;
+
+        /// <summary>
+        /// Ready and not promised to anybody: neither claimed here nor reserved by a waiter on the
+        /// level's pass, who would otherwise walk to the counter for a plate that had gone out of
+        /// the takeaway window.
+        /// </summary>
+        public int Spare(ItemType dish)
+        {
+            int ready = Ready(dish);
+            ServingPassBoard board = ServingPassBoard.Instance;
+            return board != null ? Mathf.Min(ready, board.Available(dish)) : ready;
+        }
+
+        /// <summary>Takes one spare dish off the pass for good: into a bag or onto the truck.</summary>
+        public bool TryTake(ItemType dish)
+        {
+            if (Spare(dish) <= 0) return false;
+
+            InventorySystem store = Inventory;
+            if (store != null)
+            {
+                if (!store.TryConsume(dish, 1)) return false;
+            }
+            else
+            {
+                standalone[dish] = Mathf.Max(0, Cooked(dish) - 1);
+            }
+
+            OnPassChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>A dish taken earlier comes back: a car that gave up, a truck unloaded before it left.</summary>
+        public void PutBack(ItemType dish)
+        {
+            InventorySystem store = Inventory;
+            if (store != null)
+            {
+                ItemDataSO data = DishData(dish);
+                if (data == null || !store.AddItem(new Item(data, 1)))
+                {
+                    Debug.LogWarning($"[MealStock] A {dish} came back from the window but there was no room for it on the pass.");
+                    return;
+                }
+            }
+            else
+            {
+                standalone.TryGetValue(dish, out int count);
+                standalone[dish] = count + 1;
+            }
+
+            OnPassChanged?.Invoke();
+        }
     }
 }

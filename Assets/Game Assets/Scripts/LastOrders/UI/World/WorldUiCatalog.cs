@@ -58,6 +58,22 @@ namespace LastOrders.UI.World
         [Tooltip("Feeding a chicken coop or cow shelter: how many eggs or churns to make, and the feed it costs.")]
         public Popups.FeedPopupView feedPopup;
 
+        [Header("Discovery sites")]
+        [Tooltip("The standing button over a discovery site that has been found: opens what it does.")]
+        public ActionPromptView sitePrompt;
+
+        [Tooltip("The standing button over a discovery site still to be found: says which plot finds it.")]
+        public ActionPromptView mysteryPrompt;
+
+        [Tooltip("The standing button over the noise maker in an attack: sounds it.")]
+        public ActionPromptView alarmPrompt;
+
+        [Tooltip("The drive-through window: the cars in the lane, their bags, and the dishes on the pass to pack them with.")]
+        public Popups.TakeawayPopupView takeawayPopup;
+
+        [Tooltip("The food truck: what to load from the pass, and where on the little map to send it.")]
+        public Popups.FoodTruckPopupView foodTruckPopup;
+
         [Header("Placement (metres above the anchor)")]
         public Vector3 promptOffset = new Vector3(0f, 0.9f, 0f);
         public Vector3 progressOffset = new Vector3(0f, 0.4f, 0f);

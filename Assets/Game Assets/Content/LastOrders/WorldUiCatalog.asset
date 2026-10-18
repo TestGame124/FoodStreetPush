@@ -26,6 +26,11 @@ MonoBehaviour:
   workerPanel: {fileID: 2149742550744180128, guid: 0aa4a629c1926ad45b20de4f40d405db, type: 3}
   restaurantExpansionPopup: {fileID: 649496278973467060, guid: 0a48dd6266e6cda4f8badf255b7e9812, type: 3}
   feedPopup: {fileID: 1634356862686928682, guid: d85fc1167a9bece4e92cf8e2640f2329, type: 3}
+  sitePrompt: {fileID: 1714540992992293254, guid: d4575de7eb5bd2f41bec24ef2b800255, type: 3}
+  mysteryPrompt: {fileID: 3787638392490791678, guid: 516f032640d9fe14bae595fa306cad99, type: 3}
+  alarmPrompt: {fileID: 5168482965423352902, guid: 322904f2405c4e64ab851c87c0856bf2, type: 3}
+  takeawayPopup: {fileID: 3534243655773498077, guid: db3ff1b1d7b5ff8429fbbb8ac0630f04, type: 3}
+  foodTruckPopup: {fileID: 2710225223165809896, guid: 8da72b7a0f571354c8e9488908f63da0, type: 3}
   promptOffset: {x: 0, y: 0.9, z: 0}
   progressOffset: {x: 0, y: 0.4, z: 0}
   floatingTextOffset: {x: 0, y: 0.8, z: 0}

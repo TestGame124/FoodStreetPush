@@ -174,6 +174,9 @@ namespace LastOrders.EditorTools
             foreach (TownZombies.Area patch in L.TownPatches)
                 keepOut.Add(new Rect(new Vector2(patch.centre.x, patch.centre.z) - patch.size * 0.5f - Vector2.one, patch.size + Vector2.one * 2f));
 
+            // The road-side discovery sites and the ground their vehicles turn on.
+            keepOut.AddRange(DiscoverySiteSetup.Footprints());
+
             return keepOut;
         }
 

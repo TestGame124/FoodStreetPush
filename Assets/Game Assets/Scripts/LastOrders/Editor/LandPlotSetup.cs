@@ -721,6 +721,9 @@ namespace LastOrders.EditorTools
             report.Append($"  {ExpansionNeighbours.Assign(scene)} wall sections face a neighbouring plot.\n");
             report.Append(CompoundWallSceneSetup.Apply(scope, save: false));
 
+            // The discovery sites stand on four of the plots just rebuilt: put them back, and their debris off them.
+            report.Append(DiscoverySiteSetup.Apply(scope, save: false));
+
             EditorSceneManager.MarkSceneDirty(scene);
             if (save) EditorSceneManager.SaveScene(scene);
 

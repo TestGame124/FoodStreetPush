@@ -135,6 +135,11 @@ namespace LastOrders.Data
                  "customers in return.")]
         public SafetyReputationTuning safety = new SafetyReputationTuning();
 
+        [Header("Discovery sites")]
+        [Tooltip("The drive-through, the food truck, the shooting range and the noise maker found out on " +
+                 "the land the restaurant expands into.")]
+        public DiscoveryTuning discovery = new DiscoveryTuning();
+
         [Header("Closed for Repairs (15.10)")]
         [Tooltip("Build speed bonus when the player skips serving entirely for a day.")]
         public float closedForRepairsBuildBonus = 0.5f;

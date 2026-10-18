@@ -29,11 +29,11 @@ namespace LastOrders.EditorTools.Screens
 
         // Colours the popups tint their buttons with. The tint button is grey, so these are the
         // colour the top of a button comes out.
-        static readonly Color Ready = new Color(0.42f, 0.78f, 0.72f);
-        static readonly Color Blocked = new Color(0.80f, 0.78f, 0.75f);
+        internal static readonly Color Ready = new Color(0.42f, 0.78f, 0.72f);
+        internal static readonly Color Blocked = new Color(0.80f, 0.78f, 0.75f);
         static readonly Color Premium = new Color(0.93f, 0.50f, 0.62f);
-        static readonly Color Met = new Color(0.20f, 0.52f, 0.28f);
-        static readonly Color Short = new Color(0.78f, 0.31f, 0.25f);
+        internal static readonly Color Met = new Color(0.20f, 0.52f, 0.28f);
+        internal static readonly Color Short = new Color(0.78f, 0.31f, 0.25f);
 
         [MenuItem("Last Orders/UI/Build Diner Popups", priority = 212)]
         static void BuildFromMenu() => Debug.Log($"[Last Orders] {Build()}");
@@ -95,7 +95,7 @@ namespace LastOrders.EditorTools.Screens
 
         // --- The frame every popup shares ---------------------------------------------------------
 
-        sealed class Frame
+        internal sealed class Frame
         {
             public GameObject root;
             public RectTransform panel;
@@ -106,7 +106,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>The dim, the window with its title band and icon, and the close button.</summary>
-        static Frame Popup(string name, Vector2 size, string title, string icon)
+        internal static Frame Popup(string name, Vector2 size, string title, string icon)
         {
             var f = new Frame();
             f.root = new GameObject(name, typeof(RectTransform)) { layer = 5 };
@@ -137,7 +137,7 @@ namespace LastOrders.EditorTools.Screens
             return f;
         }
 
-        static TextMeshProUGUI Para(RectTransform panel, string name, Vector2 at, Vector2 size, Face face, float fontSize, Color colour,
+        internal static TextMeshProUGUI Para(RectTransform panel, string name, Vector2 at, Vector2 size, Face face, float fontSize, Color colour,
                                     TextAlignmentOptions align = TextAlignmentOptions.Center, float min = 16f, bool wrap = true)
         {
             TextMeshProUGUI t = Label(Center(name, panel, at, size), "", face, fontSize, colour, align).Fit(min, wrap);
@@ -145,7 +145,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>A chunky button the popup tints: grey art, so the colour it is given is the colour it shows.</summary>
-        static (Button, Image, TextMeshProUGUI) TintButton(RectTransform panel, string name, Vector2 at, Vector2 size, string text,
+        internal static (Button, Image, TextMeshProUGUI) TintButton(RectTransform panel, string name, Vector2 at, Vector2 size, string text,
                                                            string sprite = null)
         {
             RectTransform rt = Center(name, panel, at, size);
@@ -182,7 +182,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>A sunken block with a paragraph of details in it.</summary>
-        static TextMeshProUGUI Details(RectTransform panel, Vector2 at, Vector2 size)
+        internal static TextMeshProUGUI Details(RectTransform panel, Vector2 at, Vector2 size)
         {
             RectTransform back = Center("DetailsBack", panel, at, size);
             Well(back, size);
@@ -193,7 +193,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>A rounded track with a fill the popup sets the amount and colour of.</summary>
-        static Image FilledBar(RectTransform panel, string name, Vector2 at, Vector2 size, out RectTransform track)
+        internal static Image FilledBar(RectTransform panel, string name, Vector2 at, Vector2 size, out RectTransform track)
         {
             track = Center(name, panel, at, size);
             Paint(track, HudSprites.BarTrack, Color.white, size: size);
@@ -211,7 +211,7 @@ namespace LastOrders.EditorTools.Screens
             return fill;
         }
 
-        static void WireFrame(Object view, Frame f)
+        internal static void WireFrame(Object view, Frame f)
         {
             Set(view, "panel", f.panel);
             Set(view, "group", f.group);
@@ -220,7 +220,7 @@ namespace LastOrders.EditorTools.Screens
             Set(view, "title", f.title);
         }
 
-        static void Colours(Object view, Color ready, Color blocked)
+        internal static void Colours(Object view, Color ready, Color blocked)
         {
             Set(view, "readyColour", ready);
             Set(view, "blockedColour", blocked);
@@ -491,7 +491,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>A round minus or plus button that greys out when it cannot be pressed.</summary>
-        static Button Stepper(RectTransform parent, string name, Vector2 at, string glyph)
+        internal static Button Stepper(RectTransform parent, string name, Vector2 at, string glyph)
         {
             ButtonParts parts = RoundButton(parent, name, HudSprites.RoundCream, glyph, 92f, at);
             Dimming(parts.button, parts.face);
@@ -499,7 +499,7 @@ namespace LastOrders.EditorTools.Screens
         }
 
         /// <summary>The popup switches some buttons off and on; a switched-off one fades back.</summary>
-        static void Dimming(Button button, Graphic face)
+        internal static void Dimming(Button button, Graphic face)
         {
             button.transition = Selectable.Transition.ColorTint;
             button.targetGraphic = face;

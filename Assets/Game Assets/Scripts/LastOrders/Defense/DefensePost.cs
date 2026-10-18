@@ -105,6 +105,12 @@ namespace LastOrders.Defense
         GameComposition composition;
         DefenseUnit unit;
         ActionPromptView buildButton;
+
+        /// <summary>A practice copy on the shooting range: see <see cref="ConfigureForPractice"/>.</summary>
+        bool practice;
+
+        DefenseUnit practiceUnit;
+        ITappable practiceOwner;
         Quaternion restRotation;
         float tracerRemaining;
 
@@ -180,7 +186,7 @@ namespace LastOrders.Defense
         /// </summary>
         void OnEnable()
         {
-            if (!standing.Contains(this)) standing.Add(this);
+            if (!practice && !standing.Contains(this)) standing.Add(this);
             if (started && placedFromShop && unit == null) reconnect = true;
         }
 
@@ -211,7 +217,7 @@ namespace LastOrders.Defense
                 return;
             }
 
-            unit = composition.Defense.Register(definition, FreeId(), transform.position, startsBuilt);
+            unit = practice ? practiceUnit : composition.Defense.Register(definition, FreeId(), transform.position, startsBuilt);
             if (unit == null) return;
 
             unit.OnFired += HandleFired;
@@ -231,7 +237,7 @@ namespace LastOrders.Defense
             unit.OnChanged -= HandleChanged;
 
             HideBuildButton();
-            composition?.Defense.Unregister(unit.Id);
+            if (!practice) composition?.Defense.Unregister(unit.Id);
             unit = null;
         }
 
@@ -398,6 +404,9 @@ namespace LastOrders.Defense
 
         public string OnTapped()
         {
+            // On the range a tap on the machine is the range's: there is nothing to buy for cardboard.
+            if (practice) return practiceOwner?.OnTapped();
+
             if (unit == null) return $"The {DisplayName} is not connected to the game.";
 
             // A wreck is mended with a repair kit, not upgraded: the reply says how.
@@ -479,6 +488,25 @@ namespace LastOrders.Defense
             postId = id;
             startsBuilt = true;
             placedFromShop = true;
+        }
+
+        /// <summary>
+        /// Makes this copy a practice machine on the shooting range, before its first frame. It
+        /// runs <paramref name="unit"/> - which the range owns and ticks itself, against cardboard -
+        /// instead of registering with the compound's defenses: so it never fires at the night's
+        /// zombies, the horde never hunts it, it costs nothing and counts for nothing, and a tap on
+        /// it goes to <paramref name="owner"/>.
+        /// </summary>
+        public void ConfigureForPractice(GameLifetimeScope lifetimeScope, DefenseUnit unit, ITappable owner)
+        {
+            scope = lifetimeScope;
+            practice = true;
+            practiceUnit = unit;
+            practiceOwner = owner;
+            placedFromShop = false;
+            standing.Remove(this);
+
+            if (unit != null && unit.Definition != null) definition = unit.Definition;
         }
 
         /// <summary>Editor wiring for the parts, for the prefab generator.</summary>
