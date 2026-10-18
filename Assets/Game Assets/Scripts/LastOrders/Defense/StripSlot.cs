@@ -1,5 +1,6 @@
 using DG.Tweening;
 using FoodStreet.Navigation;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Effects;
@@ -238,6 +239,7 @@ namespace LastOrders.Defense
         {
             lastHit = Time.time;
             if (view != null) view.Strike();
+            SoundController.Play(SoundId.TrapSnap, transform.position);
         }
 
         void HandleWorn()
@@ -251,6 +253,7 @@ namespace LastOrders.Defense
 
             Vector3 at = transform.position + Vector3.up * 0.6f;
             composition.Effects.Play(breakEffect, at);
+            SoundController.Play(SoundId.StructureBreak, at);
             composition.WorldUi.ShowWarning(at + Vector3.up * 1.2f, $"{what} {state}!");
         }
 
@@ -352,6 +355,7 @@ namespace LastOrders.Defense
         public void OnStrike()
         {
             if (view != null) view.Hit();
+            SoundController.Play(SoundId.WorkHammer, transform.position);
         }
 
         static void SetActive(GameObject target, bool active)

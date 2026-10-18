@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Effects;
@@ -221,6 +222,7 @@ namespace LastOrders.Defense
                 gun.DOLocalMove(Vector3.down * toppleDrop, 0.35f).SetEase(Ease.InQuad);
                 gun.DOLocalRotate(new Vector3(0f, 0f, toppleDegrees), 0.35f).SetEase(Ease.InQuad);
                 composition.WorldUi.ShowWarning(transform.position + Vector3.up * 3f, $"{built.displayName} knocked over!");
+                SoundController.Play(SoundId.StructureBreak, gun.position);
                 return;
             }
 

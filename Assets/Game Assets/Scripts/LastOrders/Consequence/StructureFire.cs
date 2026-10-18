@@ -1,4 +1,5 @@
 using System;
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace LastOrders.Consequence
@@ -27,6 +28,7 @@ namespace LastOrders.Consequence
         DamageableStructure structure;
         float remaining;
         float spreadTimer;
+        SoundHandle crackle;
 
         public bool IsBurning => remaining > 0f;
 
@@ -53,7 +55,11 @@ namespace LastOrders.Consequence
             // on one wall should not silently double its damage.
             remaining = burnDurationSeconds;
 
-            if (!wasBurning) OnIgnited?.Invoke();
+            if (wasBurning) return;
+
+            SoundController.Play(SoundId.FireIgnite, transform.position);
+            crackle = SoundController.PlayAttached(SoundId.FireCrackle, transform, 1f, 0.6f);
+            OnIgnited?.Invoke();
         }
 
         /// <summary>The Crisis Bar's Douse verb, and what a water tank buys. Wetting a tile
@@ -64,6 +70,8 @@ namespace LastOrders.Consequence
 
             remaining = 0f;
             spreadTimer = 0f;
+            crackle.Stop(0.5f);
+            SoundController.Play(SoundId.FireOut, transform.position);
             OnExtinguished?.Invoke();
         }
 
@@ -84,7 +92,12 @@ namespace LastOrders.Consequence
             }
 
             if (remaining <= 0f) Extinguish();
+
+            // Burnt out by itself: the crackle dies away with it.
+            if (!IsBurning) crackle.Stop(1.5f);
         }
+
+        void OnDisable() => crackle.Stop();
 
         /// <summary>
         /// Spreads to one orthogonally adjacent flammable structure.

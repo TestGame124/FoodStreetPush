@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace FoodStreet.Visitors
@@ -214,6 +215,7 @@ namespace FoodStreet.Visitors
             {
                 biteClock -= bitePeriod;
                 bitePeriod = Roll();
+                SoundController.Play(SoundId.Chew, transform.position);
             }
 
             Vector3 mouth = head != null

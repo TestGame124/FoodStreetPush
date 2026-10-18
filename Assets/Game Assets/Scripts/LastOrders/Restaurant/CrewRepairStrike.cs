@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using LastOrders.Jobs;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace LastOrders.Restaurant
         public void OnStrike()
         {
             if (view != null) view.OnCrewStrike(transform);
+            SoundController.Play(SoundId.WorkHammer, transform.position);
         }
     }
 }

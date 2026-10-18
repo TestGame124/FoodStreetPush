@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace LastOrders.UI.Hud
@@ -43,6 +44,8 @@ namespace LastOrders.UI.Hud
                 return;
             }
 
+            SoundController.Play(SoundFor(tone));
+
             HudToast toast = pool.Count > 0 ? pool.Pop() : Instantiate(template, transform);
             toast.gameObject.SetActive(true);
             toast.transform.SetAsLastSibling();
@@ -63,6 +66,18 @@ namespace LastOrders.UI.Hud
             toast.y = -toast.rect.sizeDelta.y * 0.8f;
             toast.rect.anchoredPosition = new Vector2(0f, toast.y);
             toast.rect.localScale = Vector3.one * 0.9f;
+        }
+
+        /// <summary>A new toast is heard as well as seen, by how much it matters. A refreshed one is not.</summary>
+        static SoundId SoundFor(HudTone tone)
+        {
+            switch (tone)
+            {
+                case HudTone.Good: return SoundId.UiToastGood;
+                case HudTone.Warning: return SoundId.UiToastWarning;
+                case HudTone.Danger: return SoundId.UiToastDanger;
+                default: return SoundId.UiToastInfo;
+            }
         }
 
         void Paint(HudToast toast, HudTone tone)

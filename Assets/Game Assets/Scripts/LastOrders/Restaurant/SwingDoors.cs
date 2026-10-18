@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FoodStreet.Visitors;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Jobs;
 using UnityEngine;
@@ -213,6 +214,7 @@ namespace LastOrders.Restaurant
                     swing = wanted;
                     Push(left, wanted);
                     Push(right, wanted);
+                    SoundController.Play(SoundId.DoorSwing, transform.position);
                 }
             }
             else
@@ -233,7 +235,11 @@ namespace LastOrders.Restaurant
             }
 
             // Back in the frame and as good as still: shut.
-            if (closing && swing != 0 && Settled(left) && Settled(right)) swing = 0;
+            if (closing && swing != 0 && Settled(left) && Settled(right))
+            {
+                swing = 0;
+                SoundController.Play(SoundId.DoorShut, transform.position);
+            }
 
             Apply(left);
             Apply(right);

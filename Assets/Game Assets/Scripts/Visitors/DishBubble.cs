@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.UI.Kit;
 using TMPro;
 using UnityEngine;
@@ -155,7 +156,11 @@ namespace FoodStreet.Visitors
 
             // The moment a dish comes out of the kitchen and somebody becomes servable is the
             // interesting one: a spring and a burst say so from across the room.
-            if (becameReady && IsShowing && !waiterComing) Celebrate(8);
+            if (becameReady && IsShowing && !waiterComing)
+            {
+                Celebrate(8);
+                SoundController.Play(SoundId.OrderReady, transform.position);
+            }
         }
 
         public override void SetWaiterComing(bool coming)
@@ -173,6 +178,7 @@ namespace FoodStreet.Visitors
             shake = 9f;
             flashLeft = 0.6f;
             Punch(0.12f);
+            SoundController.Play(SoundId.OrderShort, transform.position);
         }
 
         public override void Served()
@@ -251,6 +257,7 @@ namespace FoodStreet.Visitors
         void PopIn()
         {
             if (bob == null) return;
+            SoundController.Play(SoundId.OrderBubble, transform.position);
 
             DOTween.Kill(bob);
             bob.localScale = Vector3.one * 0.2f;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LastOrders.Audio;
 using LastOrders.Effects;
 using UnityEngine;
 
@@ -92,6 +93,7 @@ namespace LastOrders.Crew
 
             vanishing = 0f;
             PlacementJuice.Burst(transform.position + Vector3.up * 0.05f, 0.45f);
+            SoundController.Play(SoundId.TableWipe, transform.position);
         }
 
         void Update()

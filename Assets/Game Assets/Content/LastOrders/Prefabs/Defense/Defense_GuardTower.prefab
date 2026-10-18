@@ -2812,6 +2812,7 @@ GameObject:
   - component: {fileID: 3993600048421255898}
   - component: {fileID: 1339829251788071421}
   - component: {fileID: 4884797895149472775}
+  - component: {fileID: 6101210790148963439}
   m_Layer: 0
   m_Name: Defense_GuardTower
   m_TagString: Untagged
@@ -2874,6 +2875,7 @@ MonoBehaviour:
   definition: {fileID: 11400000, guid: 0d83ef97a0c3bb24183739ae3064c2d8, type: 2}
   postId: defense
   startsBuilt: 0
+  placedFromShop: 0
   builtVisuals: {fileID: 6414170668598999657}
   siteVisuals: {fileID: 2842844506579434157}
   aimPivot: {fileID: 3617610789551392678}
@@ -2883,6 +2885,7 @@ MonoBehaviour:
   muzzleFlash: {fileID: 6332134376808282851}
   tracerSeconds: 0.07
   muzzleEffect: {fileID: 0}
+  motion: {fileID: 0}
   turnSpeed: 360
   targetHeight: 0.9
   spottedColour: {r: 1, g: 0.45, b: 0.3, a: 1}
@@ -2891,6 +2894,21 @@ MonoBehaviour:
   builtColliderSize: {x: 2.4, y: 5, z: 2.4}
   siteColliderSize: {x: 2.6, y: 0.6, z: 2.6}
   buildButtonOffset: {x: 0, y: 1.3, z: 0}
+--- !u!114 &6101210790148963439
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5634913179667602398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 4884797895149472775}
+  fire: 707
+  impact: 0
 --- !u!1 &5715277173105299839
 GameObject:
   m_ObjectHideFlags: 0

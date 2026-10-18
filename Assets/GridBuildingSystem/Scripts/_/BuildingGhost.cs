@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using FoodStreet.Interaction;
+using LastOrders.Audio;
 
 /// <summary>Presentation only: follows the pointer and displays PlacementService validation.</summary>
 public class BuildingGhost : MonoBehaviour
@@ -96,6 +97,7 @@ public class BuildingGhost : MonoBehaviour
         if (system == null) return;
         selectedState = true;
         selectedObjOldPos = target.transform.position;
+        SoundController.Play(SoundId.PickUpObject);
         system.selectedObject = target;
         system.SetPlacedObjectTypeSO(target.PlacedObjectTypeSO);
         system.RotateObjectToAngle(target.Dir);

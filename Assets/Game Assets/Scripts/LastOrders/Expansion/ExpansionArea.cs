@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Effects;
@@ -242,7 +243,9 @@ namespace LastOrders.Expansion
         void PlayBuildEffect(Vector3 foot)
         {
             // At ground level: a section's foot is below ground while it is sunk to rise.
-            composition.Effects.Play(buildEffect, new Vector3(foot.x, transform.position.y, foot.z));
+            var ground = new Vector3(foot.x, transform.position.y, foot.z);
+            composition.Effects.Play(buildEffect, ground);
+            SoundController.Play(SoundId.ExpansionSection, ground);
         }
 
         void SetClaimed(bool claimed, bool animate)

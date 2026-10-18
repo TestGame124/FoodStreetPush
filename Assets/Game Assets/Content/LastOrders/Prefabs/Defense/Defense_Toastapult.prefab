@@ -10484,6 +10484,7 @@ GameObject:
   - component: {fileID: 5651529388002770700}
   - component: {fileID: 3777801069349209616}
   - component: {fileID: 4830811106080195459}
+  - component: {fileID: 478697868426891772}
   m_Layer: 0
   m_Name: Defense_Toastapult
   m_TagString: Untagged
@@ -10546,6 +10547,7 @@ MonoBehaviour:
   definition: {fileID: 11400000, guid: 49b79485292690149872d61b8ef17b2f, type: 2}
   postId: toastapult
   startsBuilt: 0
+  placedFromShop: 0
   builtVisuals: {fileID: 4343753209713234118}
   siteVisuals: {fileID: 3966209735080303749}
   aimPivot: {fileID: 5509112245619940404}
@@ -10579,6 +10581,8 @@ MonoBehaviour:
   post: {fileID: 5651529388002770700}
   projectile: {fileID: 3830906725045956066}
   impact: {fileID: 3081232732656326626, guid: 84090a2d2c880824e9ecd4d0fabf48cb, type: 3}
+  moreProjectiles: []
+  moreImpacts: []
 --- !u!114 &4830811106080195459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10602,6 +10606,21 @@ MonoBehaviour:
   leverTravel: 0.15
   swaying:
   - {fileID: 8776880304881925929}
+--- !u!114 &478697868426891772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5978115744081573844}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 5651529388002770700}
+  fire: 706
+  impact: 710
 --- !u!1 &6025434829641322239
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Consequence;
 using LastOrders.Core;
 using LastOrders.DayCycle;
@@ -291,6 +292,7 @@ namespace LastOrders.Livestock
                     ShowFeed(false);
                     ShowShimmer();
                     Play(producedBurst);
+                    SoundController.Play(SoundId.ProduceReady, CollectPoint);
                     Produced?.Invoke(this, Clock.Stored);
                 }
             }
@@ -525,7 +527,11 @@ namespace LastOrders.Livestock
             // Out of play (the tests) nothing animates: no tweens, no particles.
             bool playing = Application.isPlaying;
             ShowFeed(playing);
-            if (playing) Burst(feedBurst);
+            if (playing)
+            {
+                Burst(feedBurst);
+                SoundController.Play(SoundId.FeedDrop, FeedPoint);
+            }
 
             if (fedUnannounced <= 0) return;
 
@@ -562,6 +568,7 @@ namespace LastOrders.Livestock
             Show(stock, stockScale, 0, false);
             ShowShimmer();
             Play(collectBurst);
+            SoundController.Play(SoundId.ProduceCollect, CollectPoint);
 
             if (composition != null && composition.WorldUi != null)
                 composition.WorldUi.ShowReward(CollectPoint + Vector3.up * 0.8f, $"+{count} {produce.Name}");

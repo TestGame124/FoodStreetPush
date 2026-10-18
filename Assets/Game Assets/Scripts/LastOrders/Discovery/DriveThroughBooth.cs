@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using FoodStreet.Visitors;
+using LastOrders.Audio;
 using LastOrders.Data;
 using LastOrders.Economy;
 using LastOrders.Interaction;
@@ -317,6 +318,7 @@ namespace LastOrders.Discovery
             if (hatch == null || open == hatchIsOpen) return;
 
             hatchIsOpen = open;
+            SoundController.Play(open ? SoundId.HatchOpen : SoundId.HatchClose, hatch.position);
             hatch.DOKill();
             hatch.DOLocalMove(open ? hatchClosed + Vector3.right * hatchOpen : hatchClosed, 0.35f).SetEase(open ? Ease.OutBack : Ease.InOutSine);
         }

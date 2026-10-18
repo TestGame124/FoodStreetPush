@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: ToolWhisk
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 8f5fd3d756e9d904d94e2ae7c001aa70, type: 3}
+  - {fileID: 8300000, guid: 4ff63012c736acc4da3d342c6ea40686, type: 3}
+  - {fileID: 8300000, guid: f0ffe6e6a16b03f4b85d12428d61305e, type: 3}
+  - {fileID: 8300000, guid: 152654170a98a384fa0245b886e1aa71, type: 3}
+  bus: 0
+  volume: {x: 0.26, y: 0.38}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 1
+  minDistance: 10
+  maxDistance: 36
+  loop: 0
+  cooldown: 0.15
+  maxVoices: 2
+  priority: 128

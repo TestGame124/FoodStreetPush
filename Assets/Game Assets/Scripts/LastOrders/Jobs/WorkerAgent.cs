@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FoodStreet.Visitors;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.DayCycle;
 using LastOrders.Expansion;
@@ -1031,6 +1032,7 @@ namespace LastOrders.Jobs
         void HandleDamaged(float amount)
         {
             lastCombat = Time.time;
+            SoundController.Play(SoundId.WorkerHurt, transform.position);
 
             if (composition != null)
                 composition.WorldUi.ShowWarning(transform.position + Vector3.up * 2f, $"-{Mathf.CeilToInt(amount)}");

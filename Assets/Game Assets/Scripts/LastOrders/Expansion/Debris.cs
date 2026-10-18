@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Field;
@@ -201,6 +202,7 @@ namespace LastOrders.Expansion
 
             if (!paid.IsEmpty) composition.WorldUi.ShowReward(uiAnchor.position, paid.Describe());
 
+            SoundController.Play(SoundId.DebrisCleared, transform.position);
             Collapse();
         }
 
@@ -208,6 +210,8 @@ namespace LastOrders.Expansion
         public void OnStrike()
         {
             if (collapsing || visual == null) return;
+
+            SoundController.Play(SoundId.WorkChop, visual.position);
 
             // Completed, not killed, so a punch cut short by the next one snaps back to the
             // true scale instead of drifting a little larger with every blow.

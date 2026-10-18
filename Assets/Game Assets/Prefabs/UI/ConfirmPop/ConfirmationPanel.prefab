@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1000951758491655180}
   - component: {fileID: 6524714680400152230}
   - component: {fileID: 2273401079942648637}
+  - component: {fileID: 1427751230627921704}
   m_Layer: 0
   m_Name: Rotate
   m_TagString: Untagged
@@ -120,6 +121,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1427751230627921704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131101309656173598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 100
 --- !u!1 &3954687910519537405
 GameObject:
   m_ObjectHideFlags: 0
@@ -237,6 +251,7 @@ GameObject:
   - component: {fileID: 7303691036216938290}
   - component: {fileID: 1469663247617230113}
   - component: {fileID: 6858881477114651477}
+  - component: {fileID: 1088401776590401064}
   m_Layer: 0
   m_Name: Confirm
   m_TagString: Untagged
@@ -345,6 +360,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1088401776590401064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4161447683784642989}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 101
 --- !u!1 &5151044088532931590
 GameObject:
   m_ObjectHideFlags: 0
@@ -357,6 +385,7 @@ GameObject:
   - component: {fileID: 1665743711525375573}
   - component: {fileID: 771929882239617393}
   - component: {fileID: 3372034900626428234}
+  - component: {fileID: 2482272021579266905}
   m_Layer: 0
   m_Name: Cancel
   m_TagString: Untagged
@@ -465,6 +494,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2482272021579266905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5151044088532931590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 102
 --- !u!1 &7287753452391656749
 GameObject:
   m_ObjectHideFlags: 0

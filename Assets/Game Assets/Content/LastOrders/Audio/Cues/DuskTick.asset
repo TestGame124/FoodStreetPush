@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: DuskTick
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: a20c843b30efcf948b49748c27a7f23d, type: 3}
+  - {fileID: 8300000, guid: a4754c8b57e1f534997bbce205478eab, type: 3}
+  - {fileID: 8300000, guid: 612dfe22539de6c4da101d2996ffe662, type: 3}
+  - {fileID: 8300000, guid: c6e1cc9cd2251064782016a9865d2937, type: 3}
+  bus: 1
+  volume: {x: 0.6, y: 0.6}
+  pitch: {x: 1.32, y: 1.38}
+  spatial: 0
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.5
+  maxVoices: 1
+  priority: 20

@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using LastOrders.Defense;
 using LastOrders.Interaction;
 using UnityEngine;
@@ -73,6 +74,7 @@ namespace LastOrders.Discovery
             speed = Mathf.Max(0f, metresPerSecond);
             if (reverse) direction = -direction;
             Enter(Pose.Rising);
+            SoundController.Play(SoundId.RangeTargetUp, transform.position);
         }
 
         /// <summary>Drops behind the berm, whatever it was doing.</summary>
@@ -89,6 +91,7 @@ namespace LastOrders.Discovery
             if (!IsAlive || amount <= 0f) return;
 
             Enter(Pose.Hit);
+            SoundController.Play(SoundId.RangeTargetHit, transform.position);
             if (range != null) range.KnockedDown(this);
         }
 

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: DishLifted
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 40f9ff47e3fcb2241937f641f4c88ad8, type: 3}
+  - {fileID: 8300000, guid: 26ed2aa7b1e2e41498b3a872cb9473c5, type: 3}
+  - {fileID: 8300000, guid: 53ecede54705f874f9d7bbcb9a583e8e, type: 3}
+  - {fileID: 8300000, guid: 26ecfb49ecd78f245b6a62b5460b34ff, type: 3}
+  bus: 0
+  volume: {x: 0.32999998, y: 0.45}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 1
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.06
+  maxVoices: 3
+  priority: 128

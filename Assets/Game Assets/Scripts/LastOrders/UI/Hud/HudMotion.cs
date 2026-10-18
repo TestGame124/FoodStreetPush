@@ -39,6 +39,16 @@ namespace LastOrders.UI.Hud
             set => breathe = value;
         }
 
+        /// <summary>Gives under a finger: a button, rather than a panel that only punches and breathes.</summary>
+        public bool Pressable => pressable;
+
+        /// <summary>
+        /// A pressable element let go of with the finger still on it: a tap, as the player feels
+        /// it. Not raised when the press slid off, or turned into a drag or a scroll. For whatever
+        /// answers every tap the same way - the click sound - without each button wiring it.
+        /// </summary>
+        public static event System.Action<HudMotion> Pressed;
+
         void Awake()
         {
             rect = (RectTransform)transform;
@@ -81,7 +91,12 @@ namespace LastOrders.UI.Hud
             pressGoal = pressedScale;
         }
 
-        public void OnPointerUp(PointerEventData eventData) => Release(true);
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            bool tapped = pressGoal < 1f && !eventData.dragging;
+            Release(true);
+            if (tapped) Pressed?.Invoke(this);
+        }
 
         public void OnPointerExit(PointerEventData eventData) => Release(false);
 

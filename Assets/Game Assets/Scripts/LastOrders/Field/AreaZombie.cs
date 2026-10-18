@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Defense;
 using LastOrders.Interaction;
@@ -143,6 +144,7 @@ namespace LastOrders.Field
                 transform.DOPunchPosition(offset.normalized * 0.3f, 0.3f, 1, 0f);
             }
 
+            SoundController.Play(SoundId.ZombieBlow, transform.position);
             field.DamageWorker(target, tuning.Damage);
         }
 
@@ -214,8 +216,16 @@ namespace LastOrders.Field
             if (!IsAlive || amount <= 0f) return;
 
             health = Mathf.Max(0f, health - amount);
-            if (health <= 0f) Die();
-            else body?.Hurt(amount);
+            if (health <= 0f)
+            {
+                SoundController.Play(SoundId.ZombieDeath, transform.position);
+                Die();
+            }
+            else
+            {
+                body?.Hurt(amount);
+                SoundController.Play(SoundId.ZombieHurt, transform.position);
+            }
         }
 
         /// <summary>A defense's shot. Goes through the field service, so a kill is on record.</summary>

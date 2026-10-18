@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace FoodStreet.Visitors
@@ -295,6 +296,7 @@ namespace FoodStreet.Visitors
             {
                 doorCloseAt = -1f;
                 doorTarget = 0f;
+                SoundController.Play(SoundId.CarDoor, transform.position);
             }
 
             if (engineStopAt >= 0f && now >= engineStopAt)

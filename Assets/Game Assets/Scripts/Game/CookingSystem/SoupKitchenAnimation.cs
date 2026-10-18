@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -272,6 +273,7 @@ public sealed class SoupKitchenAnimation : MonoBehaviour
 
         lidHop = 0f;
         lidWait = Random.Range(0.25f, 0.9f) / h;
+        SoundController.Play(SoundId.LidRattle, lid.position);
         float a = Random.Range(0f, Mathf.PI * 2f);
         lidAxis = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
         if (lidSteam != null) lidSteam.Emit(Random.Range(1, 3));

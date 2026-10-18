@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.UI.Hud;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -70,6 +71,7 @@ namespace LastOrders.UI.Kit
             carrying = true;
             Kitchen.BeginDrag();
             MakeGhost(eventData.position);
+            SoundController.Play(SoundId.UiDragPick);
             if (picture != null) picture.color = new Color(1f, 1f, 1f, 0.35f);
         }
 
@@ -109,10 +111,12 @@ namespace LastOrders.UI.Kit
                 box.CookBtn.onClick.Invoke();
                 Land(slot, 0.55f);
                 Bounce();
+                SoundController.Play(SoundId.UiDragDrop);
             }
             else
             {
                 Land(picture != null ? picture.transform.position : transform.position, 1f);
+                SoundController.Play(SoundId.UiDragMiss);
                 k.Say("Drop the dish onto the free slot above the station", HudTone.Info);
             }
         }
@@ -201,6 +205,7 @@ namespace LastOrders.UI.Kit
 
         void Shake()
         {
+            SoundController.Play(SoundId.UiDenied);
             if (body == null) return;
             DOTween.Kill(body, true);
             body.DOShakeAnchorPos(0.35f, new Vector2(12f, 0f), 18, 0f).SetUpdate(true).SetTarget(body);

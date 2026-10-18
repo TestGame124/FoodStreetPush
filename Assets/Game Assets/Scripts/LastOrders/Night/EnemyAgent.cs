@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using FoodStreet.Navigation;
+using LastOrders.Audio;
 using LastOrders.Consequence;
 using LastOrders.Core;
 using LastOrders.Data;
@@ -321,6 +322,7 @@ namespace LastOrders.Night
             {
                 blowCooldown = BlowInterval;
                 if (body != null) body.Pound();
+                SoundController.Play(SoundId.ZombieBlow, transform.position);
             }
 
             // Accumulated rather than applied per-frame so that damage is frame-rate
@@ -359,6 +361,7 @@ namespace LastOrders.Night
             blowCooldown = BlowInterval;
 
             if (body != null) body.Pound();
+            SoundController.Play(SoundId.ZombieBlow, transform.position);
 
             if (breaking.TakeHit(definition.structureDps * BlowInterval, transform.position)) BrokeThrough();
         }
@@ -503,6 +506,7 @@ namespace LastOrders.Night
             blowCooldown = BlowInterval;
 
             if (body != null) body.Pound();
+            SoundController.Play(SoundId.ZombieBlow, transform.position);
 
             if (orders.Strike(this, raidTarget, definition.structureDps * BlowInterval, transform.position))
                 ResumeMoving();
@@ -653,9 +657,11 @@ namespace LastOrders.Night
             if (health > 0f)
             {
                 body?.Hurt(amount);
+                SoundController.Play(SoundId.ZombieHurt, transform.position);
                 return;
             }
 
+            SoundController.Play(SoundId.ZombieDeath, transform.position);
             EndRaid();
             state = State.Dying;
             if (follower != null) follower.active = false;

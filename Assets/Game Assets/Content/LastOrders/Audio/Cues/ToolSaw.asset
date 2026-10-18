@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: ToolSaw
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 5d26edc4d1aeacb4383a60482dd00628, type: 3}
+  - {fileID: 8300000, guid: 5ac2d3c28a6cc0a4ca6d1b0dd00d7b59, type: 3}
+  - {fileID: 8300000, guid: db0c378b137701b4da5b684f6f97436a, type: 3}
+  - {fileID: 8300000, guid: 7b86f8627ac96434e90761724a3a0503, type: 3}
+  bus: 0
+  volume: {x: 0.26, y: 0.38}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 1
+  minDistance: 10
+  maxDistance: 36
+  loop: 0
+  cooldown: 0.15
+  maxVoices: 2
+  priority: 128

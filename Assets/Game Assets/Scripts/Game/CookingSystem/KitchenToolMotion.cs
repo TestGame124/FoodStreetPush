@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -141,7 +142,25 @@ public sealed class KitchenToolMotion : MonoBehaviour
             case Motion.Knead: Knead(c, w, struck); break;
         }
 
+        // Every stroke is heard at the tool, while the station is working in earnest.
+        if (struck && w > 0.3f) SoundController.Play(StrokeSound, transform.position);
+
         Fly(dt);
+    }
+
+    SoundId StrokeSound
+    {
+        get
+        {
+            switch (motion)
+            {
+                case Motion.Chop: return SoundId.ToolChop;
+                case Motion.Whisk: return SoundId.ToolWhisk;
+                case Motion.Roll: return SoundId.ToolRoll;
+                case Motion.Saw: return SoundId.ToolSaw;
+                default: return SoundId.ToolKnead;
+            }
+        }
     }
 
     // --- The motions ------------------------------------------------------------------------------

@@ -470,6 +470,7 @@ GameObject:
   - component: {fileID: 311222495994247089}
   - component: {fileID: 1060862226173873463}
   - component: {fileID: 5301778918917343281}
+  - component: {fileID: 3812388586303462530}
   m_Layer: 0
   m_Name: Defense_CabbageShooter
   m_TagString: Untagged
@@ -637,6 +638,21 @@ MonoBehaviour:
   lever: {fileID: 0}
   leverTravel: 0
   swaying: []
+--- !u!114 &3812388586303462530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6800733931761219371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 4380513661601242610}
+  fire: 704
+  impact: 708
 --- !u!1 &7157550515771439416
 GameObject:
   m_ObjectHideFlags: 0

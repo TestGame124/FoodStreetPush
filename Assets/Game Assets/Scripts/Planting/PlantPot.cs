@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using LastOrders.Audio;
 using UnityEngine;
 
 public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestPlot
@@ -143,6 +144,7 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
             timer = activeItem.itemDataSO.totalTimeInSeconds;
 
         StartCoroutine(Growing());
+        SoundController.Play(SoundId.SeedPlant, transform.position);
         Planted?.Invoke(this);
     }
 
@@ -176,6 +178,7 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
         ShowStage(seed, stageCount - 1);
 
         finishedEffect.SetActive(true);
+        SoundController.Play(SoundId.CropReady, CropTop);
 
         currentState = PotState.Done;
 
@@ -408,6 +411,7 @@ public class PlantPot : MonoBehaviour, IInteractableObject, ISeedPlot, IHarvestP
         LastOrders.Core.LastOrdersBridge.AddExperience(1);
 
         currentState= PotState.Empty;
+        SoundController.Play(SoundId.Harvest, CropTop);
         Harvested?.Invoke(this);
     }
 

@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Jobs;
@@ -99,6 +100,7 @@ namespace LastOrders.Interaction
 
             composition.Progression.Set(ProgressionFlags.EntranceCleared);
 
+            SoundController.Play(SoundId.DebrisCleared, transform.position);
             gameObject.SetActive(false);
         }
     }

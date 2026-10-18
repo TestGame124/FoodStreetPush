@@ -5329,6 +5329,7 @@ GameObject:
   - component: {fileID: 1556009326894732811}
   - component: {fileID: 8783775160805292862}
   - component: {fileID: 3345797960380302717}
+  - component: {fileID: 4831946996847245889}
   m_Layer: 0
   m_Name: pfBreadStove
   m_TagString: Untagged
@@ -5423,6 +5424,24 @@ MonoBehaviour:
   MaxCookRecipies: 0
   centerPoint: {fileID: 2739181951041425887}
   displayName: 
+--- !u!114 &4831946996847245889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738897271142769183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89eecea2d94df2d42b585732c063fde2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.StationSound
+  station: {fileID: 3345797960380302717}
+  working: 305
+  started: 300
+  finished: 301
+  workingVolume: 1
+  fadeSeconds: 0.8
 --- !u!1 &3256684958443466079
 GameObject:
   m_ObjectHideFlags: 0

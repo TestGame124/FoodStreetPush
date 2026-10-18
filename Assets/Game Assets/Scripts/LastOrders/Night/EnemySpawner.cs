@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FoodStreet.Navigation;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.DayCycle.States;
@@ -195,6 +196,7 @@ namespace LastOrders.Night
             if (agent == null) return;
 
             agent.Configure(definition, position);
+            SoundController.Play(SoundId.ZombieGroan, position);
             if (definition.tintBody) Tint(agent, definition.silhouetteColour);
 
             // The horde decides whether it hunts the defenses, smashes the yard once over the wall,

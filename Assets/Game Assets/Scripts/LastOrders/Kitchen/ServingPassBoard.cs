@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace LastOrders.Kitchen
@@ -409,12 +410,15 @@ namespace LastOrders.Kitchen
             if (hop)
             {
                 dish.transform.SetPositionAndRotation(from, facing * Quaternion.Euler(0f, 160f, 0f));
-                dish.HopTo(s.Point.position, facing, hopSeconds * Mathf.Clamp(Vector3.Distance(from, s.Point.position) / 3f, 0.7f, 1.4f), hopHeight);
+                Vector3 landing = s.Point.position;
+                dish.HopTo(landing, facing, hopSeconds * Mathf.Clamp(Vector3.Distance(from, landing) / 3f, 0.7f, 1.4f), hopHeight,
+                           () => SoundController.Play(SoundId.DishOnPass, landing));
             }
             else
             {
                 dish.transform.SetPositionAndRotation(s.Point.position, facing);
                 dish.PopIn();
+                SoundController.Play(SoundId.DishOnPass, s.Point.position);
             }
         }
 

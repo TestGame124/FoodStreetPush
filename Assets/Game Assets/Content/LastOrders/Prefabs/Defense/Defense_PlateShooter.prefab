@@ -655,6 +655,7 @@ GameObject:
   - component: {fileID: 1646109028026859904}
   - component: {fileID: 9166097478593508141}
   - component: {fileID: 8238638929985689969}
+  - component: {fileID: 4689268974972752797}
   m_Layer: 0
   m_Name: Defense_PlateShooter
   m_TagString: Untagged
@@ -821,3 +822,18 @@ MonoBehaviour:
   lever: {fileID: 0}
   leverTravel: 0
   swaying: []
+--- !u!114 &4689268974972752797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8932253230467647575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 1044981116357330617}
+  fire: 706
+  impact: 709

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LastOrders.Audio;
 using LastOrders.Crew;
 using LastOrders.Interaction;
 using LastOrders.Jobs;
@@ -595,6 +596,9 @@ namespace FoodStreet.Visitors
             afterMealLeft = Gestures != null && Gestures.Play(reaction) ? WorkerGestures.Seconds(reaction) + 0.25f : 0.35f;
 
             OnMealFinished?.Invoke(this, verdict);
+            SoundController.Play(verdict == MealVerdict.Delighted ? SoundId.VisitorDelighted
+                               : verdict == MealVerdict.Happy ? SoundId.VisitorHappy
+                               : SoundId.VisitorContent, transform.position);
         }
 
         /// <summary>Crumbs and a napkin where the plate was, on the table top.</summary>
@@ -980,6 +984,7 @@ namespace FoodStreet.Visitors
             waitedFor = Time.time - WaitingSince;
             afterMeal = false;
             Stage = VisitorStage.Eating;
+            SoundController.Play(SoundId.DishServed, transform.position);
 
             ItemDataSO meal = order.Data;
             int payment = OrderPayment;

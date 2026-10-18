@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Audio;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -46,6 +47,7 @@ namespace LastOrders.UI.Kit
             closing = false;
             open.Remove(this);
             open.Add(this);
+            SoundController.Play(SoundId.UiPopupOpen);
 
             DOTween.Kill(this);
             if (panel != null)
@@ -81,6 +83,7 @@ namespace LastOrders.UI.Kit
         {
             if (closing || !isActiveAndEnabled) return;
             closing = true;
+            SoundController.Play(SoundId.UiPopupClose);
 
             DOTween.Kill(this);
             Sequence sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);

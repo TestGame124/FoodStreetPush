@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: ZombieDeath
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 1ab7a51c3d327b5459c90db7b30b1db1, type: 3}
+  - {fileID: 8300000, guid: fda9e9c397b88514da8fbdf929ac44be, type: 3}
+  - {fileID: 8300000, guid: 2f8ac076c159fef4aa9635e2dd4f1d10, type: 3}
+  - {fileID: 8300000, guid: f41ad30a0f5f8314b8a038a7ff8404dc, type: 3}
+  - {fileID: 8300000, guid: d81a6692d3149b94e923857de9b737cc, type: 3}
+  - {fileID: 8300000, guid: ffb2877d01f06114b9b156025d9451ed, type: 3}
+  - {fileID: 8300000, guid: 8c96c2613b1ec1241bf354c281c08d30, type: 3}
+  - {fileID: 8300000, guid: 6ce563094e158c8449256e53d811658b, type: 3}
+  - {fileID: 8300000, guid: 55a28e01179ed65418da898565339030, type: 3}
+  - {fileID: 8300000, guid: 43548cfc0af871842b08dc3c973a53a1, type: 3}
+  - {fileID: 8300000, guid: ac3b7b0643830a54fbfdbbca55de1aa1, type: 3}
+  - {fileID: 8300000, guid: 479a79f73e25b634daf260fa0fbf9ebd, type: 3}
+  - {fileID: 8300000, guid: 4397da1eb422bed4ab76957a0970483c, type: 3}
+  - {fileID: 8300000, guid: fdaf9c54a7d16714aae344c1aae21814, type: 3}
+  - {fileID: 8300000, guid: a1c2f05d58339c14cb434a6a281bbff9, type: 3}
+  - {fileID: 8300000, guid: eedea7b863f60d34088f19465039fe67, type: 3}
+  - {fileID: 8300000, guid: af60ab8b6e979d04386d86f3f4011164, type: 3}
+  - {fileID: 8300000, guid: bc5223fffd58f9447b088df42e8cccc8, type: 3}
+  - {fileID: 8300000, guid: 67cc066a58d013c4a9fea28ffe8f320e, type: 3}
+  - {fileID: 8300000, guid: cbb483bfa1ee8a54bb574fb2932df278, type: 3}
+  - {fileID: 8300000, guid: b59f5f251cb31f3498b6f0cccf9b04a2, type: 3}
+  - {fileID: 8300000, guid: e33983641da6f194da92b969303a3d88, type: 3}
+  - {fileID: 8300000, guid: d5b29e79c3ddb6b4c9cd90e7062fe32e, type: 3}
+  - {fileID: 8300000, guid: 3786a9dceec8f52449926fe556ad2adf, type: 3}
+  bus: 0
+  volume: {x: 0.68, y: 0.8}
+  pitch: {x: 0.62, y: 0.78}
+  spatial: 1
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.1
+  maxVoices: 3
+  priority: 110

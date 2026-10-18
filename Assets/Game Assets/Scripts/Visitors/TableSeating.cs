@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace FoodStreet.Visitors
@@ -161,13 +162,17 @@ namespace FoodStreet.Visitors
         /// <summary>Slides the chair out far enough to stand in front of it.</summary>
         public void PullOut(int chair)
         {
-            if (Has(chair)) SlideTo(seats[chair], PulledOffset(seats[chair]), 0f);
+            if (!Has(chair)) return;
+            SlideTo(seats[chair], PulledOffset(seats[chair]), 0f);
+            SoundController.Play(SoundId.ChairOut, transform.position);
         }
 
         /// <summary>Slides the chair - and whoever is on it - in to the table.</summary>
         public void ScootIn(int chair)
         {
-            if (Has(chair)) SlideTo(seats[chair], SeatedOffset(seats[chair]), 0f);
+            if (!Has(chair)) return;
+            SlideTo(seats[chair], SeatedOffset(seats[chair]), 0f);
+            SoundController.Play(SoundId.ChairIn, transform.position);
         }
 
         /// <summary>Pushes the empty chair back under the table, after <paramref name="delay"/>

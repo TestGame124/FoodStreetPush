@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.UI.Hud;
 using UnityEngine;
 
@@ -34,6 +35,7 @@ namespace LastOrders.UI.Kit
 
             DOTween.Kill(this);
             Sequence play = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+            SoundController.Play(SoundId.UiLevelUp);
 
             if (star != null)
             {
@@ -46,7 +48,11 @@ namespace LastOrders.UI.Kit
             }
 
             if (confetti != null && star != null)
-                play.InsertCallback(0.45f, () => confetti.Play(starRest));
+                play.InsertCallback(0.45f, () =>
+                {
+                    confetti.Play(starRest);
+                    SoundController.Play(SoundId.UiConfetti);
+                });
 
             if (ribbon != null)
             {

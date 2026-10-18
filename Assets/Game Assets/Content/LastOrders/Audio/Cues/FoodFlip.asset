@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: FoodFlip
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 3359396432b5f024d8121b1f5f4bd591, type: 3}
+  - {fileID: 8300000, guid: 80cc70c662724f140b9c8307db04fcdf, type: 3}
+  - {fileID: 8300000, guid: 92fc03471a98b4240b6f89c6fb354eba, type: 3}
+  - {fileID: 8300000, guid: 90a41317f1bd8064e89a8be075dd6886, type: 3}
+  - {fileID: 8300000, guid: 84cf48af53abddd45984c910d9a75e97, type: 3}
+  - {fileID: 8300000, guid: 2029c831f9aa6c9419308e8ff32a0651, type: 3}
+  bus: 0
+  volume: {x: 0.29999998, y: 0.42}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 1
+  minDistance: 10
+  maxDistance: 36
+  loop: 0
+  cooldown: 0.1
+  maxVoices: 2
+  priority: 128

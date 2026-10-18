@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: FoodTruckReturned
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 7114fe8d3d6c9b9429a9f33bec6b64b8, type: 3}
+  - {fileID: 8300000, guid: 0b70b03b980479b45bcc5cab891f2adf, type: 3}
+  - {fileID: 8300000, guid: 9f08f5242cd025a43a50e6de3fe5875c, type: 3}
+  bus: 1
+  volume: {x: 0.38, y: 0.5}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 0
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 1
+  maxVoices: 1
+  priority: 64

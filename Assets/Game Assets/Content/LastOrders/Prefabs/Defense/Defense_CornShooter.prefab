@@ -5524,6 +5524,7 @@ GameObject:
   - component: {fileID: 9130777468062519625}
   - component: {fileID: 4893056609238841629}
   - component: {fileID: 374575090723242105}
+  - component: {fileID: 7670393930337600435}
   m_Layer: 0
   m_Name: Defense_CornShooter
   m_TagString: Untagged
@@ -5586,6 +5587,7 @@ MonoBehaviour:
   definition: {fileID: 11400000, guid: c78d0c5e41a722146a5c0c215e34ace7, type: 2}
   postId: corn_shooter
   startsBuilt: 0
+  placedFromShop: 0
   builtVisuals: {fileID: 337328198638699474}
   siteVisuals: {fileID: 8725783657652514066}
   aimPivot: {fileID: 6180045811861381582}
@@ -5706,6 +5708,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Defense.DefenseReload
   post: {fileID: 2515907046997080585}
   loaded: {fileID: 1363217751106668080}
+--- !u!114 &7670393930337600435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6227909708042131297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 2515907046997080585}
+  fire: 704
+  impact: 708
 --- !u!1 &6738707956770218351
 GameObject:
   m_ObjectHideFlags: 0

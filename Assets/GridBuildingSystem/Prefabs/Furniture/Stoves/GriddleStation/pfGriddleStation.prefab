@@ -10681,6 +10681,7 @@ GameObject:
   - component: {fileID: 6524617835345863004}
   - component: {fileID: 395940744790472291}
   - component: {fileID: 5740531904589501170}
+  - component: {fileID: 391549885221146335}
   m_Layer: 0
   m_Name: pfGriddleStation
   m_TagString: Untagged
@@ -10767,6 +10768,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.4, y: 1.2, z: 1.75}
   m_Center: {x: 1.5, y: 0.63500005, z: 1.075}
+--- !u!114 &391549885221146335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7320521722276497447}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89eecea2d94df2d42b585732c063fde2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.StationSound
+  station: {fileID: 395940744790472291}
+  working: 303
+  started: 300
+  finished: 301
+  workingVolume: 1
+  fadeSeconds: 0.8
 --- !u!1 &8310660897859765054
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Data;
 using LastOrders.Night;
@@ -245,6 +246,8 @@ namespace LastOrders.Consequence
         {
             if (State == next) return;
             State = next;
+            if (next == DamageState.Wrecked || next == DamageState.Destroyed)
+                SoundController.Play(SoundId.StructureBreak, transform.position);
             OnStateChanged?.Invoke(next);
         }
     }

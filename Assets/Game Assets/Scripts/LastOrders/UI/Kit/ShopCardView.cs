@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using LastOrders.UI.Hud;
 using TMPro;
 using UnityEngine;
@@ -93,16 +94,19 @@ namespace LastOrders.UI.Kit
             if (!unlocked)
             {
                 if (motion != null) motion.Shake(9f);
+                SoundController.Play(SoundId.UiDenied);
                 hint?.Say($"Unlocks at level {item.Data.requiredLevel}", HudTone.Warning);
             }
             else if (!available)
             {
                 if (motion != null) motion.Shake(9f);
+                SoundController.Play(SoundId.UiDenied);
                 hint?.Say("You have built all of these", HudTone.Warning);
             }
             else if (!affordable)
             {
                 if (motion != null) motion.Shake(9f);
+                SoundController.Play(SoundId.UiDenied);
                 hint?.Say($"Needs {item.Data.PriceAmount} coins", HudTone.Danger);
             }
             else

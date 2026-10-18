@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: TrapSnap
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 334b43f59d41d7944bbf8da56a41dfde, type: 3}
+  - {fileID: 8300000, guid: c95aa61234d32574da8a2a73555b624e, type: 3}
+  - {fileID: 8300000, guid: 69aad2841666fe04ebb9b56ec7b2d73b, type: 3}
+  - {fileID: 8300000, guid: 9f4e3e973e58b4f4e88be37c2d980d85, type: 3}
+  - {fileID: 8300000, guid: 316fda7914e134d41a60d5ad1901ea28, type: 3}
+  - {fileID: 8300000, guid: 99c01507eafbfc24a929b774c84ec0d9, type: 3}
+  - {fileID: 8300000, guid: 41297531979ab24418888a85d8bd221d, type: 3}
+  - {fileID: 8300000, guid: 8c6a4f1c572320a42a556a95fb0d677a, type: 3}
+  - {fileID: 8300000, guid: 0d7c2d1c50e284b4891a134d89ccf0f3, type: 3}
+  - {fileID: 8300000, guid: 099a4daff4287484ca200fe7010f96e6, type: 3}
+  bus: 0
+  volume: {x: 0.5, y: 0.62}
+  pitch: {x: 0.75, y: 0.85}
+  spatial: 1
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.06
+  maxVoices: 3
+  priority: 128

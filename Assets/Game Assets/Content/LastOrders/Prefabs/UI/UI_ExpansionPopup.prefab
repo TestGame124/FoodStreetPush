@@ -2569,6 +2569,7 @@ GameObject:
   - component: {fileID: 4672562787648240980}
   - component: {fileID: 2213239466231979080}
   - component: {fileID: 8774063939506269979}
+  - component: {fileID: 6352732070112836607}
   m_Layer: 0
   m_Name: ExpandButton
   m_TagString: Untagged
@@ -2678,6 +2679,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6352732070112836607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6260230903081031131}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 101
 --- !u!1 &6352877839123604616
 GameObject:
   m_ObjectHideFlags: 0
@@ -2903,6 +2917,7 @@ GameObject:
   - component: {fileID: 8754517182051607116}
   - component: {fileID: 7513669134916784572}
   - component: {fileID: 7614072570355035858}
+  - component: {fileID: 551563105268209841}
   m_Layer: 0
   m_Name: Close
   m_TagString: Untagged
@@ -3012,6 +3027,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &551563105268209841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7349701195762593136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 102
 --- !u!1 &8140932048472116058
 GameObject:
   m_ObjectHideFlags: 0

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8698843211178132509}
   - component: {fileID: 4276205160220682553}
   - component: {fileID: 7086470935929332799}
+  - component: {fileID: 1876453757717752745}
   m_Layer: 0
   m_Name: Rotate
   m_TagString: Untagged
@@ -120,6 +121,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1876453757717752745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 628938385802005697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 100
 --- !u!1 &3512230023154535401
 GameObject:
   m_ObjectHideFlags: 0
@@ -132,6 +146,7 @@ GameObject:
   - component: {fileID: 1253294350606700692}
   - component: {fileID: 2040777329899061377}
   - component: {fileID: 8347528366298247181}
+  - component: {fileID: 1219375225500722604}
   m_Layer: 0
   m_Name: Confirm
   m_TagString: Untagged
@@ -240,6 +255,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1219375225500722604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3512230023154535401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 101
 --- !u!1 &4890982429468300830
 GameObject:
   m_ObjectHideFlags: 0
@@ -252,6 +280,7 @@ GameObject:
   - component: {fileID: 7068894748948839017}
   - component: {fileID: 4089325080032264664}
   - component: {fileID: 5966168986431722583}
+  - component: {fileID: 8507014425129028740}
   m_Layer: 0
   m_Name: Sell (1)
   m_TagString: Untagged
@@ -360,6 +389,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8507014425129028740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4890982429468300830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 100
 --- !u!1 &4953887601115875358
 GameObject:
   m_ObjectHideFlags: 0
@@ -424,6 +466,7 @@ GameObject:
   - component: {fileID: 7952877357824307515}
   - component: {fileID: 3570135228385938790}
   - component: {fileID: 3787970863336388718}
+  - component: {fileID: 2869758792239033881}
   m_Layer: 0
   m_Name: Sell
   m_TagString: Untagged
@@ -533,6 +576,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2869758792239033881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5910414991484878183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 100
 --- !u!1 &6942880098709779131
 GameObject:
   m_ObjectHideFlags: 0

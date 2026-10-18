@@ -1,5 +1,6 @@
 using DG.Tweening;
 using FoodStreet.Navigation;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Effects;
 using LastOrders.Jobs;
@@ -267,7 +268,11 @@ namespace LastOrders.Perimeter
         }
 
         /// <summary>A blow of the worker's hammer landed.</summary>
-        public void OnStrike() => Shake();
+        public void OnStrike()
+        {
+            Shake();
+            SoundController.Play(SoundId.WorkHammer, transform.position);
+        }
 
         float VisualTop()
         {

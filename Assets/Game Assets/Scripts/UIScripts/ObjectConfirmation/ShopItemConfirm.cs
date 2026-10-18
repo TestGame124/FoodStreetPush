@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using LastOrders.Audio;
 using UnityEngine;
 
 public class ShopItemConfirm : ConfirmationUiPanel
@@ -26,9 +27,16 @@ public class ShopItemConfirm : ConfirmationUiPanel
         if (gridBuildingSystem.GetPlacedObjectTypeSO().categoryType != ObjectCategory.Floor)
         {
             if (!gridBuildingSystem.GetPlacedObjectTypeSO().CanPurchase() ||
-                (gridBuildingSystem.CurrentShopItem != null && !gridBuildingSystem.CurrentShopItem.CanPurchase())) return;
-            if (!gridBuildingSystem.PlaceObject())
+                (gridBuildingSystem.CurrentShopItem != null && !gridBuildingSystem.CurrentShopItem.CanPurchase()))
+            {
+                SoundController.Play(SoundId.PlaceRefused);
                 return;
+            }
+            if (!gridBuildingSystem.PlaceObject())
+            {
+                SoundController.Play(SoundId.PlaceRefused);
+                return;
+            }
             if(gridBuildingSystem.GetPlacedObjectTypeSO().PriceAmount > 0)
             {
                 CurrenciesController.SubtractCurrency(CurrencyType.Coins, gridBuildingSystem.GetPlacedObjectTypeSO().PriceAmount);

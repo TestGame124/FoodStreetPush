@@ -1,5 +1,6 @@
 using DG.Tweening;
 using System.Collections.Generic;
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -91,6 +92,7 @@ public class ItemReceiver : MonoBehaviour/*,IInteractableObject*/
         inventory.AddItem(item);
         Show(item.itemDataSO.itemImage);
         Launch(transform.position, index, Mathf.Max(1, count));
+        SoundController.Play(SoundId.ItemPop, transform.position);
     }
 
     void Show(Sprite sprite)
@@ -271,6 +273,7 @@ public class ItemReceiver : MonoBehaviour/*,IInteractableObject*/
         }
 
         if (intoStorage && storage != null) Punch(storage);
+        SoundController.Play(SoundId.ItemCollect, at);
         Destroy(gameObject);
     }
 

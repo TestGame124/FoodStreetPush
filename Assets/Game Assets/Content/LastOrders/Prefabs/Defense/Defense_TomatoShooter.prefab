@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 4108301086321417782}
   - component: {fileID: 5338091187770773623}
   - component: {fileID: 3853846295219320012}
+  - component: {fileID: 3081480722682155366}
   m_Layer: 0
   m_Name: Defense_TomatoShooter
   m_TagString: Untagged
@@ -182,6 +183,21 @@ MonoBehaviour:
   lever: {fileID: 0}
   leverTravel: 0
   swaying: []
+--- !u!114 &3081480722682155366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 29815991265797213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 7373762873151085950}
+  fire: 704
+  impact: 708
 --- !u!1 &355407635702705241
 GameObject:
   m_ObjectHideFlags: 0

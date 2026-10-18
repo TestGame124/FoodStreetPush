@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using LastOrders.Audio;
 using LastOrders.Economy;
 using LastOrders.UI.Kit;
 using TMPro;
@@ -88,6 +89,7 @@ namespace LastOrders.UI.Hud
             Vector2 to = UiFx.ToLayer(layer, UiFx.ScreenOf(target.icon));
 
             Label(target, gained, from);
+            SoundController.Play(SoundId.UiRewardLaunch);
 
             bool shown = false;
             RectTransform icon = target.icon;
@@ -128,6 +130,7 @@ namespace LastOrders.UI.Hud
 
                     if (kick != null) kick.Punch(0.12f);
                     if (icon != null) Sparkle(icon, tint);
+                    SoundController.Play(SoundId.UiCoinLand);
                     if (rt != null) Destroy(rt.gameObject);
                 });
             }

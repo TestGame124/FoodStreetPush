@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -177,7 +178,11 @@ public sealed class SaladStationAnimation : MonoBehaviour
         float lift = c < 0.65f ? 1f - (1f - c / 0.65f) * (1f - c / 0.65f) : 1f - Mathf.Pow((c - 0.65f) / 0.35f, 2f);
         knife.localRotation = Quaternion.AngleAxis(chopLift * lift * w, Vector3.right) * knifeRest;
 
-        if (Mathf.Floor(chop) > Mathf.Floor(before) && w > 0.3f) LaunchBit();
+        if (Mathf.Floor(chop) > Mathf.Floor(before) && w > 0.3f)
+        {
+            LaunchBit();
+            SoundController.Play(SoundId.ToolChop, transform.position);
+        }
     }
 
     void LaunchBit()
@@ -241,6 +246,7 @@ public sealed class SaladStationAnimation : MonoBehaviour
         {
             LaunchLeaf();
             LaunchLeaf();
+            SoundController.Play(SoundId.SaladToss, transform.position);
         }
     }
 
@@ -283,6 +289,7 @@ public sealed class SaladStationAnimation : MonoBehaviour
             pourWait -= dt;
             if (pourWait > 0f) return;
             pourClock = 0f;
+            SoundController.Play(SoundId.DressingPour, cruet.position);
         }
 
         pourClock += dt;

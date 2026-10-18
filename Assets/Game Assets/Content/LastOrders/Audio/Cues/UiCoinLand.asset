@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: UiCoinLand
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 63555e7a661f7164692bf5a076128fe4, type: 3}
+  - {fileID: 8300000, guid: 6c852231869491e4ab6dda4b5de77a48, type: 3}
+  - {fileID: 8300000, guid: 765a3465afebffe4d85d82cfb3674938, type: 3}
+  - {fileID: 8300000, guid: 09fdf97b34726ae4ca45a67669de70cb, type: 3}
+  bus: 1
+  volume: {x: 0.18, y: 0.3}
+  pitch: {x: 1.4, y: 1.65}
+  spatial: 0
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.05
+  maxVoices: 3
+  priority: 64

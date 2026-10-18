@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -298,6 +299,7 @@ public sealed class GriddleStationAnimation : MonoBehaviour
     /// <summary>A puff of steam and a spit of fat where a flipped item comes down.</summary>
     void Land(Transform item)
     {
+        SoundController.Play(SoundId.FoodFlip, item.position);
         var at = new ParticleSystem.EmitParams { position = item.position + Vector3.up * 0.03f, applyShapeToPosition = true };
         if (steam != null) steam.Emit(at, 3);
         if (spatter != null) spatter.Emit(at, 6);

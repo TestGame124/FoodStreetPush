@@ -1,4 +1,5 @@
 using FoodStreet.Placement;
+using LastOrders.Audio;
 using LastOrders.Core;
 using UnityEngine;
 
@@ -93,6 +94,7 @@ namespace LastOrders.Effects
                 PlacementPop.Shape shape = tile;
                 shape.delay = Mathf.Min(tileRippleLimit, Vector3.Distance(centre, runStart) * tileRipple);
                 PlacementPop.Play(target.transform, centre, shape);
+                SoundController.Play(SoundId.PlaceFloor, centre);
                 return;
             }
 
@@ -102,7 +104,11 @@ namespace LastOrders.Effects
             if (!wasMoved) landingShape.drop += dropPerMetre * across;
 
             PlacementPop.Play(target.transform, centre, landingShape,
-                              pop => PlayBurst(pop.Centre, across * (wasMoved ? 0.8f : 1f)));
+                              pop =>
+                              {
+                                  PlayBurst(pop.Centre, across * (wasMoved ? 0.8f : 1f));
+                                  SoundController.Play(wasMoved ? SoundId.PlaceMoved : SoundId.Place, pop.Centre);
+                              });
         }
 
         void PlayBurst(Vector3 at, float size)

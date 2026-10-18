@@ -11208,6 +11208,7 @@ GameObject:
   - component: {fileID: 3784462166276279816}
   - component: {fileID: 6801866694534180644}
   - component: {fileID: 1566712855068238971}
+  - component: {fileID: 4947221993661343078}
   m_Layer: 0
   m_Name: pfGrillStation
   m_TagString: Untagged
@@ -11294,6 +11295,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.4, y: 1.2, z: 1.75}
   m_Center: {x: 1.5, y: 0.63500005, z: 1.075}
+--- !u!114 &4947221993661343078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7535091283384555172}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89eecea2d94df2d42b585732c063fde2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.StationSound
+  station: {fileID: 6801866694534180644}
+  working: 302
+  started: 300
+  finished: 301
+  workingVolume: 1
+  fadeSeconds: 0.8
 --- !u!1 &8211616714089291881
 GameObject:
   m_ObjectHideFlags: 0

@@ -945,6 +945,7 @@ GameObject:
   - component: {fileID: 1556009326894732811}
   - component: {fileID: -5101677624059125589}
   - component: {fileID: 3665794386092119041}
+  - component: {fileID: 8089522677133570651}
   m_Layer: 0
   m_Name: pfSaladStation
   m_TagString: Untagged
@@ -1040,6 +1041,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.5, y: 1.2, z: 1.75}
   m_Center: {x: 1.5, y: 0.63500005, z: 1.0749998}
+--- !u!114 &8089522677133570651
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738897271142769183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89eecea2d94df2d42b585732c063fde2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.StationSound
+  station: {fileID: -5101677624059125589}
+  working: 0
+  started: 300
+  finished: 301
+  workingVolume: 1
+  fadeSeconds: 0.8
 --- !u!1 &3179853510295288609
 GameObject:
   m_ObjectHideFlags: 0

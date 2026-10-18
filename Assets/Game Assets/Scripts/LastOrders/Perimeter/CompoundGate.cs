@@ -1,4 +1,5 @@
 using FoodStreet.Navigation;
+using LastOrders.Audio;
 using UnityEngine;
 
 namespace LastOrders.Perimeter
@@ -102,9 +103,28 @@ namespace LastOrders.Perimeter
                               composition.Compound.HostileWithin(transform.position, lockRadius);
 
             mechanism.Tick(Time.deltaTime, threatened);
+            SoundSliding();
 
             PoseLeaves();
             ShowLamps();
+        }
+
+        float heardOpen;
+        int heardDirection;
+
+        /// <summary>The leaves are heard as they start to slide, apart or back together - not while they stand still.</summary>
+        void SoundSliding()
+        {
+            float open = mechanism.OpenAmount;
+            float change = open - heardOpen;
+            heardOpen = open;
+            if (Mathf.Abs(change) < 1e-4f) return;
+
+            int direction = change > 0f ? 1 : -1;
+            if (direction == heardDirection) return;
+
+            heardDirection = direction;
+            SoundController.Play(direction > 0 ? SoundId.GateOpen : SoundId.GateClose, transform.position);
         }
 
         // --- Who gets through ---------------------------------------------------------------------

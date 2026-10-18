@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FoodStreet.Visitors;
+using LastOrders.Audio;
 using LastOrders.Crew;
 using LastOrders.Jobs;
 using LastOrders.Kitchen;
@@ -329,6 +330,7 @@ namespace LastOrders.Restaurant
             }
 
             holding = false;
+            SoundController.Play(SoundId.DishLifted, carried.transform.position);
             Pose hands = CarryPose();
             carried.HopTo(hands.position, hands.rotation, liftSeconds, 0.22f, () => holding = true);
             step = Step.Lifting;

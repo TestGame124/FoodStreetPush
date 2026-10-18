@@ -4889,6 +4889,7 @@ GameObject:
   - component: {fileID: 1492712123448880933}
   - component: {fileID: 7367544562008574832}
   - component: {fileID: 2924260117546513125}
+  - component: {fileID: 211713907621406295}
   m_Layer: 0
   m_Name: Defense_ScrapTurret
   m_TagString: Untagged
@@ -4951,6 +4952,7 @@ MonoBehaviour:
   definition: {fileID: 11400000, guid: 0f29635041c851848bbc6e06e4a5c4f9, type: 2}
   postId: turret
   startsBuilt: 0
+  placedFromShop: 0
   builtVisuals: {fileID: 8153911487704464469}
   siteVisuals: {fileID: 8675002205935195831}
   aimPivot: {fileID: 5022660707951031930}
@@ -4988,6 +4990,21 @@ MonoBehaviour:
   - {fileID: 2001834110143038376}
   - {fileID: 3790586752173554991}
   casings: {fileID: 7343283021809108879}
+--- !u!114 &211713907621406295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3467195630413478892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75d2bc381391cc743acbf6b4c9cbe6e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.DefenseSound
+  post: {fileID: 7367544562008574832}
+  fire: 705
+  impact: 0
 --- !u!1 &3687148266021275828
 GameObject:
   m_ObjectHideFlags: 0

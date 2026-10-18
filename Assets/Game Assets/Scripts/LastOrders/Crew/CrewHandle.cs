@@ -1,4 +1,5 @@
 using FoodStreet.Interaction;
+using LastOrders.Audio;
 using LastOrders.Core;
 using LastOrders.Effects;
 using LastOrders.Interaction;
@@ -137,6 +138,7 @@ namespace LastOrders.Crew
             pressed = false;
             held = true;
             pickedFrom = ground = transform.position;
+            SoundController.Play(SoundId.CrewPickUp, transform.position);
             velocity = Vector3.zero;
             clock = 0f;
             over = null;
@@ -222,6 +224,7 @@ namespace LastOrders.Crew
             brain.Legs.Land(land);
             landing = 0f;
             PlacementJuice.Burst(land, 0.7f);
+            SoundController.Play(SoundId.CrewDrop, land);
 
             if (cancelled || assist == null) return;
 

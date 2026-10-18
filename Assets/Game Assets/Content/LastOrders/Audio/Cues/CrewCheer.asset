@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bce1705ba6cf344abd423e8d217fc01, type: 3}
+  m_Name: CrewCheer
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: 05fa276b8cbcf434caf4338f9e17247f, type: 3}
+  - {fileID: 8300000, guid: 20c17a7f4064ce94f9d3dcc0035199ee, type: 3}
+  - {fileID: 8300000, guid: 78f326c95178f5b42abf35c8f343edee, type: 3}
+  - {fileID: 8300000, guid: a9720341ee78d9347a1ab3531a5f8e5d, type: 3}
+  - {fileID: 8300000, guid: 428984b396d889c409480e2f50344a24, type: 3}
+  - {fileID: 8300000, guid: 8840db400c473d34291e2f6893301052, type: 3}
+  - {fileID: 8300000, guid: ef17b34ed58b77e4c9cebde27243fc67, type: 3}
+  - {fileID: 8300000, guid: 8822b20474a85244fad22a5add792a24, type: 3}
+  bus: 4
+  volume: {x: 0.48000002, y: 0.6}
+  pitch: {x: 0.95, y: 1.05}
+  spatial: 1
+  minDistance: 14
+  maxDistance: 50
+  loop: 0
+  cooldown: 0.8
+  maxVoices: 1
+  priority: 128

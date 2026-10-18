@@ -350,6 +350,7 @@ GameObject:
   - component: {fileID: 1385735178445149743}
   - component: {fileID: 2382345657669189369}
   - component: {fileID: 3068738535008648995}
+  - component: {fileID: 8579544712618553043}
   m_Layer: 0
   m_Name: Button
   m_TagString: Untagged
@@ -462,6 +463,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8579544712618553043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4942198773160868252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44670c732feaa174db8ef170121b265e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastOrders.Audio.UiButtonSound
+  sound: 100
 --- !u!1 &5152135100416536822
 GameObject:
   m_ObjectHideFlags: 0
@@ -745,6 +759,10 @@ MonoBehaviour:
   button: {fileID: 3068738535008648995}
   icon: {fileID: 3055360362606997375}
   placeholderIcon: {fileID: 2644121513893378833}
+  dismissOnWorldTap: 1
+  releaseOnPress: 1
+  pulse: {fileID: 0}
+  pulseScale: 1.08
 --- !u!1 &8800071667148678669
 GameObject:
   m_ObjectHideFlags: 0

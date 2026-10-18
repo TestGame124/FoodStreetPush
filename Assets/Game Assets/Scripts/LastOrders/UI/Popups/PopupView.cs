@@ -1,4 +1,5 @@
 using DG.Tweening;
+using LastOrders.Audio;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -40,6 +41,7 @@ namespace LastOrders.UI.Popups
             owner = service;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
+            SoundController.Play(SoundId.UiPopupOpen);
 
             DOTween.Kill(this);
 
@@ -72,6 +74,7 @@ namespace LastOrders.UI.Popups
             if (group != null) group.alpha = 1f;
 
             OnClosed();
+            SoundController.Play(SoundId.UiPopupClose);
 
             owner = null;
             gameObject.SetActive(false);

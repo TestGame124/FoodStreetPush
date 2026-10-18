@@ -1,3 +1,4 @@
+using LastOrders.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -276,6 +277,7 @@ public sealed class GrillStationAnimation : MonoBehaviour
 
     void BeginTurn()
     {
+        SoundController.Play(SoundId.FoodFlip, tongs != null ? tongs.position : transform.position);
         stage = Stage.Turn;
         clock = 0f;
         landed = false;
@@ -362,6 +364,7 @@ public sealed class GrillStationAnimation : MonoBehaviour
     void Land(Transform item)
     {
         flare = 1f;
+        SoundController.Play(SoundId.FatFlare, item != null ? item.position : transform.position);
         if (item == null) return;
 
         var at = new ParticleSystem.EmitParams { position = item.position + Vector3.up * 0.03f, applyShapeToPosition = true };
