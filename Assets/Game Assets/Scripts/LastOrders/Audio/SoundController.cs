@@ -51,7 +51,10 @@ namespace LastOrders.Audio
         readonly List<Voice> voices = new List<Voice>();
         readonly Dictionary<SoundCue, float> lastPlayed = new Dictionary<SoundCue, float>();
         readonly Dictionary<SoundCue, int> sounding = new Dictionary<SoundCue, int>();
-        float[] busVolume;
+
+        // Never serialized: the editor keeps private fields over a script reload, and an emptied
+        // array coming back would be indexed by bus.
+        [NonSerialized] float[] busVolume;
 
         Transform voiceRoot;
         SoundLayer ambience;
@@ -190,7 +193,6 @@ namespace LastOrders.Audio
             ambience = new SoundLayer(transform, "Ambience");
             music = new SoundLayer(transform, "Music");
 
-            busVolume = new float[BusCount];
             RefreshBusVolumes();
             SoundSettings.Changed += HandleSettingsChanged;
         }
@@ -214,7 +216,9 @@ namespace LastOrders.Audio
         void OnValidate()
         {
             maxVoices = Mathf.Max(maxVoices, prewarmVoices);
-            if (busVolume != null) RefreshBusVolumes();
+
+            // The library's mix tuned while the game runs is heard at once.
+            if (Application.isPlaying && instance == this) RefreshBusVolumes();
         }
 
         void Update()
@@ -436,6 +440,8 @@ namespace LastOrders.Audio
 
         void RefreshBusVolumes()
         {
+            if (busVolume == null || busVolume.Length != BusCount) busVolume = new float[BusCount];
+
             float master = SoundSettings.Master;
             for (int i = 0; i < BusCount; i++)
             {
